@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Insert Studio — Printable TN Inserts</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@400;500&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #0f0c08;
+  --paper: #f5f0e4;
+  --cream: #ede6d0;
+  --warm: #faf7f0;
+  --accent: #7a2e0e;
+  --accent2: #1a3a2a;
+  --gold: #b8860b;
+  --gold-light: #d4a843;
+  --rule: #c8bda0;
+  --muted: #7a7060;
+  --shadow: rgba(15,12,8,0.15);
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'DM Mono', monospace;
+  overflow-x: hidden;
+}
+
+/* ── Grain overlay ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 1000; pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px;
+}
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes slideRight {
+  from { transform: scaleX(0); } to { transform: scaleX(1); }
+}
+
+.reveal { opacity: 0; animation: fadeUp 0.7s ease forwards; }
+.reveal-1 { animation-delay: 0.1s; }
+.reveal-2 { animation-delay: 0.25s; }
+.reveal-3 { animation-delay: 0.4s; }
+.reveal-4 { animation-delay: 0.55s; }
+.reveal-5 { animation-delay: 0.7s; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 48px; height: 60px;
+  background: rgba(245,240,228,0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em;
+  color: var(--ink); text-decoration: none;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.nav-brand-mark {
+  width: 28px; height: 28px;
+  background: var(--ink); color: var(--paper);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 900;
+  font-family: 'Playfair Display', serif;
+}
+
+.nav-links {
+  display: flex; align-items: center; gap: 32px; list-style: none;
+}
+
+.nav-links a {
+  font-size: 0.65rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted); text-decoration: none; transition: color 0.15s;
+}
+.nav-links a:hover { color: var(--accent); }
+
+.nav-cta {
+  font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 8px 18px; background: var(--ink); color: var(--paper);
+  text-decoration: none; transition: all 0.15s;
+}
+.nav-cta:hover { background: var(--accent); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding-top: 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-left {
+  background: var(--ink);
+  display: flex; flex-direction: column;
+  justify-content: center; padding: 80px 64px;
+  position: relative; overflow: hidden;
+}
+
+.hero-left::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    -45deg, transparent, transparent 40px,
+    rgba(255,255,255,0.012) 40px, rgba(255,255,255,0.012) 41px
+  );
+}
+
+.hero-eyebrow {
+  font-size: 0.6rem; letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--gold-light); margin-bottom: 24px;
+  display: flex; align-items: center; gap: 12px;
+}
+
+.hero-eyebrow::before {
+  content: ''; display: block; width: 32px; height: 1px; background: var(--gold);
+  animation: slideRight 0.8s ease 0.2s both; transform-origin: left;
+}
+
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  font-weight: 900; line-height: 1.0;
+  color: var(--paper);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.hero-title em {
+  font-style: italic; color: var(--gold-light);
+  display: block;
+}
+
+.hero-subtitle {
+  font-size: 0.72rem; line-height: 1.7;
+  color: rgba(245,240,228,0.55);
+  margin-top: 24px; max-width: 380px;
+}
+
+.hero-divider {
+  width: 48px; height: 2px;
+  background: var(--gold);
+  margin: 32px 0;
+}
+
+.hero-stats {
+  display: flex; gap: 40px;
+}
+
+.hero-stat-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 700; color: var(--paper);
+  display: block; line-height: 1;
+}
+
+.hero-stat-label {
+  font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(245,240,228,0.45); margin-top: 4px; display: block;
+}
+
+.hero-right {
+  background: var(--cream);
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 80px 48px; gap: 16px;
+  position: relative;
+}
+
+/* Mini insert preview cards in hero */
+.hero-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.hero-card {
+  background: var(--warm);
+  border: 1px solid var(--rule);
+  padding: 20px;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
+}
+
+.hero-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px var(--shadow);
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute; inset: 4px;
+  border: 1px solid var(--rule);
+  pointer-events: none; opacity: 0.5;
+}
+
+.hero-card-icon { font-size: 1.4rem; margin-bottom: 8px; display: block; }
+.hero-card-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 3px;
+}
+.hero-card-desc { font-size: 0.58rem; color: var(--muted); line-height: 1.4; }
+
+.hero-card.featured {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 20px;
+}
+
+.hero-card.featured .hero-card-icon { font-size: 2rem; margin: 0; flex-shrink: 0; }
+
+.hero-scroll-hint {
+  position: absolute; bottom: 32px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+
+.scroll-arrow {
+  width: 1px; height: 32px; background: var(--rule);
+  animation: fadeIn 1.5s ease infinite alternate;
+}
+
+/* ── TOOLS SECTION ── */
+.tools-section {
+  padding: 120px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-header {
+  display: flex; align-items: baseline;
+  justify-content: space-between; margin-bottom: 60px;
+  padding-bottom: 20px; border-bottom: 1px solid var(--rule);
+}
+
+.section-label {
+  font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
+}
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-weight: 700; letter-spacing: -0.02em; margin-top: 8px;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: var(--rule);
+}
+
+.tool-card {
+  background: var(--warm);
+  padding: 40px 36px;
+  text-decoration: none; color: var(--ink);
+  display: block; position: relative; overflow: hidden;
+  transition: background 0.2s ease;
+  group: true;
+}
+
+.tool-card::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 3px; background: var(--accent);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.25s ease;
+}
+
+.tool-card:hover { background: #faf6ee; }
+.tool-card:hover::after { transform: scaleX(1); }
+
+.tool-card-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 4rem; font-weight: 900; line-height: 1;
+  color: rgba(15,12,8,0.06); position: absolute;
+  top: 20px; right: 24px; letter-spacing: -0.04em;
+  pointer-events: none;
+  transition: color 0.2s;
+}
+.tool-card:hover .tool-card-num { color: rgba(122,46,14,0.08); }
+
+.tool-icon { font-size: 2rem; margin-bottom: 20px; display: block; }
+
+.tool-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem; font-weight: 700;
+  letter-spacing: -0.01em; margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.tool-tagline {
+  font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 14px;
+}
+
+.tool-desc {
+  font-size: 0.7rem; line-height: 1.7; color: var(--muted);
+  margin-bottom: 28px;
+}
+
+.tool-features {
+  list-style: none; display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 32px;
+}
+
+.tool-features li {
+  font-size: 0.63rem; color: var(--muted); display: flex; align-items: center; gap: 8px;
+}
+
+.tool-features li::before { content: '—'; color: var(--gold); flex-shrink: 0; }
+
+.tool-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 0.63rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent); font-weight: 500;
+  transition: gap 0.15s;
+}
+.tool-card:hover .tool-link { gap: 14px; }
+.tool-link-arrow { font-size: 0.8rem; }
+
+/* ── HOW IT WORKS ── */
+.how-section {
+  background: var(--ink);
+  padding: 100px 48px;
+  position: relative; overflow: hidden;
+}
+
+.how-section::before {
+  content: 'PRINT';
+  position: absolute; right: -20px; top: 50%; transform: translateY(-50%);
+  font-family: 'Playfair Display', serif;
+  font-size: 18vw; font-weight: 900; color: rgba(255,255,255,0.02);
+  line-height: 1; pointer-events: none; letter-spacing: -0.05em;
+  white-space: nowrap;
+}
+
+.how-inner {
+  max-width: 1200px; margin: 0 auto;
+}
+
+.how-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 700;
+  color: var(--paper); letter-spacing: -0.02em;
+  margin-bottom: 60px;
+}
+
+.how-title em { font-style: italic; color: var(--gold-light); }
+
+.how-steps {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px;
+}
+
+.how-step { position: relative; }
+
+.how-step::after {
+  content: '→';
+  position: absolute; right: -24px; top: 16px;
+  color: rgba(245,240,228,0.15); font-size: 1.2rem;
+}
+.how-step:last-child::after { display: none; }
+
+.how-step-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem; font-weight: 900; line-height: 1;
+  color: var(--gold); opacity: 0.4; margin-bottom: 16px;
+}
+
+.how-step-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem; color: var(--paper); margin-bottom: 10px;
+}
+
+.how-step-desc {
+  font-size: 0.68rem; line-height: 1.7;
+  color: rgba(245,240,228,0.45);
+}
+
+/* ── ABOUT BAND ── */
+.about-band {
+  padding: 80px 48px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.about-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 2fr; gap: 80px; align-items: center;
+}
+
+.about-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em;
+}
+
+.about-title em { font-style: italic; color: var(--accent); }
+
+.about-body {
+  font-size: 0.75rem; line-height: 1.85; color: var(--muted);
+}
+
+.about-body p + p { margin-top: 16px; }
+
+/* ── FOOTER ── */
+footer {
+  background: var(--ink);
+  padding: 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 20px;
+}
+
+.footer-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem; color: var(--paper); font-weight: 700;
+}
+
+.footer-links {
+  display: flex; gap: 28px; list-style: none;
+}
+
+.footer-links a {
+  font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(245,240,228,0.35); text-decoration: none; transition: color 0.15s;
+}
+.footer-links a:hover { color: var(--gold-light); }
+
+.footer-copy {
+  font-size: 0.58rem; color: rgba(245,240,228,0.25); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .tools-grid { grid-template-columns: 1fr 1fr; }
+  .how-steps { grid-template-columns: 1fr 1fr; }
+  .how-step::after { display: none; }
+}
+
+@media (max-width: 768px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-left { min-height: 60vh; padding: 60px 32px; }
+  .hero-right { padding: 48px 32px; }
+  .tools-grid { grid-template-columns: 1fr; }
+  nav { padding: 0 24px; }
+  .nav-links { display: none; }
+  .tools-section, .about-band, footer { padding: 60px 24px; }
+  .how-section { padding: 60px 24px; }
+  .about-inner { grid-template-columns: 1fr; gap: 32px; }
+  .how-steps { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <a href="#" class="nav-brand">
+    <div class="nav-brand-mark">IS</div>
+    The Insert Studio
+  </a>
+  <ul class="nav-links">
+    <li><a href="#tools">Tools</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#about">About</a></li>
+  </ul>
+  <a href="#tools" class="nav-cta">Browse Tools</a>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow reveal reveal-1">Traveler's Notebook Inserts</div>
+    <h1 class="hero-title reveal reveal-2">
+      The
+      <em>Insert</em>
+      Studio
+    </h1>
+    <p class="hero-subtitle reveal reveal-3">
+      A collection of free, printable insert generators for Traveler's Notebooks.
+      Pick a tool, choose your settings, download a PDF — ready for Regular or Passport size.
+    </p>
+    <div class="hero-divider reveal reveal-4"></div>
+    <div class="hero-stats reveal reveal-5">
+      <div>
+        <span class="hero-stat-val">3</span>
+        <span class="hero-stat-label">Tools</span>
+      </div>
+      <div>
+        <span class="hero-stat-val">A4</span>
+        <span class="hero-stat-label">Print Format</span>
+      </div>
+      <div>
+        <span class="hero-stat-val">Free</span>
+        <span class="hero-stat-label">Always</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-cards reveal reveal-2">
+      <div class="hero-card featured">
+        <span class="hero-card-icon">🔢</span>
+        <div>
+          <span class="hero-card-name">Sudoku Generator</span>
+          <span class="hero-card-desc">Easy to hard · 3 fonts · cover page · notes section</span>
+        </div>
+      </div>
+      <div class="hero-card reveal reveal-3">
+        <span class="hero-card-icon">🔤</span>
+        <span class="hero-card-name">Word Search</span>
+        <span class="hero-card-desc">5 categories · 3 difficulties</span>
+      </div>
+      <div class="hero-card reveal reveal-4">
+        <span class="hero-card-icon">📖</span>
+        <span class="hero-card-name">Wandering Library</span>
+        <span class="hero-card-desc">Solo RPG insert pack</span>
+      </div>
+    </div>
+
+    <div class="hero-scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Tools -->
+<section class="tools-section" id="tools">
+  <div class="section-header">
+    <div>
+      <div class="section-label">The Collection</div>
+      <h2 class="section-title">Choose your insert</h2>
+    </div>
+  </div>
+
+  <div class="tools-grid">
+
+    <!-- Sudoku -->
+    <a href="https://einarjonsson.github.io/sudoku-travelers-notebook" class="tool-card reveal reveal-2" target="_blank">
+      <div class="tool-card-num">01</div>
+      <span class="tool-icon">🔢</span>
+      <div class="tool-name">Sudoku<br>Generator</div>
+      <div class="tool-tagline">Logic Puzzles</div>
+      <p class="tool-desc">
+        Generate printable Sudoku booklets sized perfectly for your TN.
+        Every puzzle is freshly generated — no two are ever the same.
+      </p>
+      <ul class="tool-features">
+        <li>Easy, Medium &amp; Hard difficulty</li>
+        <li>3 font styles — Classic, Serif, Mono</li>
+        <li>Custom title &amp; cover page</li>
+        <li>Notes section &amp; date field</li>
+        <li>Roman numeral puzzle numbering</li>
+        <li>Regular &amp; Passport sizes</li>
+      </ul>
+      <span class="tool-link">Open Generator <span class="tool-link-arrow">→</span></span>
+    </a>
+
+    <!-- Word Search -->
+    <a href="https://einarjonsson.github.io/tn-wordsearch" class="tool-card reveal reveal-3" target="_blank">
+      <div class="tool-card-num">02</div>
+      <span class="tool-icon">🔤</span>
+      <div class="tool-name">Word Search<br>Generator</div>
+      <div class="tool-tagline">Letter Puzzles</div>
+      <p class="tool-desc">
+        Hunt for hidden words across 5 curated categories.
+        Adjustable difficulty changes the directions words can hide.
+      </p>
+      <ul class="tool-features">
+        <li>Animals, Nature, Travel, Food, Geography</li>
+        <li>Easy (↔), Medium (↔↕↗), Hard (+ backwards)</li>
+        <li>14×14 grid for Regular, 12×12 for Passport</li>
+        <li>Custom title &amp; cover page</li>
+        <li>3 font styles</li>
+        <li>Regular &amp; Passport sizes</li>
+      </ul>
+      <span class="tool-link">Open Generator <span class="tool-link-arrow">→</span></span>
+    </a>
+
+    <!-- Wandering Library -->
+    <a href="https://einarjonsson.github.io/wandering-library" class="tool-card reveal reveal-4" target="_blank">
+      <div class="tool-card-num">03</div>
+      <span class="tool-icon">📖</span>
+      <div class="tool-name">The Wandering<br>Library</div>
+      <div class="tool-tagline">Solo RPG Inserts</div>
+      <p class="tool-desc">
+        A complete insert pack for the solo journaling RPG about running
+        a mobile library. Five insert types, old manuscript aesthetic.
+      </p>
+      <ul class="tool-features">
+        <li>Session Log with d6 encounter tables</li>
+        <li>Location &amp; Patron cards</li>
+        <li>Book Ledger — track your inventory</li>
+        <li>World Map with dot grid &amp; compass</li>
+        <li>Choose quantities of each type</li>
+        <li>Ornate ink border &amp; serif manuscript style</li>
+      </ul>
+      <span class="tool-link">Open Generator <span class="tool-link-arrow">→</span></span>
+    </a>
+
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="how-section" id="how">
+  <div class="how-inner">
+    <h2 class="how-title">How it <em>works</em></h2>
+    <div class="how-steps">
+      <div class="how-step reveal reveal-2">
+        <div class="how-step-num">01</div>
+        <div class="how-step-title">Choose a tool</div>
+        <p class="how-step-desc">Pick from Sudoku, Word Search, or the Wandering Library insert pack. All free, no account needed.</p>
+      </div>
+      <div class="how-step reveal reveal-3">
+        <div class="how-step-num">02</div>
+        <div class="how-step-title">Set your options</div>
+        <p class="how-step-desc">Choose your TN size (Regular or Passport), difficulty, font, page count, and personalisation. A live preview updates as you go.</p>
+      </div>
+      <div class="how-step reveal reveal-4">
+        <div class="how-step-num">03</div>
+        <div class="how-step-title">Download &amp; print</div>
+        <p class="how-step-desc">Get a print-ready PDF. Duplex printers print in one go — manual printers get a guided two-step process with correctly ordered pages.</p>
+      </div>
+      <div class="how-step reveal reveal-5">
+        <div class="how-step-num">04</div>
+        <div class="how-step-title">Fold, cut &amp; enjoy</div>
+        <p class="how-step-desc">Fold at 110mm, cut at 220mm for Regular inserts. Cut at the centre lines for Passport. Slip into your TN and go.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- About -->
+<section class="about-band" id="about">
+  <div class="about-inner">
+    <div>
+      <h2 class="about-title">Made for<br><em>notebooks</em><br>that travel</h2>
+    </div>
+    <div class="about-body">
+      <p>
+        The Insert Studio is a small collection of free, browser-based generators
+        for Traveler's Notebook enthusiasts. Every tool runs entirely in your browser —
+        no data is sent anywhere, no account is required, and everything is open source.
+      </p>
+      <p>
+        All inserts are designed to print on standard A4 paper in landscape orientation
+        and work with both Regular (110mm) and Passport (134×98mm) sized notebooks.
+        The duplex-aware print flow means you get correctly ordered, print-ready PDFs
+        whether your printer supports double-sided printing or not.
+      </p>
+      <p>
+        Built with love for the TN community. More tools coming soon.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-brand">The Insert Studio</div>
+  <ul class="footer-links">
+    <li><a href="https://einarjonsson.github.io/sudoku-travelers-notebook" target="_blank">Sudoku</a></li>
+    <li><a href="https://einarjonsson.github.io/tn-wordsearch" target="_blank">Word Search</a></li>
+    <li><a href="https://einarjonsson.github.io/wandering-library" target="_blank">Wandering Library</a></li>
+    <li><a href="https://github.com/einarjonsson" target="_blank">GitHub</a></li>
+  </ul>
+  <div class="footer-copy">Free &amp; open source · Built for Traveler's Notebooks</div>
+</footer>
+
+<script>
+// Intersection Observer for scroll reveals
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = 'running';
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal').forEach(el => {
+  el.style.animationPlayState = 'paused';
+  observer.observe(el);
+});
+
+// Immediately play hero reveals
+document.querySelectorAll('.hero .reveal').forEach(el => {
+  el.style.animationPlayState = 'running';
+});
+</script>
+</body>
+</html>

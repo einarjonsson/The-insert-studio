@@ -383,13 +383,13 @@ function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph, font) {
 
   // Grid letters
   doc.setFont(font, 'normal');
-  const fs = cellSize * (isPassport ? 0.62 : 0.52);
+  const fs = cellSize * 1.55; // mm → pt, letter ≈ 40% of the cell
   doc.setFontSize(fs);
   doc.setTextColor(20, 20, 20);
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
       const lx = gx + c * cellSize + cellSize / 2;
-      const ly = gy + r * cellSize + cellSize * 0.68;
+      const ly = gy + r * cellSize + cellSize * 0.70;
       const ch = grid[r][c];
       const tw = doc.getTextWidth(ch);
       doc.text(ch, lx - tw / 2, ly);
@@ -411,21 +411,21 @@ function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph, font) {
   // Word list below grid
   const wly = gy + gridH + 4;
   doc.setFont(font, 'bold');
-  doc.setFontSize(isPassport ? 4 : 4.5);
+  doc.setFontSize(5);
   doc.setTextColor(100, 100, 100);
   doc.text('FIND:', ox + margin, wly);
 
   doc.setFont(font, 'normal');
-  doc.setFontSize(isPassport ? 3.8 : 4.2);
+  doc.setFontSize(isPassport ? 5 : 5.5);
   doc.setTextColor(40, 40, 40);
 
-  const cols = isPassport ? 4 : 3;
+  const cols = 4;
   const colW = availW / cols;
   words.forEach((w, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const wx = ox + margin + col * colW;
-    const wy = wly + 4 + row * (isPassport ? 4 : 4.5);
+    const wy = wly + 4 + row * (isPassport ? 4.2 : 4.6);
     doc.text('• ' + w, wx, wy);
   });
 }

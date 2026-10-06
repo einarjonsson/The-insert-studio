@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nonogram Generator — The Insert Studio</title>
 <script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <link rel="stylesheet" href="../assets/tokens.css">
@@ -420,7 +421,7 @@ function drawNonogramPDF(doc, px, py, pw, ph, grid, puzzleNum, showSolution) {
   const gy = oy + clueRowH; // grid origin y
 
   // ── Column clues ──
-  doc.setFont('times','normal'); doc.setFontSize(Math.min(4.5, cellW * 0.65));
+  doc.setFont('times','normal'); doc.setFontSize(Math.min(7, cellW * 1.7)); // legible clues (was 4.5pt)
   doc.setTextColor(20,18,14);
   colClues.forEach((clue, c) => {
     const cx = gx + c * cellW + cellW / 2;
@@ -506,12 +507,11 @@ function drawCoverPage(doc, count, cols, rows) {
 
   // Top ornament
   doc.setFont('times','normal'); doc.setFontSize(7); doc.setTextColor(139,58,26);
-  doc.text('✦ · ✦', cx, fy+14, {align:'center'});
+  PDFKit.ornament(doc, cx, fy+12.6, 1.5);
 
   // Title
-  doc.setFont('times','bolditalic'); doc.setFontSize(20); doc.setTextColor(15,12,8);
-  doc.text('Nono', cx, fy+fh*0.36, {align:'center'});
-  doc.text('gram', cx, fy+fh*0.36+14, {align:'center'});
+  doc.setFont('times','bolditalic'); doc.setFontSize(26); doc.setTextColor(15,12,8);
+  doc.text('Nonogram', cx, fy+fh*0.36+13, {align:'center'});
 
   // Gold rules
   doc.setDrawColor(139,58,26); doc.setLineWidth(0.4);
@@ -547,7 +547,7 @@ function drawCoverPage(doc, count, cols, rows) {
 
   // Bottom ornament
   doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(139,58,26);
-  doc.text('✦', cx, fy+fh-6, {align:'center'});
+  doc.setFillColor(doc.getTextColor()); PDFKit.star(doc, cx, fy+fh-7.5, 1.8);
 
   // Fold/cut lines
   doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);

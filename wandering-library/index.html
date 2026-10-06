@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Wandering Library — Insert Generator</title>
 <script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <link rel="stylesheet" href="../assets/tokens.css">
@@ -384,17 +385,16 @@ function field(doc, name, x, y, w, fs=4) {
 }
 
 // d6 mini table
-function drawD6Table(doc, entries, x, y, w) {
-  const rowH = 4.2;
+function drawD6Table(doc, entries, x, y, w, rowH = 4.2) {
   entries.forEach(([roll, text], i) => {
     const ry = y + i*rowH;
     doc.setFontSize(3.8);
     doc.setFont('times', 'bold');
     doc.setTextColor(100, 60, 20);
-    doc.text(roll, x+1, ry+3);
+    doc.text(roll, x+1, ry+rowH*0.74);
     doc.setFont('times', 'normal');
     doc.setTextColor(40, 30, 20);
-    doc.text(text, x+5, ry+3);
+    doc.text(text, x+5, ry+rowH*0.74);
     if (i < entries.length-1) {
       doc.setDrawColor(200,185,165);
       doc.setLineWidth(0.1);
@@ -418,7 +418,7 @@ function drawSessionLog(doc, px, py, pw, ph, pageNum, librarian) {
   doc.setFont('times', 'bolditalic');
   doc.setFontSize(7.5);
   doc.setTextColor(240, 230, 210);
-  doc.text('✦ Session Log', px + pw/2, py + 6.8, {align:'center'});
+  PDFKit.starTitle(doc, 'Session Log', px + pw/2, py + 6.8);
   if (librarian) {
     doc.setFontSize(4); doc.setFont('times','italic');
     doc.setTextColor(200,185,160);
@@ -429,21 +429,21 @@ function drawSessionLog(doc, px, py, pw, ph, pageNum, librarian) {
 
   // Session # / Date / Weather row
   doc.setFontSize(3.8); doc.setFont('times','italic'); doc.setTextColor(100,80,55);
-  const fields3 = [['Session #', 22], ['Date', 30], ['Weather', pw-m-52]];
+  const fields3 = [['Session #', 22], ['Date', 30], ['Weather', iw-58]];
   let fx = px+m;
   fields3.forEach(([name, w]) => {
     field(doc, name+':', fx, cy, w, 3.8);
     fx += w + 3;
   });
-  cy += 6;
-
-  // "The Road" section
-  drawSectionHeader(doc, '— The Road —', px+m, cy, iw, 5);
   cy += 5;
 
-  // Travel prompt lines
-  drawLines(doc, px+m, cy, iw, 2, 4.5);
-  cy += 11;
+  // "The Road" section
+  drawSectionHeader(doc, '— The Road —', px+m, cy, iw, 4.4);
+  cy += 4.4;
+
+  // Travel prompt line
+  drawLines(doc, px+m, cy, iw, 1, 4.5);
+  cy += 6;
 
   // Journey d6 table
   label(doc, 'Roll d6 for the journey:', px+m, cy, 3.8);
@@ -454,12 +454,12 @@ function drawSessionLog(doc, px, py, pw, ph, pageNum, librarian) {
     ['4', 'Took a wrong turn — discovery?'],
     ['5', 'Bad weather slowed you down'],
     ['6', 'Something unusual happened'],
-  ], px+m, cy, iw);
-  cy += 5*4.2 + 4;
+  ], px+m, cy, iw, 3.1);
+  cy += 5*3.1 + 2.2;
 
   // "The Encounter" section
-  drawSectionHeader(doc, '— Who Came to the Library? —', px+m, cy, iw, 5);
-  cy += 5;
+  drawSectionHeader(doc, '— Who Came to the Library? —', px+m, cy, iw, 4.4);
+  cy += 4.4;
   drawD6Table(doc, [
     ['1', 'A curious child with questions'],
     ['2', 'An elderly scholar seeking lore'],
@@ -467,28 +467,30 @@ function drawSessionLog(doc, px, py, pw, ph, pageNum, librarian) {
     ['4', 'Someone who just returned a book'],
     ['5', 'A traveler passing through'],
     ['6', 'Someone from your past'],
-  ], px+m, cy, iw);
-  cy += 6*4.2 + 4;
+  ], px+m, cy, iw, 3.1);
+  cy += 6*3.1 + 2.2;
 
-  // "The Library Tonight" checklist
-  drawSectionHeader(doc, '— The Library Tonight —', px+m, cy, iw, 5);
-  cy += 5;
+  // "The Library Tonight" checklist (two columns)
+  drawSectionHeader(doc, '— The Library Tonight —', px+m, cy, iw, 4.4);
+  cy += 4.4;
   const checks = ['Books lent out', 'Books returned', 'New book found', 'Book lost or damaged'];
-  checks.forEach(c => {
+  checks.forEach((c, i) => {
+    const bx = px + m + (i % 2) * (iw / 2), by = cy + Math.floor(i / 2) * 4.4;
     doc.setDrawColor(100,80,55); doc.setLineWidth(0.3);
-    doc.rect(px+m, cy-3, 3, 3);
-    doc.setFont('times','normal'); doc.setFontSize(4.5); doc.setTextColor(50,35,20);
-    doc.text(c, px+m+5, cy);
-    cy += 5;
+    doc.rect(bx, by - 2.6, 2.6, 2.6);
+    doc.setFont('times','normal'); doc.setFontSize(4.3); doc.setTextColor(50,35,20);
+    doc.text(c, bx + 4, by);
   });
-  cy += 2;
+  cy += 2 * 4.4 + 1;
 
-  // "What happened" — journal lines
-  drawSectionHeader(doc, '— What Happened —', px+m, cy, iw, 5);
-  cy += 5;
-  const linesLeft = Math.floor((ph - cy + py - m - 12) / 4.5);
-  drawLines(doc, px+m, cy, iw, Math.max(linesLeft, 3), 4.5);
-  cy += Math.max(linesLeft,3)*4.5 + 3;
+  // "What happened" — journal lines, only as many as genuinely fit in this panel
+  const wLines = Math.floor((py + ph - m - 2 - (cy + 4.4)) / 4.5);
+  if (wLines >= 2) {
+    drawSectionHeader(doc, '— What Happened —', px+m, cy, iw, 4.4);
+    cy += 4.4;
+    drawLines(doc, px+m, cy, iw, wLines, 4.5);
+    cy += wLines*4.5 + 3;
+  }
 
   // "Until next time"
   if (cy < py+ph-14) {
@@ -513,7 +515,7 @@ function drawLocationCard(doc, px, py, pw, ph, pageNum) {
   doc.setFillColor(40, 60, 35);
   doc.rect(px, py, pw, 10, 'F');
   doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(220,240,215);
-  doc.text('✦ Location Card', px+pw/2, py+6.8, {align:'center'});
+  PDFKit.starTitle(doc, 'Location Card', px + pw/2, py + 6.8);
 
   let cy = py+14;
 
@@ -574,7 +576,7 @@ function drawPatronCard(doc, px, py, pw, ph, pageNum) {
   doc.setFillColor(60, 35, 55);
   doc.rect(px, py, pw, 10, 'F');
   doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(235,220,240);
-  doc.text('✦ Patron Card', px+pw/2, py+6.8, {align:'center'});
+  PDFKit.starTitle(doc, 'Patron Card', px + pw/2, py + 6.8);
 
   let cy = py+14;
 
@@ -640,7 +642,7 @@ function drawBookLedger(doc, px, py, pw, ph, pageNum, librarian) {
   doc.setFillColor(35, 45, 65);
   doc.rect(px, py, pw, 10, 'F');
   doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(215,225,245);
-  doc.text('✦ Book Ledger', px+pw/2, py+6.8, {align:'center'});
+  PDFKit.starTitle(doc, 'Book Ledger', px + pw/2, py + 6.8);
 
   let cy = py+13;
 
@@ -697,7 +699,7 @@ function drawWorldMap(doc, px, py, pw, ph, pageNum, librarian) {
 
   // Header
   doc.setFont('times','bolditalic'); doc.setFontSize(6.5); doc.setTextColor(50,35,15);
-  doc.text('✦ The Wandering Library', px+pw/2, py+8, {align:'center'});
+  PDFKit.starTitle(doc, 'The Wandering Library', px + pw/2, py + 8);
   doc.setFont('times','italic'); doc.setFontSize(4.5); doc.setTextColor(120,90,55);
   doc.text('Routes & Places', px+pw/2, py+12, {align:'center'});
   doc.setDrawColor(140,110,65); doc.setLineWidth(0.3);

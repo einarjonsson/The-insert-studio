@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TN Sudoku Generator</title>
 <script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -100,9 +101,16 @@
       <!-- Font -->
       <div class="section">
         <div class="section-title">Font Style</div>
-        <div class="radio-group cols-3">
+        <div class="radio-group cols-2">
           <label class="radio-option">
-            <input type="radio" name="font" value="helvetica" checked>
+            <input type="radio" name="font" value="studio" checked>
+            <span class="radio-btn">
+              <span class="rb-title" style="font-family:'DM Mono',monospace">Studio</span>
+              <span class="rb-sub">site look · mono digits</span>
+            </span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="font" value="helvetica">
             <span class="radio-btn">
               <span class="rb-title" style="font-family:sans-serif">Classic</span>
               <span class="rb-sub">clean & minimal</span>
@@ -333,7 +341,8 @@ function getDifficulty() { return document.querySelector('input[name="difficulty
 function getTitle() { return document.getElementById('customTitle')?.value.trim() || ''; }
 function getCover() { return document.querySelector('input[name="cover"]:checked')?.value || 'none'; }
 function getCoverTitle() { return getCover() === 'cover' ? getTitle() : null; }
-function getFont() { return document.querySelector('input[name="font"]:checked')?.value || 'helvetica'; }
+function getFont() { return document.querySelector('input[name="font"]:checked')?.value || 'studio'; }
+const F = () => PDFKit.family(getFont());   // jsPDF family for puzzle digits
 function getNotes() { return document.querySelector('input[name="notes"]:checked')?.value || 'none'; }
 function getNumbering() { return document.querySelector('input[name="numbering"]:checked')?.value || 'sudoku'; }
 function getDateField() { return document.querySelector('input[name="datefield"]:checked')?.value || 'none'; }
@@ -394,181 +403,77 @@ function generateSudoku(difficulty) {
 }
 
 // ── PDF drawing ───────────────────────────────────────────────────────────────
-function drawSudoku(doc, ox, oy, size, puzzle, number, labelFs=3) {
-  const cell = size/9;
-  doc.setFontSize(labelFs*2.5); doc.setFont(getFont(),'bold'); doc.setTextColor(0,0,0);
-  doc.setFillColor(255,255,255);
-  const pLabel = puzzleLabel(number);
-  doc.rect(ox, oy-labelFs*1.2, doc.getTextWidth(pLabel)+2, labelFs*1.5, 'F');
-  doc.text(pLabel, ox+1, oy-labelFs*0.2);
-  for (let row=0; row<9; row++) for (let col=0; col<9; col++) {
+const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+
+// One panel: header, grid, optional notes, footer.  (px,py,pw,ph) is the whole panel.
+function drawPanel(doc, px, py, pw, ph, puzzle, number) {
+  const label = puzzleLabel(number);                       // "Sudoku 3" | "No. 3" | "III"
+  const accent = /^Sudoku\s/.test(label) ? 'No. ' + number : label;
+  const top = PDFKit.header(doc, px, py, pw, {
+    eyebrow: 'The Insert Studio · ' + DIFF_LABEL[getDifficulty()], title: 'Sudoku', accent, number
+  });
+  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number });
+  const notesH = getNotes() === 'notes' ? 14 : 0;
+  const size = Math.min(pw - 14, bottom - top - notesH - 2);
+  const ox = px + (pw - size) / 2, oy = top + (bottom - top - notesH - size) / 2;
+  drawSudoku(doc, ox, oy, size, puzzle);
+  if (notesH) drawNotes(doc, ox, oy + size + 3, size);
+}
+
+function drawSudoku(doc, ox, oy, size, puzzle) {
+  const cell = size / 9, C = PDFKit.COLORS;
+  // given digits
+  doc.setFont(F(), getFont() === 'studio' ? 'bold' : 'normal'); doc.setFontSize(cell * 1.75); doc.setTextColor(...C.ink);
+  for (let row = 0; row < 9; row++) for (let col = 0; col < 9; col++) {
     const val = puzzle[row][col];
-    if (val !== 0) {
-      const x=ox+col*cell, y=oy+row*cell;
-      doc.setFontSize(cell*1.8); doc.setFont(getFont(),'normal'); doc.setTextColor(0,0,0);
-      const tw=doc.getTextWidth(String(val));
-      doc.text(String(val), x+(cell-tw)/2, y+cell*0.72);
-    }
+    if (val !== 0) doc.text(String(val), ox + col * cell + cell / 2, oy + row * cell + cell * 0.72, { align: 'center' });
   }
-  doc.setDrawColor(0,0,0);
-  for (let i=0; i<=9; i++) {
-    doc.setLineWidth(i%3===0?0.5:0.18);
-    doc.line(ox, oy+i*cell, ox+size, oy+i*cell);
-    doc.line(ox+i*cell, oy, ox+i*cell, oy+size);
+  // thin lines in tan, 3x3 boxes in ink
+  for (let i = 0; i <= 9; i++) {
+    if (i % 3 === 0) continue;
+    doc.setDrawColor(...C.tan); doc.setLineWidth(0.18);
+    doc.line(ox, oy + i * cell, ox + size, oy + i * cell);
+    doc.line(ox + i * cell, oy, ox + i * cell, oy + size);
   }
-}
-
-
-function drawPageTitle(doc, title, W, H) {
-  if (!title) return;
-  doc.setFontSize(7);
-  doc.setFont(getFont(), 'bold');
-  doc.setTextColor(80, 80, 80);
-  doc.text(title, W / 2, H - 4, { align: 'center' });
-}
-
-function drawCoverPage(doc, title) {
-  const W = 297, H = 210;
-  const colW = 110;
-
-  // Left panel: blank (nothing drawn)
-
-  // Right panel: frame with title
-  const margin = 8;
-  const fx = colW + margin, fy = margin;
-  const fw = colW - margin*2, fh = H - margin*2;
-
-  // Outer frame
-  doc.setDrawColor(80, 80, 80);
-  doc.setLineWidth(0.8);
-  doc.rect(fx, fy, fw, fh);
-
-  // Inner frame (inset by 3mm)
-  doc.setLineWidth(0.25);
-  doc.rect(fx + 3, fy + 3, fw - 6, fh - 6);
-
-  // Corner marks
-  const cs = 5; // corner mark size
-  doc.setLineWidth(0.5);
-  for (const [ox, oy, sx, sy] of [
-    [fx+3, fy+3, 1, 1], [fx+fw-3, fy+3, -1, 1],
-    [fx+3, fy+fh-3, 1, -1], [fx+fw-3, fy+fh-3, -1, -1]
-  ]) {
-    doc.line(ox, oy, ox + sx*cs, oy);
-    doc.line(ox, oy, ox, oy + sy*cs);
-  }
-
-  if (title) {
-    // Parse Vol. number from title if present, else just show title
-    const centerX = fx + fw/2;
-    const centerY = fy + fh/2;
-
-    // Main title
-    doc.setFont(getFont(), 'bold');
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(11);
-    doc.text(title, centerX, centerY - 4, { align: 'center', maxWidth: fw - 16 });
-
-    // Decorative line under title
-    const lineW = Math.min(doc.getTextWidth(title) + 8, fw - 20);
-    doc.setLineWidth(0.3);
-    doc.setDrawColor(120, 120, 120);
-    doc.line(centerX - lineW/2, centerY + 1, centerX + lineW/2, centerY + 1);
-
-    // "Sudoku Puzzles" subtitle
-    doc.setFont(getFont(), 'normal');
-    doc.setFontSize(6);
-    doc.setTextColor(100, 100, 100);
-    doc.text('SUDOKU PUZZLES', centerX, centerY + 7, { align: 'center' });
-  } else {
-    // Blank — show subtle writing lines
-    const centerY = fy + fh/2;
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.2);
-    for (let i = -1; i <= 1; i++) {
-      const ly = centerY + i * 8;
-      doc.line(fx + 12, ly, fx + fw - 12, ly);
-    }
-    // Tiny label above lines
-    doc.setFont(getFont(), 'normal');
-    doc.setFontSize(5);
-    doc.setTextColor(160, 160, 160);
-    doc.text('MY SUDOKU BOOK', fx + fw/2, centerY - 14, { align: 'center' });
+  doc.setDrawColor(...C.ink); doc.setLineWidth(0.5);
+  for (let i = 0; i <= 9; i += 3) {
+    doc.line(ox, oy + i * cell, ox + size, oy + i * cell);
+    doc.line(ox + i * cell, oy, ox + i * cell, oy + size);
   }
 }
 
 function drawNotes(doc, ox, oy, width) {
-  const lineGap = 4.5;
-  const labelFs = 2.8;
-
-  // Date field on the right if enabled
+  const C = PDFKit.COLORS, lineGap = 4.5;
+  PDFKit.set(doc, PDFKit.mono(), 'normal', 4.2, C.rust);
+  PDFKit.text(doc, 'NOTES', ox, oy + 2.5, null, 0.6);
   if (getDateField() === 'date') {
-    doc.setFont(getFont(), 'normal');
-    doc.setFontSize(labelFs * 2.2);
-    doc.setTextColor(160, 160, 160);
-    const dateLabel = 'Date: ___________';
-    const dw = doc.getTextWidth(dateLabel);
-    doc.text(dateLabel, ox + width - dw, oy + labelFs);
+    PDFKit.set(doc, PDFKit.mono(), 'normal', 4.2, C.muted);
+    doc.text('Date: ____________', ox + width, oy + 2.5, { align: 'right' });
   }
-
-  // Notes label on the left
-  doc.setFont(getFont(), 'normal');
-  doc.setFontSize(labelFs * 2.2);
-  doc.setTextColor(160, 160, 160);
-  doc.text('Notes', ox, oy + labelFs);
-
-  // Ruled lines
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.15);
-  for (let i = 0; i < 3; i++) {
-    const ly = oy + labelFs + 2 + i * lineGap;
-    doc.line(ox, ly, ox + width, ly);
-  }
+  doc.setDrawColor(...C.rule); doc.setLineWidth(0.15);
+  for (let i = 0; i < 3; i++) doc.line(ox, oy + 6 + i * lineGap, ox + width, oy + 6 + i * lineGap);
 }
 
 function drawRegularSide(doc, puzzles, startIdx, sideLabel) {
-  const W=297, H=210, colW=110, margin=5, halfH=H/2;
-  const notesH = getNotes() === 'notes' ? 18 : 0;
-  const sudSize=Math.min(colW-2*margin, halfH-14-notesH), vGap=(halfH-sudSize-notesH)/2;
-  for (const [col,row,num] of [[0,0,startIdx],[0,1,startIdx+1],[1,0,startIdx+2],[1,1,startIdx+3]]) {
-    const ox = col*colW+margin, oy = row*halfH+vGap;
-    drawSudoku(doc, ox, oy, sudSize, puzzles[num-1], num, 3);
-    if (getNotes() === 'notes') drawNotes(doc, ox, oy + sudSize + 3, sudSize);
-  }
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-  doc.setLineDashPattern([],0);
-  doc.setDrawColor(180,180,180); doc.setLineWidth(0.12); doc.setLineDashPattern([1,2],0);
-  doc.line(0,halfH,2*colW,halfH); doc.setLineDashPattern([],0);
-  doc.setFontSize(4); doc.setFont(getFont(),'normal'); doc.setTextColor(120,120,120);
-  doc.text('--- fold at 110mm', 2*colW+2, halfH-4);
-  doc.text('... cut at 220mm', 2*colW+2, halfH);
-  doc.text(sideLabel, 2*colW+2, halfH+4);
-  drawPageTitle(doc, getTitle(), W, H);
+  const colW = 110, halfH = 105;
+  for (const [col, row, num] of [[0,0,startIdx],[0,1,startIdx+1],[1,0,startIdx+2],[1,1,startIdx+3]])
+    drawPanel(doc, col * colW, row * halfH, colW, halfH, puzzles[num-1], num);
+  PDFKit.marks(doc, 'regular', { label: sideLabel, title: getTitle(), horizontal: true });
 }
 
 function drawPassportSide(doc, puzzles, startIdx, sideLabel) {
-  const W=297, H=210, pw=134, ph=98;
-  const totalW=pw*2, totalH=ph*2;
-  const startX=(W-totalW)/2, startY=(H-totalH)/2;
-  const passNotesH = getNotes() === 'notes' ? 14 : 0;
-  const labelH=8, gridSize=Math.min(pw-8,ph-8-labelH-passNotesH);
-  const vOff=(ph-gridSize-labelH-passNotesH)/2, hOff=(pw-gridSize)/2;
-  for (const [col,row,num] of [[0,0,startIdx],[1,0,startIdx+1],[0,1,startIdx+2],[1,1,startIdx+3]]) {
-    const ox = startX+col*pw+hOff, oy = startY+row*ph+vOff;
-    drawSudoku(doc, ox, oy, gridSize, puzzles[num-1], num, 2.5);
-    if (getNotes() === 'notes') drawNotes(doc, ox, oy + gridSize + 2, gridSize);
-  }
-  doc.setDrawColor(160,160,160); doc.setLineWidth(0.15); doc.setLineDashPattern([],0);
-  for (let col=0;col<2;col++) for (let row=0;row<2;row++) doc.rect(startX+col*pw, startY+row*ph, pw, ph);
-  doc.setDrawColor(80,80,80); doc.setLineWidth(0.25); doc.setLineDashPattern([0.8,2],0);
-  doc.line(startX+pw, startY-4, startX+pw, startY+totalH+4);
-  doc.line(startX-4, startY+ph, startX+totalW+4, startY+ph);
-  doc.setLineDashPattern([],0);
-  doc.setFontSize(4); doc.setFont(getFont(),'normal'); doc.setTextColor(120,120,120);
-  doc.text('... cut horizontally and vertically at centre | '+sideLabel, W/2, startY-4, {align:'center'});
-  drawPageTitle(doc, getTitle(), W, H);
+  const W = 297, H = 210, pw = 134, ph = 98;
+  const startX = (W - pw * 2) / 2, startY = (H - ph * 2) / 2;
+  for (const [col, row, num] of [[0,0,startIdx],[1,0,startIdx+1],[0,1,startIdx+2],[1,1,startIdx+3]])
+    drawPanel(doc, startX + col * pw, startY + row * ph, pw, ph, puzzles[num-1], num);
+  PDFKit.marks(doc, 'passport', { label: sideLabel, title: getTitle() });
+}
+
+function drawCoverPage(doc, title, count) {
+  PDFKit.cover(doc, {
+    kicker: 'Sudoku', title: title || 'Sudoku Puzzles', blank: !title,
+    subtitle: `${DIFF_LABEL[getDifficulty()]} · ${count} puzzles`
+  });
 }
 
 // ── Build PDFs ────────────────────────────────────────────────────────────────
@@ -577,12 +482,13 @@ function buildDoc(puzzles, size, pages, sideFilter) {
   // For side2 manual duplex: pages must be in REVERSE order so when
   // the stack is flipped, page N back aligns with page N front.
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  PDFKit.register(doc);
   let first = true;
 
   // Dedicated cover sheet: blank left panel, framed right panel
   // Printed as first page of side1 so when folded = outside front cover
   if (getCover() === 'cover' && sideFilter !== 'side2') {
-    drawCoverPage(doc, getTitle());
+    drawCoverPage(doc, getTitle(), pages * 8);
     first = false;
   }
 
@@ -629,6 +535,7 @@ generateBtn.addEventListener('click', async () => {
   }
 
   setProgress(80, 'Building PDF...');
+  await PDFKit.preload();
   await new Promise(r => setTimeout(r, 50));
 
   if (duplexSupported) {

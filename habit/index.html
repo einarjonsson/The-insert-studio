@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TN Habit Tracker</title>
 <script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <link rel="stylesheet" href="../assets/tokens.css">
@@ -117,8 +118,9 @@
       <!-- Font -->
       <div class="section">
         <div class="section-title">Font Style</div>
-        <div class="radio-group cols-3">
-          <label class="radio-option"><input type="radio" name="font" value="helvetica" checked><span class="radio-btn"><span class="rb-title" style="font-family:sans-serif">Classic</span><span class="rb-sub">clean</span></span></label>
+        <div class="radio-group cols-2">
+          <label class="radio-option"><input type="radio" name="font" value="studio" checked><span class="radio-btn"><span class="rb-title" style="font-family:'DM Mono',monospace">Studio</span><span class="rb-sub">site look</span></span></label>
+          <label class="radio-option"><input type="radio" name="font" value="helvetica"><span class="radio-btn"><span class="rb-title" style="font-family:sans-serif">Classic</span><span class="rb-sub">clean</span></span></label>
           <label class="radio-option"><input type="radio" name="font" value="times"><span class="radio-btn"><span class="rb-title" style="font-family:serif">Serif</span><span class="rb-sub">elegant</span></span></label>
           <label class="radio-option"><input type="radio" name="font" value="courier"><span class="radio-btn"><span class="rb-title" style="font-family:monospace">Mono</span><span class="rb-sub">typewriter</span></span></label>
         </div>
@@ -190,7 +192,7 @@ const modalClose   = document.getElementById('modalClose');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const getSize    = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
-const getFont    = () => document.querySelector('input[name="font"]:checked')?.value || 'helvetica';
+const getFont    = () => document.querySelector('input[name="font"]:checked')?.value || 'studio';
 const getMonth   = () => document.getElementById('monthSelect').value;
 const getYear    = () => parseInt(document.getElementById('yearInput').value) || 2026;
 const getHabitCount = () => Math.min(8, Math.max(1, parseInt(document.getElementById('habitCount').value) || 6));
@@ -296,201 +298,135 @@ modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) mod
 function setProgress(pct, text) { progressFill.style.width = pct + '%'; progressText.textContent = text; }
 
 // ── PDF DRAWING ────────────────────────────────────────────────────────────────
-function drawHabitPage(doc, px, py, pw, ph, config) {
-  const { month, year, habits, font, showMood, showNotes, showStreak } = config;
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_PDF = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const HB_SAGE = PDFKit.COLORS.sage;
+const HB_TINT = [236, 241, 231];   // pale sage for weekend rows
+
+function drawHabitPage(doc, px, py, pw, ph, config, number) {
+  const { month, year, habits, font, showMood } = config;
+  const C = PDFKit.COLORS;
   const days = getDaysInMonth(month, year);
   const habitCount = habits.length;
-  const m = 4;
+  const top = PDFKit.header(doc, px, py, pw, {
+    eyebrow: `The Insert Studio · ${month} ${year}`, title: 'Habit', accent: 'Tracker', number, accentColor: HB_SAGE
+  });
+  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number, accentColor: HB_SAGE });
+  const G = PDFKit.family(font);
+  const m = 6;
 
-  // Layout: ROTATED — days as ROWS (top to bottom), habits as COLUMNS (left to right)
-  // Month title runs vertically on the left edge
-  const titleW = 9;  // vertical title strip width
-  const labelH = 8;  // habit name row height at top
-  const streakH = showMood ? 7 : 0;
-  const availW = pw - m*2 - titleW;
-  const availH = ph - m*2 - labelH - streakH;
-  const cellW = availW / habitCount;   // one column per habit
-  const cellH = Math.min(availH / days, 6); // one row per day
+  const dayW = 7;    // day-number column
+  const labelH = 9;  // habit name row height
+  const streakH = showMood ? 6 : 0;
+  const availW = pw - m*2 - dayW;
+  const availH = bottom - top - labelH - streakH - 1;
+  const cellW = availW / habitCount;
+  const cellH = Math.min(availH / days, 6);
   const actualGridH = cellH * days;
 
-  const gx = px + m + titleW;          // grid left
-  const gy = py + m + labelH;           // grid top
+  const gx = px + m + dayW;
+  const gy = top + labelH;
 
-  // Background
-  doc.setFillColor(253, 250, 245);
-  doc.rect(px, py, pw, ph, 'F');
-
-  // ── Vertical month title strip ──
-  const stripX = px + m;
-  const stripY = py + m;
-  const stripH = ph - m*2;
-  doc.setFillColor(28, 21, 16);
-  doc.rect(stripX, stripY, titleW - 1, stripH, 'F');
-
-  // Month text rotated inside strip — clipped to strip width
-  // (the day numbers use the strip below, so the month sits in its header block)
-  doc.setFont(font, 'bold');
-  doc.setFontSize(4.4);
-  doc.setTextColor(245, 240, 228);
-  doc.text(month.slice(0,3).toUpperCase(), stripX + (titleW-1)/2, stripY + 3.6, { align: 'center' });
-  doc.setFont(font, 'normal'); doc.setFontSize(3.2); doc.setTextColor(212, 175, 105);
-  doc.text(String(year), stripX + (titleW-1)/2, stripY + 6.6, { align: 'center' });
-
-  // ── Habit name columns (header row) ──
+  // ── Habit name columns (angled) ──
   for (let i = 0; i < habitCount; i++) {
     const cx = gx + i * cellW;
-    if (i % 2 === 0) {
-      doc.setFillColor(245, 240, 230);
-      doc.rect(cx, py + m, cellW, labelH, 'F');
-    }
-    doc.setFont(font, 'normal');
-    doc.setFontSize(Math.min(3.8, cellW * 0.38));
-    doc.setTextColor(30, 22, 14);
-    let label = habits[i] || `H${i+1}`;
-    while (doc.getTextWidth(label) > cellW - 1.5 && label.length > 2) label = label.slice(0,-1);
-    if (label !== (habits[i] || `H${i+1}`)) label += '…';
-    // Center in column, rotated
-    doc.text(label, cx + cellW/2, py + m + labelH - 1.5, { angle: 45, align: 'center' });
+    PDFKit.set(doc, G, 'normal', Math.min(4.6, cellW * 0.4 / 0.3528 * 0.4), C.ink);
+    const raw = habits[i] || `H${i+1}`;
+    let label = raw;
+    while (doc.getTextWidth(label) > Math.max(cellW * 1.6, 12) && label.length > 2) label = label.slice(0,-1);
+    if (label !== raw) label += '.';
+    doc.text(label, cx + cellW * 0.35, gy - 1.2, { angle: 40 });
   }
 
-  // Rule under header
-  doc.setDrawColor(120, 100, 70);
-  doc.setLineWidth(0.4);
+  doc.setDrawColor(...C.ink); doc.setLineWidth(0.4);
   doc.line(gx, gy, gx + habitCount * cellW, gy);
 
   // ── Day rows ──
   for (let d = 0; d < days; d++) {
     const ry = gy + d * cellH;
     const dayNum = d + 1;
-    const dow = new Date(year, MONTHS.indexOf(month), dayNum).getDay();
+    const dow = new Date(year, MONTHS_PDF.indexOf(month), dayNum).getDay();
     const isWeekend = dow === 0 || dow === 6;
-
-    // Row background
     if (isWeekend) {
-      doc.setFillColor(242, 234, 218);
-      doc.rect(gx, ry, habitCount * cellW, cellH, 'F');
-    } else if (d % 2 === 0) {
-      doc.setFillColor(250, 247, 240);
+      doc.setFillColor(HB_TINT[0], HB_TINT[1], HB_TINT[2]);
       doc.rect(gx, ry, habitCount * cellW, cellH, 'F');
     }
+    PDFKit.set(doc, G, isWeekend ? 'bold' : 'normal', Math.min(5.2, Math.max(3.6, cellH * 2.835 * 0.62)), isWeekend ? HB_SAGE : C.muted);
+    doc.text(String(dayNum), gx - 1.6, ry + cellH * 0.5 + 0.9 * Math.min(1, cellH / 4), { align: 'right' });
 
-    // Day number — centered inside the dark strip
-    const daynFS = Math.min(3.8, cellH * 0.65);
-    doc.setFont(font, isWeekend ? 'bold' : 'normal');
-    doc.setFontSize(daynFS);
-    doc.setTextColor(isWeekend ? 210 : 170, isWeekend ? 180 : 150, isWeekend ? 140 : 115);
-    doc.text(String(dayNum), px + m + (titleW-1)/2, ry + cellH * 0.70, { align: 'center' });
-
-    // Checkbox per habit
     const bp = Math.min(cellW * 0.1, cellH * 0.1, 0.8);
-    for (let h = 0; h < habitCount; h++) {
-      doc.setDrawColor(180, 165, 140);
-      doc.setLineWidth(0.15);
+    doc.setDrawColor(...C.tan); doc.setLineWidth(0.15);
+    for (let h = 0; h < habitCount && cellH >= 3.5; h++) {
       doc.rect(gx + h*cellW + bp, ry + bp, cellW - bp*2, cellH - bp*2);
     }
   }
 
   // ── Grid lines ──
-  doc.setDrawColor(210, 195, 170); doc.setLineWidth(0.1);
-  for (let h = 0; h <= habitCount; h++) {
-    doc.line(gx + h*cellW, gy, gx + h*cellW, gy + actualGridH);
-  }
+  doc.setDrawColor(...C.tan); doc.setLineWidth(0.1);
+  const boxed = cellH >= 3.5;   // cells already drawn as boxes
+  for (let h = 0; h <= habitCount && !boxed; h++) doc.line(gx + h*cellW, gy, gx + h*cellW, gy + actualGridH);
   for (let d = 0; d <= days; d++) {
-    doc.setLineWidth(d % 7 === 0 ? 0.25 : 0.1);
+    if (boxed && d % 7 !== 0) continue;
+    if (d % 7 === 0) { doc.setDrawColor(...C.muted); doc.setLineWidth(0.2); }
+    else { doc.setDrawColor(...C.tan); doc.setLineWidth(0.1); }
     doc.line(gx, gy + d*cellH, gx + habitCount*cellW, gy + d*cellH);
   }
-
-  // Outer border
-  doc.setDrawColor(80, 60, 35); doc.setLineWidth(0.45);
+  doc.setDrawColor(...C.ink); doc.setLineWidth(0.4);
   doc.rect(gx, gy, habitCount * cellW, actualGridH);
 
-  // ── Mood / streak row at bottom ──
+  // ── Mood row ──
   if (showMood && streakH > 0) {
-    const sy = gy + actualGridH;
-    doc.setFillColor(240, 232, 215);
-    doc.rect(gx, sy, habitCount * cellW, streakH, 'F');
-    doc.setFont(font, 'italic'); doc.setFontSize(3.5); doc.setTextColor(120, 100, 70);
-    doc.text('mood', px + m + 0.5, sy + streakH * 0.72);
-    for (let h = 0; h < habitCount; h++) {
-      doc.setDrawColor(180, 165, 140); doc.setLineWidth(0.15);
-      doc.rect(gx + h*cellW + 0.4, sy + 0.4, cellW - 0.8, streakH - 0.8);
-    }
-    doc.setDrawColor(100, 80, 55); doc.setLineWidth(0.3);
+    const sy = gy + actualGridH + 1;
+    PDFKit.set(doc, PDFKit.serif(), 'italic', 5.5, HB_SAGE);
+    doc.text('mood', gx - 1.6, sy + streakH * 0.62, { align: 'right' });
+    doc.setDrawColor(...C.tan); doc.setLineWidth(0.15);
+    for (let h = 0; h < habitCount; h++) doc.rect(gx + h*cellW + 0.4, sy + 0.4, cellW - 0.8, streakH - 0.8);
+    doc.setDrawColor(...C.ink); doc.setLineWidth(0.3);
     doc.rect(gx, sy, habitCount*cellW, streakH);
   }
 }
 
-function drawNotesPanel(doc, px, py, pw, ph, config) {
+function drawNotesPanel(doc, px, py, pw, ph, config, number) {
   const { month, year, font } = config;
-  const m = 5;
+  const C = PDFKit.COLORS;
+  const m = 6;
   const iw = pw - m*2;
+  const top = PDFKit.header(doc, px, py, pw, {
+    eyebrow: `The Insert Studio · ${month} ${year}`, title: 'Monthly', accent: 'Reflection', number, accentColor: HB_SAGE
+  });
+  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number, accentColor: HB_SAGE });
+  const Q = font === 'studio' ? PDFKit.serif() : font;     // prompt face
+  const L = font === 'studio' ? PDFKit.mono() : font;      // label face
 
-  doc.setFillColor(253, 250, 245);
-  doc.rect(px, py, pw, ph, 'F');
-
-  // Header
-  doc.setFont(font, 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(20, 15, 10);
-  doc.text(`${month} ${year}`, px + m, py + m + 6);
-  doc.setFont(font, 'italic');
-  doc.setFontSize(5.5);
-  doc.setTextColor(120, 100, 70);
-  doc.text('Monthly Reflection', px + pw - m, py + m + 6, { align: 'right' });
-
-  doc.setDrawColor(180, 165, 140);
-  doc.setLineWidth(0.3);
-  doc.line(px + m, py + m + 8, px + pw - m, py + m + 8);
-
-  let cy = py + m + 14;
-
-  // Reflection prompts with lined space
+  let cy = top + 5;
   const prompts = [
     { q: 'What went well this month?', lines: 4 },
     { q: 'What was challenging?', lines: 3 },
     { q: 'Habit I\'m most proud of:', lines: 2 },
     { q: 'Focus for next month:', lines: 3 },
   ];
-
   const lineGap = 4.8;
-
+  const statsH = 16;
   for (const { q, lines } of prompts) {
-    if (cy + lines * lineGap + 12 > py + ph - m) break;
-
-    doc.setFont(font, 'italic');
-    doc.setFontSize(4.8);
-    doc.setTextColor(80, 65, 45);
+    if (cy + lines * lineGap + 12 > bottom) break;
+    PDFKit.set(doc, Q, 'italic', 7, C.ink);
     doc.text(q, px + m, cy);
     cy += 5;
-
-    doc.setDrawColor(200, 185, 160);
-    doc.setLineWidth(0.2);
-    for (let l = 0; l < lines; l++) {
-      doc.line(px + m, cy + l * lineGap, px + pw - m, cy + l * lineGap);
-    }
+    doc.setDrawColor(...C.rule); doc.setLineWidth(0.2);
+    for (let l = 0; l < lines; l++) doc.line(px + m, cy + l * lineGap, px + pw - m, cy + l * lineGap);
     cy += lines * lineGap + 8;
   }
 
-  // Monthly stats boxes at bottom
-  const statsY = py + ph - m - 20;
-  if (cy < statsY - 4) {
-    doc.setFont(font, 'italic');
-    doc.setFontSize(4.5);
-    doc.setTextColor(120, 100, 70);
-    doc.text('— Month at a glance —', px + pw/2, statsY - 6, { align: 'center' });
-
-    const boxes = [
-      { label: 'Best day' }, { label: 'Perfect days' }, { label: 'Overall' }
-    ];
+  const statsY = bottom - statsH - 1;
+  if (cy < statsY - 8) {
+    PDFKit.set(doc, L, 'normal', 4.6, HB_SAGE);
+    PDFKit.text(doc, 'MONTH AT A GLANCE', px + pw/2, statsY - 3, { align: 'center' }, 0.6);
     const bw = (iw - 8) / 3;
-    boxes.forEach((b, i) => {
+    ['Best day', 'Perfect days', 'Overall'].forEach((label, i) => {
       const bx = px + m + i * (bw + 4);
-      doc.setDrawColor(180, 165, 140); doc.setLineWidth(0.25);
-      doc.rect(bx, statsY, bw, 16);
-      doc.setFont(font, 'normal'); doc.setFontSize(3.8);
-      doc.setTextColor(120, 100, 70);
-      doc.text(b.label, bx + bw/2, statsY + 13, { align: 'center' });
+      doc.setDrawColor(...C.tan); doc.setLineWidth(0.25);
+      doc.rect(bx, statsY, bw, statsH);
+      PDFKit.set(doc, L, 'normal', 4.6, C.muted);
+      doc.text(label, bx + bw/2, statsY + statsH - 2.5, { align: 'center' });
     });
   }
 }
@@ -498,44 +434,28 @@ function drawNotesPanel(doc, px, py, pw, ph, config) {
 // ── Layout engine ──────────────────────────────────────────────────────────────
 function buildDoc(config) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  PDFKit.register(doc);
   const { size, pages, showNotes } = config;
+  const label = `${config.month} ${config.year}`;
 
   for (let p = 0; p < pages; p++) {
     if (p > 0) doc.addPage();
 
     if (size === 'regular') {
-      const W = 297, H = 210, colW = 110, halfH = H / 2;
-      // 4 panels: TL, BL, TR, BR
-      // TL + TR = grid panels (top/bottom halves of col 0 and 1)
-      // For habit tracker: one full 110x210 panel = the grid, other = notes
-      // We use left col for grid, right col for notes
-      drawHabitPage(doc, 0, 0, colW, H, config);
-      if (showNotes) {
-        drawNotesPanel(doc, colW, 0, colW, H, config);
-      } else {
-        drawHabitPage(doc, colW, 0, colW, H, config);
-      }
-      // Fold/cut lines
-      doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-      doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-      doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-      doc.setLineDashPattern([],0);
-      doc.setFont(config.font,'normal'); doc.setFontSize(4); doc.setTextColor(140,130,110);
-      doc.text('--- fold', 2*colW+2, H/2-4);
-      doc.text('... cut', 2*colW+2, H/2);
+      const H = 210, colW = 110;
+      drawHabitPage(doc, 0, 0, colW, H, config, 1);
+      if (showNotes) drawNotesPanel(doc, colW, 0, colW, H, config, 2);
+      else drawHabitPage(doc, colW, 0, colW, H, config, 2);
+      PDFKit.marks(doc, 'regular', { label });
     } else {
-      // Passport: 4 panels 134x98
       const W=297, H=210, pw=134, ph=98;
       const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
       const panels = [[sx,sy],[sx+pw,sy],[sx,sy+ph],[sx+pw,sy+ph]];
       panels.forEach(([ox,oy], i) => {
-        if (i === 0 || i === 1) drawHabitPage(doc, ox, oy, pw, ph, config);
-        else drawNotesPanel(doc, ox, oy, pw, ph, config);
+        if (i === 0 || i === 1) drawHabitPage(doc, ox, oy, pw, ph, config, i + 1);
+        else drawNotesPanel(doc, ox, oy, pw, ph, config, i + 1);
       });
-      doc.setDrawColor(100,100,100); doc.setLineWidth(0.25); doc.setLineDashPattern([0.8,2],0);
-      doc.line(sx+pw,sy-4,sx+pw,sy+ph*2+4);
-      doc.line(sx-4,sy+ph,sx+pw*2+4,sy+ph);
-      doc.setLineDashPattern([],0);
+      PDFKit.marks(doc, 'passport', { label });
     }
   }
   return doc;
@@ -560,6 +480,7 @@ generateBtn.addEventListener('click', async () => {
 
   setProgress(70, 'Drawing pages...');
   await new Promise(r => setTimeout(r, 80));
+  await PDFKit.preload();
   const doc = buildDoc(config);
 
   const slug = `${config.month.toLowerCase()}-${config.year}`;

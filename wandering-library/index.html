@@ -313,10 +313,16 @@ modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) mod
 const PW = 110, PH = 210; // panel dimensions in mm (Regular TN)
 const PPW = 134, PPH = 98; // passport panel
 
-function mmFont(doc, size, style='normal', face='times') {
-  doc.setFont(face, style);
+// Fonts: Playfair (PDFKit.serif) for titles / section headings / numerals, DM Mono (PDFKit.mono) for labels and lists.
+// Sizes are pt, layout is mm.
+function mmFont(doc, size, style='normal', face='serif') {
+  const mono = face === 'mono';
+  if (mono && style === 'italic') style = 'normal';
+  if (mono && style === 'bolditalic') style = 'bold';
+  doc.setFont(mono ? PDFKit.mono() : PDFKit.serif(), style);
   doc.setFontSize(size);
 }
+const isWide = (pw) => pw > 120;   // passport panels (134mm) get a two-column layout
 
 // Ornate border with corner flourishes
 function drawBorder(doc, x, y, w, h, thin=false) {
@@ -340,11 +346,34 @@ function drawBorder(doc, x, y, w, h, thin=false) {
   }
 }
 
-// Ornate section header
-function drawSectionHeader(doc, text, x, y, w, fs=5.5) {
+// Coloured title band (kept from the original design) with starred Playfair title
+function drawBand(doc, px, py, pw, rgb, textRgb, title, sub) {
+  doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+  doc.rect(px, py, pw, 10, 'F');
+  mmFont(doc, 10, 'bolditalic', 'serif'); doc.setTextColor(textRgb[0], textRgb[1], textRgb[2]);
+  PDFKit.starTitle(doc, title, px + pw/2, py + 6.7);
+  if (sub) {
+    mmFont(doc, 6, 'italic', 'serif'); doc.setTextColor(textRgb[0], textRgb[1], textRgb[2]);
+    let t = sub;
+    while (doc.getTextWidth(t) > pw/2 - 22 && t.length > 3) t = t.slice(0, -2).trimEnd() + '…';
+    doc.text(t, px+pw-5, py+8.6, {align:'right'});
+  }
+}
+
+// Footer text line inside the frame: brand label + italic page number
+function drawFooter(doc, px, py, pw, ph, pageNum) {
+  mmFont(doc, 3.4, 'normal', 'mono'); doc.setTextColor(154,144,128);
+  PDFKit.text(doc, 'THE INSERT STUDIO', px+pw/2, py+ph-4, {align:'center'}, 0.5);
+  if (pageNum !== '' && pageNum != null) {
+    mmFont(doc, 6.5, 'italic', 'serif'); doc.setTextColor(122,46,14);
+    doc.text(String(pageNum), px+pw-6, py+ph-3.8, {align:'right'});
+  }
+}
+
+// Ornate section header: Playfair italic between two rules. Occupies ~3.4mm below the baseline y.
+function drawSectionHeader(doc, text, x, y, w, fs=6) {
   const pad = 3;
-  doc.setFontSize(fs);
-  doc.setFont('times', 'italic');
+  mmFont(doc, fs, 'italic', 'serif');
   doc.setTextColor(60, 40, 20);
   const tw = doc.getTextWidth(text);
   const cx = x + w/2;
@@ -355,11 +384,12 @@ function drawSectionHeader(doc, text, x, y, w, fs=5.5) {
     doc.line(x+4, y, cx - tw/2 - pad, y);
     doc.line(cx + tw/2 + pad, y, x+w-4, y);
   }
-  doc.text(text, cx, y + 0.8, { align:'center' });
+  doc.text(text, cx, y + 0.9, { align:'center' });
 }
+const SH = 3.5; // header baseline -> first content
 
 // Ruled lines
-function drawLines(doc, x, y, w, count, gap=4.5, color=[180,170,155]) {
+function drawLines(doc, x, y, w, count, gap=4.5, color=[201,185,143]) {
   doc.setDrawColor(...color);
   doc.setLineWidth(0.18);
   for (let i = 0; i < count; i++) {
@@ -367,16 +397,15 @@ function drawLines(doc, x, y, w, count, gap=4.5, color=[180,170,155]) {
   }
 }
 
-// Small label
-function label(doc, text, x, y, fs=4, color=[100,80,60]) {
-  doc.setFontSize(fs);
-  doc.setFont('times', 'italic');
+// Small label (DM Mono)
+function label(doc, text, x, y, fs=4.2, color=[100,80,60]) {
+  mmFont(doc, fs, 'normal', 'mono');
   doc.setTextColor(...color);
   doc.text(text, x, y);
 }
 
 // Field with underline
-function field(doc, name, x, y, w, fs=4) {
+function field(doc, name, x, y, w, fs=4.2) {
   label(doc, name, x, y, fs);
   doc.setDrawColor(160, 140, 110);
   doc.setLineWidth(0.18);
@@ -384,17 +413,24 @@ function field(doc, name, x, y, w, fs=4) {
   doc.line(lx, y+0.5, x+w, y+0.5);
 }
 
+// Big name line: small caption above a heavier rule
+function nameLine(doc, caption, x, y, w, rgb) {
+  label(doc, caption, x, y, 4.2);
+  doc.setDrawColor(rgb[0], rgb[1], rgb[2]); doc.setLineWidth(0.4);
+  doc.line(x, y+4.2, x+w, y+4.2);
+  return y + 7.4;
+}
+
 // d6 mini table
-function drawD6Table(doc, entries, x, y, w, rowH = 4.2) {
+function drawD6Table(doc, entries, x, y, w, rowH = 3.0) {
   entries.forEach(([roll, text], i) => {
     const ry = y + i*rowH;
-    doc.setFontSize(3.8);
-    doc.setFont('times', 'bold');
+    mmFont(doc, 4, 'bold', 'mono');
     doc.setTextColor(100, 60, 20);
-    doc.text(roll, x+1, ry+rowH*0.74);
-    doc.setFont('times', 'normal');
+    doc.text(roll, x+1, ry+rowH*0.7);
+    mmFont(doc, 4, 'normal', 'mono');
     doc.setTextColor(40, 30, 20);
-    doc.text(text, x+5, ry+rowH*0.74);
+    doc.text(text, x+6.5, ry+rowH*0.7);
     if (i < entries.length-1) {
       doc.setDrawColor(200,185,165);
       doc.setLineWidth(0.1);
@@ -406,243 +442,213 @@ function drawD6Table(doc, entries, x, y, w, rowH = 4.2) {
   doc.rect(x, y, w, entries.length*rowH);
 }
 
+// Header + n ruled lines. Returns the y after the block.
+function secLines(doc, title, x, y, w, n, gap) {
+  drawSectionHeader(doc, title, x, y, w);
+  drawLines(doc, x, y+SH+0.6, w, n, gap);
+  return y + SH + 0.6 + (n-1)*gap + 3.4;
+}
+
+const D6_ROAD = [
+  ['1–2', 'Peaceful road, time to think'],
+  ['3', 'Met a traveler on the way'],
+  ['4', 'Took a wrong turn — discovery?'],
+  ['5', 'Bad weather slowed you down'],
+  ['6', 'Something unusual happened'],
+];
+const D6_VISITOR = [
+  ['1', 'A curious child with questions'],
+  ['2', 'An elderly scholar seeking lore'],
+  ['3', 'A merchant wanting distraction'],
+  ['4', 'Someone who just returned a book'],
+  ['5', 'A traveler passing through'],
+  ['6', 'Someone from your past'],
+];
+const D6_PATRON = [
+  ['1','Curious — full of questions'],
+  ['2','Shy — hard to draw out'],
+  ['3','Gruff — but secretly kind'],
+  ['4','Warm — remembers your name'],
+  ['5','Mysterious — few answers'],
+  ['6','Learned — knows much'],
+];
+
+function drawChecks(doc, items, x, y, w) {
+  items.forEach((c, i) => {
+    const bx = x + (i % 2) * (w / 2), by = y + Math.floor(i / 2) * 4;
+    doc.setDrawColor(100,80,55); doc.setLineWidth(0.3);
+    doc.rect(bx, by - 2.6, 2.6, 2.6);
+    mmFont(doc, 4.6, 'normal', 'mono'); doc.setTextColor(50,35,20);
+    doc.text(c, bx + 4, by);
+  });
+}
+
 // ── SESSION LOG ────────────────────────────────────────────────────────────────
 function drawSessionLog(doc, px, py, pw, ph, pageNum, librarian) {
   const m = 5; // margin
   const iw = pw - m*2; // inner width
+  const B = py + ph - 8.6; // content bottom (above the footer)
   drawBorder(doc, px, py, pw, ph);
+  drawBand(doc, px, py, pw, [55,35,15], [240,230,210], 'Session Log', librarian);
 
-  // Header
-  doc.setFillColor(55, 35, 15);
-  doc.rect(px, py, pw, 10, 'F');
-  doc.setFont('times', 'bolditalic');
-  doc.setFontSize(7.5);
-  doc.setTextColor(240, 230, 210);
-  PDFKit.starTitle(doc, 'Session Log', px + pw/2, py + 6.8);
-  if (librarian) {
-    doc.setFontSize(4); doc.setFont('times','italic');
-    doc.setTextColor(200,185,160);
-    doc.text(librarian, px+pw-m, py+9.2, {align:'right'});
-  }
-
-  let cy = py + 13;
+  let cy = py + 14.4;
 
   // Session # / Date / Weather row
-  doc.setFontSize(3.8); doc.setFont('times','italic'); doc.setTextColor(100,80,55);
-  const fields3 = [['Session #', 22], ['Date', 30], ['Weather', iw-58]];
+  const fields3 = [['Session #:', 24], ['Date:', 30], ['Weather:', iw-60]];
   let fx = px+m;
   fields3.forEach(([name, w]) => {
-    field(doc, name+':', fx, cy, w, 3.8);
+    field(doc, name, fx, cy, w, 4.2);
     fx += w + 3;
   });
-  cy += 5;
-
-  // "The Road" section
-  drawSectionHeader(doc, '— The Road —', px+m, cy, iw, 4.4);
-  cy += 4.4;
-
-  // Travel prompt line
-  drawLines(doc, px+m, cy, iw, 1, 4.5);
-  cy += 6;
-
-  // Journey d6 table
-  label(doc, 'Roll d6 for the journey:', px+m, cy, 3.8);
-  cy += 3;
-  drawD6Table(doc, [
-    ['1–2', 'Peaceful road, time to think'],
-    ['3', 'Met a traveler on the way'],
-    ['4', 'Took a wrong turn — discovery?'],
-    ['5', 'Bad weather slowed you down'],
-    ['6', 'Something unusual happened'],
-  ], px+m, cy, iw, 3.1);
-  cy += 5*3.1 + 2.2;
-
-  // "The Encounter" section
-  drawSectionHeader(doc, '— Who Came to the Library? —', px+m, cy, iw, 4.4);
-  cy += 4.4;
-  drawD6Table(doc, [
-    ['1', 'A curious child with questions'],
-    ['2', 'An elderly scholar seeking lore'],
-    ['3', 'A merchant wanting distraction'],
-    ['4', 'Someone who just returned a book'],
-    ['5', 'A traveler passing through'],
-    ['6', 'Someone from your past'],
-  ], px+m, cy, iw, 3.1);
-  cy += 6*3.1 + 2.2;
-
-  // "The Library Tonight" checklist (two columns)
-  drawSectionHeader(doc, '— The Library Tonight —', px+m, cy, iw, 4.4);
-  cy += 4.4;
+  cy += 5.2;
   const checks = ['Books lent out', 'Books returned', 'New book found', 'Book lost or damaged'];
-  checks.forEach((c, i) => {
-    const bx = px + m + (i % 2) * (iw / 2), by = cy + Math.floor(i / 2) * 4.4;
-    doc.setDrawColor(100,80,55); doc.setLineWidth(0.3);
-    doc.rect(bx, by - 2.6, 2.6, 2.6);
-    doc.setFont('times','normal'); doc.setFontSize(4.3); doc.setTextColor(50,35,20);
-    doc.text(c, bx + 4, by);
-  });
-  cy += 2 * 4.4 + 1;
 
-  // "What happened" — journal lines, only as many as genuinely fit in this panel
-  const wLines = Math.floor((py + ph - m - 2 - (cy + 4.4)) / 4.5);
-  if (wLines >= 2) {
-    drawSectionHeader(doc, '— What Happened —', px+m, cy, iw, 4.4);
-    cy += 4.4;
-    drawLines(doc, px+m, cy, iw, wLines, 4.5);
-    cy += wLines*4.5 + 3;
+  if (isWide(pw)) {
+    // Passport: two columns
+    const cw = (iw - 5) / 2, lx = px+m, rx = px+m+cw+5;
+    let ly = cy, ry = cy;
+    drawSectionHeader(doc, '— The Road —', lx, ly, cw); ly += SH;
+    drawLines(doc, lx, ly, cw, 1, 4.5); ly += 4.4;
+    label(doc, 'Roll d6 for the journey:', lx, ly, 4.2); ly += 1.4;
+    drawD6Table(doc, D6_ROAD, lx, ly, cw, 3.0); ly += 5*3.0 + 3;
+    drawSectionHeader(doc, '— Who Came to the Library? —', rx, ry, cw); ry += SH;
+    drawD6Table(doc, D6_VISITOR, rx, ry, cw, 3.0); ry += 6*3.0 + 3;
+    // the shorter column gets the checklist
+    drawSectionHeader(doc, '— The Library Tonight —', lx, ly, cw); ly += SH + 0.8;
+    drawChecks(doc, checks, lx, ly, cw); ly += 2*4;
+    cy = Math.max(ly, ry) + 1.4;
+    // What happened + next time, side by side
+    const nLines = Math.max(2, Math.floor((B - (cy + SH + 0.6)) / 4.2));
+    drawSectionHeader(doc, '— What Happened —', lx, cy, cw);
+    drawLines(doc, lx, cy+SH+0.6, cw, nLines, 4.2);
+    drawSectionHeader(doc, '— Until Next Time —', rx, cy, cw);
+    field(doc, 'Next destination:', rx, cy+SH+1.8, cw, 4.2);
+    field(doc, 'One thing I\'m carrying forward:', rx, cy+SH+7.8, cw, 4.2);
+  } else {
+    drawSectionHeader(doc, '— The Road —', px+m, cy, iw); cy += SH;
+    drawLines(doc, px+m, cy, iw, 1, 4.5); cy += 4.2;
+    label(doc, 'Roll d6 for the journey:', px+m, cy, 4.2); cy += 1.4;
+    drawD6Table(doc, D6_ROAD, px+m, cy, iw, 2.9); cy += 5*2.9 + 2.6;
+    drawSectionHeader(doc, '— Who Came to the Library? —', px+m, cy, iw); cy += SH;
+    drawD6Table(doc, D6_VISITOR, px+m, cy, iw, 2.9); cy += 6*2.9 + 2.6;
+    drawSectionHeader(doc, '— The Library Tonight —', px+m, cy, iw); cy += SH + 0.8;
+    drawChecks(doc, checks, px+m, cy, iw); cy += 2*4 + 0.4;
+    // Optional journal lines, only as many as genuinely fit
+    const need = SH + 5 + 5.6;                 // "Until next time" block
+    const wLines = Math.floor((B - need - (cy + SH + 0.6) - 1.5) / 4);
+    if (wLines >= 2) {
+      drawSectionHeader(doc, '— What Happened —', px+m, cy, iw); cy += SH + 0.6;
+      drawLines(doc, px+m, cy, iw, wLines, 4); cy += wLines*4 + 0.8;
+    }
+    drawSectionHeader(doc, '— Until Next Time —', px+m, cy, iw); cy += SH + 1.2;
+    field(doc, 'Next destination:', px+m, cy, iw, 4.2); cy += 5;
+    field(doc, 'One thing I\'m carrying forward:', px+m, cy, iw, 4.2);
   }
-
-  // "Until next time"
-  if (cy < py+ph-14) {
-    drawSectionHeader(doc, '— Until Next Time —', px+m, cy, iw, 5);
-    cy += 5;
-    field(doc, 'Next destination:', px+m, cy, iw, 4);
-    cy += 6;
-    field(doc, 'One thing I\'m carrying forward:', px+m, cy, iw, 4);
-  }
-
-  // Page number
-  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
-  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+  drawFooter(doc, px, py, pw, ph, pageNum);
 }
 
 // ── LOCATION CARD ──────────────────────────────────────────────────────────────
 function drawLocationCard(doc, px, py, pw, ph, pageNum) {
   const m = 5, iw = pw - m*2;
+  const B = py + ph - 8.6;
   drawBorder(doc, px, py, pw, ph);
+  drawBand(doc, px, py, pw, [40,60,35], [220,240,215], 'Location Card');
 
-  // Header
-  doc.setFillColor(40, 60, 35);
-  doc.rect(px, py, pw, 10, 'F');
-  doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(220,240,215);
-  PDFKit.starTitle(doc, 'Location Card', px + pw/2, py + 6.8);
+  let cy = py+14.2;
+  cy = nameLine(doc, 'Place Name', px+m, cy, iw, [80,100,60]);
 
-  let cy = py+14;
-
-  // Name field (large)
-  label(doc, 'Place Name', px+m, cy, 3.8);
-  cy += 2;
-  doc.setDrawColor(80,100,60); doc.setLineWidth(0.4);
-  doc.line(px+m, cy+5, px+pw-m, cy+5);
-  cy += 10;
-
-  // Region / Type / First Visit
-  field(doc, 'Region:', px+m, cy, iw*0.45, 4);
-  field(doc, 'Type:', px+m+iw*0.5, cy, iw*0.5, 4);
-  cy += 7;
-  field(doc, 'First visited:', px+m, cy, iw*0.5, 4);
-  field(doc, 'Pop. feel:', px+m+iw*0.55, cy, iw*0.45, 4);
-  cy += 7;
-
-  // Notable features
-  drawSectionHeader(doc, '— Notable Features —', px+m, cy, iw, 5);
-  cy += 5; drawLines(doc, px+m, cy, iw, 3); cy += 3*4.5+4;
-
-  // What the library offered
-  drawSectionHeader(doc, '— What the Library Offered Here —', px+m, cy, iw, 5);
-  cy += 5; drawLines(doc, px+m, cy, iw, 3); cy += 3*4.5+4;
-
-  // People met here
-  drawSectionHeader(doc, '— People Met Here —', px+m, cy, iw, 5);
-  cy += 5; drawLines(doc, px+m, cy, iw, 3); cy += 3*4.5+4;
-
-  // Return visits
-  drawSectionHeader(doc, '— Return Visits —', px+m, cy, iw, 5);
-  cy += 5;
-  for (let i=0; i<2; i++) {
-    field(doc, 'Date:', px+m, cy, iw*0.4, 4);
-    field(doc, 'Note:', px+m+iw*0.45, cy, iw*0.55, 4);
-    cy += 6;
-  }
-  cy += 2;
-
-  // I will remember
-  if (cy < py+ph-20) {
-    drawSectionHeader(doc, '— I Will Remember —', px+m, cy, iw, 5);
+  if (isWide(pw)) {
+    // Passport: one row of four fields, then two columns
+    const fw = (iw - 9) / 4;
+    ['Region:', 'Type:', 'First visited:', 'Pop. feel:'].forEach((n, i) => field(doc, n, px+m+i*(fw+3), cy, fw, 4.2));
+    cy += 5.4;
+    const cw = (iw - 5) / 2, lx = px+m, rx = px+m+cw+5;
+    const g = 4.2;
+    let ly = secLines(doc, '— Notable Features —', lx, cy, cw, 3, g);
+    ly = secLines(doc, '— What the Library Offered Here —', lx, ly, cw, 3, g);
+    let ry = secLines(doc, '— People Met Here —', rx, cy, cw, 3, g);
+    drawSectionHeader(doc, '— Return Visits —', rx, ry, cw); ry += SH + 1.4;
+    for (let i=0; i<2; i++) { field(doc, 'Date:', rx, ry, cw*0.4, 4.2); field(doc, 'Note:', rx+cw*0.45, ry, cw*0.55, 4.2); ry += 4.8; }
+    cy = Math.max(ly, ry + 0.4);
+    const n = Math.max(1, Math.floor((B - (cy + SH + 0.6)) / g) + 1);
+    secLines(doc, '— I Will Remember —', px+m, cy, iw, n, g);
+  } else {
+    field(doc, 'Region:', px+m, cy, iw*0.45, 4.2);
+    field(doc, 'Type:', px+m+iw*0.5, cy, iw*0.5, 4.2);
     cy += 5;
-    drawLines(doc, px+m, cy, iw, Math.floor((py+ph-m-cy-4)/4.5));
+    field(doc, 'First visited:', px+m, cy, iw*0.5, 4.2);
+    field(doc, 'Pop. feel:', px+m+iw*0.55, cy, iw*0.45, 4.2);
+    cy += 5.4;
+    // fixed parts: 5 headers, return rows; the rest is shared by 8 ruled lines
+    const fixed = 5*(SH + 0.6 + 2.6) + 2*4.8;
+    const g = Math.max(3.2, Math.min(4.5, (B - cy - fixed) / 11));
+    cy = secLines(doc, '— Notable Features —', px+m, cy, iw, 3, g) - 0.8;
+    cy = secLines(doc, '— What the Library Offered Here —', px+m, cy, iw, 3, g) - 0.8;
+    cy = secLines(doc, '— People Met Here —', px+m, cy, iw, 3, g) - 0.8;
+    drawSectionHeader(doc, '— Return Visits —', px+m, cy, iw); cy += SH + 1.4;
+    for (let i=0; i<2; i++) {
+      field(doc, 'Date:', px+m, cy, iw*0.4, 4.2);
+      field(doc, 'Note:', px+m+iw*0.45, cy, iw*0.55, 4.2);
+      cy += 4.8;
+    }
+    cy += 0.8;
+    secLines(doc, '— I Will Remember —', px+m, cy, iw, 2, g);
   }
-
-  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
-  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+  drawFooter(doc, px, py, pw, ph, pageNum);
 }
 
 // ── PATRON CARD ────────────────────────────────────────────────────────────────
 function drawPatronCard(doc, px, py, pw, ph, pageNum) {
   const m = 5, iw = pw - m*2;
+  const B = py + ph - 8.6;
   drawBorder(doc, px, py, pw, ph);
+  drawBand(doc, px, py, pw, [60,35,55], [235,220,240], 'Patron Card');
 
-  // Header
-  doc.setFillColor(60, 35, 55);
-  doc.rect(px, py, pw, 10, 'F');
-  doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(235,220,240);
-  PDFKit.starTitle(doc, 'Patron Card', px + pw/2, py + 6.8);
+  let cy = py+14.2;
+  cy = nameLine(doc, 'Name', px+m, cy, iw, [100,60,100]);
+  field(doc, 'Met at:', px+m, cy, iw*0.55, 4.2);
+  field(doc, 'Date:', px+m+iw*0.6, cy, iw*0.4, 4.2);
+  cy += 5.4;
 
-  let cy = py+14;
+  const willReturn = (x, y) => {
+    doc.setDrawColor(100,80,55); doc.setLineWidth(0.3);
+    doc.rect(x, y-2.8, 2.8, 2.8);
+    mmFont(doc, 4.6, 'normal', 'mono'); doc.setTextColor(50,35,20);
+    doc.text('Will return', x+4.5, y);
+  };
 
-  // Name (large)
-  label(doc, 'Name', px+m, cy, 3.8);
-  cy += 2;
-  doc.setDrawColor(100,60,100); doc.setLineWidth(0.4);
-  doc.line(px+m, cy+5, px+pw-m, cy+5);
-  cy += 10;
-
-  field(doc, 'Met at:', px+m, cy, iw*0.55, 4);
-  field(doc, 'Date:', px+m+iw*0.6, cy, iw*0.4, 4);
-  cy += 7;
-
-  // Personality — d6 table
-  drawSectionHeader(doc, '— Personality (d6) —', px+m, cy, iw, 5);
-  cy += 5;
-  drawD6Table(doc, [
-    ['1','Curious — full of questions'],
-    ['2','Shy — hard to draw out'],
-    ['3','Gruff — but secretly kind'],
-    ['4','Warm — remembers your name'],
-    ['5','Mysterious — few answers'],
-    ['6','Learned — knows much'],
-  ], px+m, cy, iw);
-  cy += 6*4.2+4;
-
-  // Appearance
-  drawSectionHeader(doc, '— Appearance —', px+m, cy, iw, 5);
-  cy += 5; drawLines(doc, px+m, cy, iw, 2); cy += 2*4.5+4;
-
-  // Books
-  drawSectionHeader(doc, '— Books —', px+m, cy, iw, 5);
-  cy += 5;
-  field(doc, 'Borrowed:', px+m, cy, iw, 4); cy += 6;
-  field(doc, 'Returned:', px+m, cy, iw, 4); cy += 8;
-
-  // Will return?
-  doc.setDrawColor(100,80,55); doc.setLineWidth(0.3);
-  doc.rect(px+m, cy-3, 3, 3);
-  doc.text('Will return', px+m+5, cy, {baseline:'bottom'});
-  doc.setFontSize(4.5); doc.setFont('times','normal'); doc.setTextColor(50,35,20);
-  doc.text('Will return', px+m+5, cy);
-  cy += 7;
-
-  // Notes
-  if (cy < py+ph-20) {
-    drawSectionHeader(doc, '— Notes —', px+m, cy, iw, 5);
-    cy += 5;
-    drawLines(doc, px+m, cy, iw, Math.floor((py+ph-m-cy-4)/4.5));
+  if (isWide(pw)) {
+    const cw = (iw - 5) / 2, lx = px+m, rx = px+m+cw+5;
+    let ly = cy, ry = cy;
+    drawSectionHeader(doc, '— Personality (d6) —', lx, ly, cw); ly += SH;
+    drawD6Table(doc, D6_PATRON, lx, ly, cw, 3.2); ly += 6*3.2 + 4.2;
+    willReturn(lx, ly); ly += 4.6;
+    ry = secLines(doc, '— Appearance —', rx, ry, cw, 2, 4.2);
+    drawSectionHeader(doc, '— Books —', rx, ry, cw); ry += SH + 1.4;
+    field(doc, 'Borrowed:', rx, ry, cw, 4.2); ry += 4.8;
+    field(doc, 'Returned:', rx, ry, cw, 4.2); ry += 5;
+    cy = Math.max(ly, ry) + 0.6;
+    const n = Math.max(1, Math.floor((B - (cy + SH + 0.6)) / 4.2) + 1);
+    secLines(doc, '— Notes —', px+m, cy, iw, n, 4.2);
+  } else {
+    drawSectionHeader(doc, '— Personality (d6) —', px+m, cy, iw); cy += SH;
+    drawD6Table(doc, D6_PATRON, px+m, cy, iw, 2.9); cy += 6*2.9 + 3.6;
+    cy = secLines(doc, '— Appearance —', px+m, cy, iw, 2, 3.8) - 0.6;
+    drawSectionHeader(doc, '— Books —', px+m, cy, iw); cy += SH + 1.4;
+    field(doc, 'Borrowed:', px+m, cy, iw, 4.2); cy += 4.8;
+    field(doc, 'Returned:', px+m, cy, iw, 4.2); cy += 5.4;
+    willReturn(px+m, cy); cy += 4.4;
+    const n = Math.max(1, Math.floor((B - (cy + SH + 0.6)) / 3.8) + 1);
+    secLines(doc, '— Notes —', px+m, cy, iw, n, 3.8);
   }
-
-  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
-  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+  drawFooter(doc, px, py, pw, ph, pageNum);
 }
 
 // ── BOOK LEDGER ────────────────────────────────────────────────────────────────
 function drawBookLedger(doc, px, py, pw, ph, pageNum, librarian) {
   const m = 4, iw = pw - m*2;
   drawBorder(doc, px, py, pw, ph);
-
-  // Header
-  doc.setFillColor(35, 45, 65);
-  doc.rect(px, py, pw, 10, 'F');
-  doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(215,225,245);
-  PDFKit.starTitle(doc, 'Book Ledger', px + pw/2, py + 6.8);
+  drawBand(doc, px, py, pw, [35,45,65], [215,225,245], 'Book Ledger', librarian);
 
   let cy = py+13;
 
@@ -657,19 +663,21 @@ function drawBookLedger(doc, px, py, pw, ph, pageNum, librarian) {
   let cx = px+m;
   doc.setFillColor(240,235,220);
   doc.rect(px+m, cy-3.5, iw, 5.5, 'F');
-  doc.setFont('times','bold'); doc.setFontSize(4); doc.setTextColor(60,45,25);
+  mmFont(doc, 4, 'bold', 'mono'); doc.setTextColor(60,45,25);
   cols.forEach(col => {
-    doc.text(col.label, cx+0.5, cy+0.8);
+    let t = col.label.toUpperCase();
+    while (doc.getTextWidth(t) > col.w*iw - 1 && t.length > 2) t = t.slice(0, -1);
+    doc.text(t, cx+0.8, cy+0.2);
     cx += col.w*iw;
   });
   cy += 4;
 
   // Rows
-  const rowH = (ph - (cy-py) - m - 4) / 14;
+  const rowH = (ph - (cy-py) - 9.4) / 14;
   for (let i=0; i<14; i++) {
     const ry = cy + i*rowH;
     if (i % 2 === 0) {
-      doc.setFillColor(252,249,243);
+      doc.setFillColor(250,245,236);
       doc.rect(px+m, ry, iw, rowH, 'F');
     }
     doc.setDrawColor(210,200,180); doc.setLineWidth(0.12);
@@ -688,8 +696,7 @@ function drawBookLedger(doc, px, py, pw, ph, pageNum, librarian) {
   doc.setDrawColor(130,100,60); doc.setLineWidth(0.3);
   doc.rect(px+m, cy, iw, tableH);
 
-  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
-  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+  drawFooter(doc, px, py, pw, ph, pageNum);
 }
 
 // ── WORLD MAP ──────────────────────────────────────────────────────────────────
@@ -698,15 +705,17 @@ function drawWorldMap(doc, px, py, pw, ph, pageNum, librarian) {
   drawBorder(doc, px, py, pw, ph);
 
   // Header
-  doc.setFont('times','bolditalic'); doc.setFontSize(6.5); doc.setTextColor(50,35,15);
+  mmFont(doc, 9.5, 'bolditalic', 'serif'); doc.setTextColor(50,35,15);
   PDFKit.starTitle(doc, 'The Wandering Library', px + pw/2, py + 8);
-  doc.setFont('times','italic'); doc.setFontSize(4.5); doc.setTextColor(120,90,55);
-  doc.text('Routes & Places', px+pw/2, py+12, {align:'center'});
+  mmFont(doc, 4, 'normal', 'mono'); doc.setTextColor(120,90,55);
+  PDFKit.text(doc, 'ROUTES & PLACES', px+pw/2, py+11.6, {align:'center'}, 0.8);
   doc.setDrawColor(140,110,65); doc.setLineWidth(0.3);
-  doc.line(px+m+4, py+13.5, px+pw-m-4, py+13.5);
+  doc.line(px+m+4, py+13.3, px+pw-m-4, py+13.3);
 
+  // Bottom boxes (legend + places visited)
+  const boxH = 17, boxY = py+ph-8.6-boxH;
   // Dot grid (5mm spacing)
-  const gridTop = py+16, gridBot = py+ph-18;
+  const gridTop = py+16.5, gridBot = boxY-3;
   const gridLeft = px+m+2, gridRight = px+pw-m-2;
   doc.setFillColor(130,100,60);
   for (let gx=gridLeft; gx<=gridRight; gx+=5) {
@@ -716,95 +725,83 @@ function drawWorldMap(doc, px, py, pw, ph, pageNum, librarian) {
   }
 
   // Compass rose (top right of map area)
-  const cx2 = gridRight-8, cy2 = gridTop+8;
-  doc.setFont('times','bold'); doc.setFontSize(5); doc.setTextColor(80,55,25);
+  const cx2 = gridRight-9, cy2 = gridTop+9;
+  doc.setFillColor(255,255,255); doc.circle(cx2, cy2, 9, 'F');
   doc.setDrawColor(80,55,25); doc.setLineWidth(0.4);
   doc.line(cx2, cy2-6, cx2, cy2+6);
   doc.line(cx2-6, cy2, cx2+6, cy2);
   doc.line(cx2-4, cy2-4, cx2+4, cy2+4);
   doc.line(cx2+4, cy2-4, cx2-4, cy2+4);
-  doc.setFontSize(4.5);
-  doc.text('N', cx2, cy2-7.5, {align:'center'});
-  doc.text('S', cx2, cy2+9.5, {align:'center'});
-  doc.text('W', cx2-9, cy2+1, {align:'right'});
-  doc.text('E', cx2+9, cy2+1);
+  mmFont(doc, 5.5, 'bold', 'serif'); doc.setTextColor(80,55,25);
+  doc.text('N', cx2, cy2-7.4, {align:'center'});
+  doc.text('S', cx2, cy2+10.6, {align:'center'});
+  doc.text('W', cx2-8.2, cy2+0.8, {align:'right'});
+  doc.text('E', cx2+8.2, cy2+0.8);
 
   // Legend box (bottom left)
-  const lx = px+m+2, ly = gridBot+3;
+  const lx = px+m+2, ly = boxY, lw = iw*0.5-1;
   doc.setDrawColor(130,100,60); doc.setLineWidth(0.25);
-  doc.rect(lx, ly, iw*0.45, ph-(ly-py)-m-2);
-  doc.setFont('times','italic'); doc.setFontSize(4); doc.setTextColor(100,75,45);
-  doc.text('Legend', lx+2, ly+4);
+  doc.rect(lx, ly, lw, boxH);
+  mmFont(doc, 5.4, 'italic', 'serif'); doc.setTextColor(100,75,45);
+  doc.text('Legend', lx+2, ly+3.6);
   doc.setLineWidth(0.2);
-  doc.line(lx+1, ly+5.5, lx+iw*0.45-1, ly+5.5);
-  // Legend entries
-  const legendItems = ['● Town / Village','★ City','◆ Landmark','~ River / Water','▲ Mountains'];
-  legendItems.forEach((item,i) => {
-    doc.setFontSize(3.5); doc.setTextColor(70,50,30);
-    doc.text(item, lx+2, ly+9+i*3.5);
+  doc.line(lx+1, ly+4.8, lx+lw-1, ly+4.8);
+  // Legend entries: symbols drawn as vectors, two columns
+  const items = [['Town / Village','dot'],['City','star'],['Landmark','dia'],['River / Water','wave'],['Mountains','tri']];
+  items.forEach(([t, k], i) => {
+    const colx = lx + 2 + (i < 3 ? 0 : lw/2), iy = ly + 8.4 + (i % 3) * 3.5;
+    const sx = colx + 1.4, sy = iy - 0.8;
+    doc.setFillColor(70,50,30); doc.setDrawColor(70,50,30); doc.setLineWidth(0.25);
+    if (k === 'dot') doc.circle(sx, sy, 0.8, 'F');
+    else if (k === 'star') PDFKit.star(doc, sx, sy, 1.3);
+    else if (k === 'dia') doc.lines([[1.1,1.1],[-1.1,1.1],[-1.1,-1.1],[1.1,-1.1]], sx, sy-1.1, [1,1], 'F', true);
+    else if (k === 'wave') doc.lines([[0.7,-0.8],[0.7,0.8],[0.7,-0.8],[0.7,0.8]], sx-1.4, sy, [1,1], 'S', false);
+    else doc.lines([[1.2,-2],[1.2,2]], sx-1.2, sy+1, [1,1], 'S', false);
+    mmFont(doc, 3.9, 'normal', 'mono'); doc.setTextColor(70,50,30);
+    doc.text(t, colx+4, iy);
   });
 
-  // Sessions count box (bottom right)
-  const bx = px+m+iw*0.5, by = gridBot+3, bw = iw*0.5;
-  const bh = ph-(by-py)-m-2;
+  // Places visited box (bottom right)
+  const bx = px+m+iw*0.5+1, bw = iw*0.5-3;
   doc.setDrawColor(130,100,60); doc.setLineWidth(0.25);
-  doc.rect(bx, by, bw, bh);
-  doc.setFont('times','italic'); doc.setFontSize(4); doc.setTextColor(100,75,45);
-  doc.text('Places Visited', bx+2, by+4);
-  doc.setLineWidth(0.2); doc.line(bx+1, by+5.5, bx+bw-1, by+5.5);
-  drawLines(doc, bx+2, by+8, bw-4, Math.floor((bh-10)/4), 4, [180,165,140]);
+  doc.rect(bx, boxY, bw, boxH);
+  mmFont(doc, 5.4, 'italic', 'serif'); doc.setTextColor(100,75,45);
+  doc.text('Places Visited', bx+2, boxY+3.6);
+  doc.setLineWidth(0.2); doc.line(bx+1, boxY+4.8, bx+bw-1, boxY+4.8);
+  drawLines(doc, bx+2, boxY+8.6, bw-4, 3, 3.6, [201,185,143]);
 
-  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
-  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+  drawFooter(doc, px, py, pw, ph, pageNum);
 }
 
 // ── Layout helpers ─────────────────────────────────────────────────────────────
 // Regular TN: 4 panels per A4 landscape (2 cols × 2 rows, each 110×105mm)
-// We treat each folded page as ONE 110×210mm panel (2 rows stacked, we use full height)
-
 function layoutRegular(doc, drawFn, pageData, sideLabel) {
-  const W=297, H=210, colW=110, halfH=H/2;
+  const colW=110, halfH=105;
+  PDFKit.marks(doc, 'regular', { label: sideLabel, horizontal: true });
   const positions = [[0,0],[0,1],[1,0],[1,1]];
   pageData.forEach((data, i) => {
     if (i >= 4) return;
     const [col, row] = positions[i];
     drawFn(doc, col*colW, row*halfH, colW, halfH, data.num, data.librarian);
   });
-  // Fold + cut lines
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-  doc.setLineDashPattern([],0);
-  doc.setDrawColor(180,180,180); doc.setLineWidth(0.12); doc.setLineDashPattern([1,2],0);
-  doc.line(0,H/2,2*colW,H/2); doc.setLineDashPattern([],0);
-  doc.setFontSize(4); doc.setFont('times','italic'); doc.setTextColor(140,120,90);
-  doc.text('--- fold', 2*colW+2, H/2-4);
-  doc.text('... cut', 2*colW+2, H/2);
-  doc.text(sideLabel, 2*colW+2, H/2+4);
 }
 
 function layoutPassport(doc, drawFn, pageData, sideLabel) {
   const W=297,H=210,pw=134,ph=98;
   const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
+  PDFKit.marks(doc, 'passport', { label: sideLabel });
   const positions=[[0,0],[1,0],[0,1],[1,1]];
   pageData.forEach((data,i)=>{
     if(i>=4)return;
     const[col,row]=positions[i];
     drawFn(doc,sx+col*pw,sy+row*ph,pw,ph,data.num,data.librarian);
   });
-  doc.setDrawColor(160,160,160);doc.setLineWidth(0.15);doc.setLineDashPattern([],0);
-  for(let c=0;c<2;c++)for(let r=0;r<2;r++)doc.rect(sx+c*pw,sy+r*ph,pw,ph);
-  doc.setDrawColor(80,80,80);doc.setLineWidth(0.25);doc.setLineDashPattern([0.8,2],0);
-  doc.line(sx+pw,sy-4,sx+pw,sy+ph*2+4);
-  doc.line(sx-4,sy+ph,sx+pw*2+4,sy+ph);
-  doc.setLineDashPattern([],0);
-  doc.setFontSize(4);doc.setFont('times','italic');doc.setTextColor(140,120,90);
-  doc.text('... cut at centre | '+sideLabel,W/2,sy-4,{align:'center'});
 }
 
 // ── Build the full PDF ─────────────────────────────────────────────────────────
 function buildFullDoc(sideFilter) {
   const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  PDFKit.register(doc);
   const size = getSize();
   const librarian = getLibrarian();
   const layout = size === 'passport' ? layoutPassport : layoutRegular;
@@ -880,6 +877,7 @@ generateBtn.addEventListener('click', async () => {
   setProgress(90, 'Binding the pack...');
   await new Promise(r => setTimeout(r, 100));
 
+  await PDFKit.preload();
   const name = getLibrarian().replace(/[^a-z0-9]/gi,'-').toLowerCase() || 'wandering-library';
 
   if (duplexSupported) {

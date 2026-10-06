@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TN Word Search Generator</title>
 <script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -117,9 +118,13 @@
       <!-- Font -->
       <div class="section">
         <div class="section-title">Font Style</div>
-        <div class="radio-group cols-3">
+        <div class="radio-group cols-2">
           <label class="radio-option">
-            <input type="radio" name="font" value="helvetica" checked>
+            <input type="radio" name="font" value="studio" checked>
+            <span class="radio-btn"><span class="rb-title" style="font-family:'DM Mono',monospace">Studio</span><span class="rb-sub">site look</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="font" value="helvetica">
             <span class="radio-btn"><span class="rb-title" style="font-family:sans-serif">Classic</span><span class="rb-sub">clean</span></span>
           </label>
           <label class="radio-option">
@@ -258,7 +263,8 @@ const modalClose  = document.getElementById('modalClose');
 const getSize       = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
 const getCategory   = () => document.querySelector('input[name="category"]:checked')?.value || 'animals';
 const getDifficulty = () => document.querySelector('input[name="difficulty"]:checked')?.value || 'medium';
-const getFont       = () => document.querySelector('input[name="font"]:checked')?.value || 'helvetica';
+const getFont       = () => document.querySelector('input[name="font"]:checked')?.value || 'studio';
+const F = () => PDFKit.family(getFont());
 const getCover      = () => document.querySelector('input[name="cover"]:checked')?.value || 'none';
 const getTitle      = () => document.getElementById('customTitle')?.value.trim() || '';
 
@@ -353,160 +359,95 @@ function generateWordSearch(words, gridSize, difficulty) {
 }
 
 // ── PDF Drawing ────────────────────────────────────────────────────────────────
-function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph, font) {
-  const { grid, words } = puzzle;
+const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+
+function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph) {
+  const { grid, words } = puzzle, C = PDFKit.COLORS;
   const gridSize = grid.length;
-  const margin = 5;
   const isPassport = ph < 110; // passport panels are 98mm tall
-  const wordListH = isPassport ? 18 : 22;
-  const titleH = 8;
-  const availW = pw - margin * 2;
-  const availH = ph - margin * 2 - titleH - wordListH;
+  const top = PDFKit.header(doc, ox, oy, pw, {
+    eyebrow: 'The Insert Studio · ' + CATEGORY_LABELS[getCategory()] + ' · ' + DIFF_LABEL[getDifficulty()],
+    title: 'Word Search', accent: 'No. ' + number, number
+  });
+  const bottom = PDFKit.footer(doc, ox, oy, pw, ph, { number });
+
+  const rowH = isPassport ? 3.6 : 4.0;
+  const listRows = Math.ceil(words.length / 4);
+  const wordListH = 3.5 + listRows * rowH + 1;
+  const availW = pw - 14;
+  const availH = bottom - top - wordListH - 1;
   const cellSize = Math.min(availW / gridSize, availH / gridSize);
   const gridW = cellSize * gridSize;
-  const gridH = cellSize * gridSize;
-  const gx = ox + margin + (availW - gridW) / 2;
-  const gy = oy + margin + titleH;
-
-  // Title
-  doc.setFont(font, 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(30, 30, 30);
-  const label = `Word Search ${number}`;
-  doc.setFillColor(255,255,255);
-  doc.rect(ox + margin - 1, oy + margin - 2, doc.getTextWidth(label) + 4, 6, 'F');
-  doc.text(label, ox + margin, oy + margin + 3.5);
-
-  // Grid background
-  doc.setFillColor(252, 250, 247);
-  doc.rect(gx, gy, gridW, gridH, 'F');
+  const gx = ox + (pw - gridW) / 2;
+  const gy = top;
 
   // Grid letters
-  doc.setFont(font, 'normal');
-  const fs = cellSize * 1.55; // mm → pt, letter ≈ 40% of the cell
-  doc.setFontSize(fs);
-  doc.setTextColor(20, 20, 20);
+  doc.setFont(F(), getFont() === 'studio' ? 'bold' : 'normal');
+  doc.setFontSize(cellSize * 1.55);
+  doc.setTextColor(...C.ink);
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
-      const lx = gx + c * cellSize + cellSize / 2;
-      const ly = gy + r * cellSize + cellSize * 0.70;
-      const ch = grid[r][c];
-      const tw = doc.getTextWidth(ch);
-      doc.text(ch, lx - tw / 2, ly);
+      doc.text(grid[r][c], gx + c * cellSize + cellSize / 2, gy + r * cellSize + cellSize * 0.70, { align: 'center' });
     }
   }
 
   // Grid lines
-  doc.setDrawColor(200, 195, 185);
-  doc.setLineWidth(0.1);
+  doc.setDrawColor(...C.tan);
+  doc.setLineWidth(0.12);
   for (let i = 0; i <= gridSize; i++) {
-    doc.line(gx + i*cellSize, gy, gx + i*cellSize, gy + gridH);
+    doc.line(gx + i*cellSize, gy, gx + i*cellSize, gy + gridW);
     doc.line(gx, gy + i*cellSize, gx + gridW, gy + i*cellSize);
   }
-  // Outer border
-  doc.setDrawColor(80, 80, 80);
-  doc.setLineWidth(0.4);
-  doc.rect(gx, gy, gridW, gridH);
+  doc.setDrawColor(...C.ink);
+  doc.setLineWidth(0.5);
+  doc.rect(gx, gy, gridW, gridW);
 
   // Word list below grid
-  const wly = gy + gridH + 4;
-  doc.setFont(font, 'bold');
-  doc.setFontSize(5);
-  doc.setTextColor(100, 100, 100);
-  doc.text('FIND:', ox + margin, wly);
-
-  doc.setFont(font, 'normal');
-  doc.setFontSize(isPassport ? 5 : 5.5);
-  doc.setTextColor(40, 40, 40);
-
-  const cols = 4;
-  const colW = availW / cols;
+  const wly = gy + gridW + 3.4;
+  const lx = ox + 7;
+  PDFKit.set(doc, PDFKit.mono(), 'normal', 4.2, C.rust);
+  PDFKit.text(doc, 'FIND', lx, wly, null, 0.6);
+  PDFKit.set(doc, PDFKit.mono(), 'normal', isPassport ? 5 : 5.2, C.ink);
+  const colW = (pw - 14) / 4;
   words.forEach((w, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const wx = ox + margin + col * colW;
-    const wy = wly + 4 + row * (isPassport ? 4.2 : 4.6);
-    doc.text('• ' + w, wx, wy);
+    doc.text(w, lx + (i % 4) * colW, wly + 3.2 + Math.floor(i / 4) * rowH);
   });
 }
 
-function drawRegularSide(doc, puzzles, startIdx, sideLabel, font, title) {
-  const W = 297, H = 210, colW = 110, halfH = H / 2;
+function drawRegularSide(doc, puzzles, startIdx, sideLabel, title) {
+  const colW = 110, halfH = 105;
   const panels = [[0, 0, startIdx],[0, 1, startIdx+1],[1, 0, startIdx+2],[1, 1, startIdx+3]];
   for (const [col, row, idx] of panels) {
-    if (idx - 1 < puzzles.length) {
-      drawWordSearchPage(doc, puzzles[idx-1], idx, col*colW, row*halfH, colW, halfH, font);
-    }
+    if (idx - 1 < puzzles.length) drawWordSearchPage(doc, puzzles[idx-1], idx, col*colW, row*halfH, colW, halfH);
   }
-  // Fold + cut lines
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-  doc.setLineDashPattern([],0);
-  doc.setDrawColor(180,180,180); doc.setLineWidth(0.12); doc.setLineDashPattern([1,2],0);
-  doc.line(0,H/2,2*colW,H/2); doc.setLineDashPattern([],0);
-  doc.setFontSize(4); doc.setFont(font,'normal'); doc.setTextColor(120,120,120);
-  doc.text('--- fold at 110mm', 2*colW+2, H/2-4);
-  doc.text('... cut at 220mm', 2*colW+2, H/2);
-  doc.text(sideLabel, 2*colW+2, H/2+4);
-  if (title) { doc.setFontSize(5); doc.text(title, W/2, H-3, {align:'center'}); }
+  PDFKit.marks(doc, 'regular', { label: sideLabel, title, horizontal: true });
 }
 
-function drawPassportSide(doc, puzzles, startIdx, sideLabel, font, title) {
+function drawPassportSide(doc, puzzles, startIdx, sideLabel, title) {
   const W = 297, H = 210, pw = 134, ph = 98;
-  const totalW = pw*2, totalH = ph*2;
-  const startX = (W-totalW)/2, startY = (H-totalH)/2;
+  const startX = (W-pw*2)/2, startY = (H-ph*2)/2;
   const panels = [[0,0,startIdx],[1,0,startIdx+1],[0,1,startIdx+2],[1,1,startIdx+3]];
   for (const [col,row,idx] of panels) {
-    if (idx-1 < puzzles.length) {
-      drawWordSearchPage(doc, puzzles[idx-1], idx, startX+col*pw, startY+row*ph, pw, ph, font);
-    }
+    if (idx-1 < puzzles.length) drawWordSearchPage(doc, puzzles[idx-1], idx, startX+col*pw, startY+row*ph, pw, ph);
   }
-  doc.setDrawColor(160,160,160); doc.setLineWidth(0.15); doc.setLineDashPattern([],0);
-  for (let c=0;c<2;c++) for (let r=0;r<2;r++) doc.rect(startX+c*pw,startY+r*ph,pw,ph);
-  doc.setDrawColor(80,80,80); doc.setLineWidth(0.25); doc.setLineDashPattern([0.8,2],0);
-  doc.line(startX+pw,startY-4,startX+pw,startY+totalH+4);
-  doc.line(startX-4,startY+ph,startX+totalW+4,startY+ph);
-  doc.setLineDashPattern([],0);
-  doc.setFontSize(4); doc.setFont(font,'normal'); doc.setTextColor(120,120,120);
-  doc.text('... cut at centre | '+sideLabel, W/2, startY-4, {align:'center'});
-  if (title) { doc.setFontSize(5); doc.text(title, W/2, H-3, {align:'center'}); }
+  PDFKit.marks(doc, 'passport', { label: sideLabel, title });
 }
 
-function drawCoverPage(doc, title, font) {
-  const W=297, H=210, colW=110, margin=8;
-  const fx=colW+margin, fy=margin, fw=colW-margin*2, fh=H-margin*2;
-  doc.setDrawColor(80,80,80); doc.setLineWidth(0.8); doc.rect(fx,fy,fw,fh);
-  doc.setLineWidth(0.25); doc.rect(fx+3,fy+3,fw-6,fh-6);
-  const cs=5;
-  for (const [ox,oy,sx,sy] of [[fx+3,fy+3,1,1],[fx+fw-3,fy+3,-1,1],[fx+3,fy+fh-3,1,-1],[fx+fw-3,fy+fh-3,-1,-1]]) {
-    doc.setLineWidth(0.5);
-    doc.line(ox,oy,ox+sx*cs,oy); doc.line(ox,oy,ox,oy+sy*cs);
-  }
-  const cx=fx+fw/2, cy=fy+fh/2;
-  if (title) {
-    doc.setFont(font,'bold'); doc.setTextColor(30,30,30); doc.setFontSize(11);
-    doc.text(title, cx, cy-4, {align:'center', maxWidth:fw-16});
-    const lw=Math.min(doc.getTextWidth(title)+8,fw-20);
-    doc.setLineWidth(0.3); doc.setDrawColor(120,120,120);
-    doc.line(cx-lw/2,cy+1,cx+lw/2,cy+1);
-    doc.setFont(font,'normal'); doc.setFontSize(6); doc.setTextColor(100,100,100);
-    doc.text('WORD SEARCH PUZZLES', cx, cy+7, {align:'center'});
-  } else {
-    doc.setFont(font,'normal'); doc.setFontSize(5); doc.setTextColor(160,160,160);
-    doc.text('MY WORD SEARCH BOOK', cx, cy-14, {align:'center'});
-    doc.setDrawColor(180,180,180); doc.setLineWidth(0.2);
-    for (let i=-1;i<=1;i++) doc.line(fx+12,cy+i*8,fx+fw-12,cy+i*8);
-  }
+function drawCoverPage(doc, title, count) {
+  PDFKit.cover(doc, {
+    kicker: 'Word Search', title: title || 'Word Search Puzzles', blank: !title,
+    subtitle: `${CATEGORY_LABELS[getCategory()]} · ${DIFF_LABEL[getDifficulty()]} · ${count} puzzles`
+  });
 }
 
 function buildDoc(puzzles, size, pages, sideFilter) {
   const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
-  const font = getFont(), title = getTitle();
+  PDFKit.register(doc);
+  const title = getTitle();
   let first = true;
 
   if (getCover() === 'cover' && sideFilter !== 'side2') {
-    drawCoverPage(doc, title, font);
+    drawCoverPage(doc, title, pages * 8);
     first = false;
   }
 
@@ -520,15 +461,15 @@ function buildDoc(puzzles, size, pages, sideFilter) {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 1`;
       size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+1, label, font, title)
-        : drawPassportSide(doc, puzzles, base+1, label, font, title);
+        ? drawRegularSide(doc, puzzles, base+1, label, title)
+        : drawPassportSide(doc, puzzles, base+1, label, title);
     }
     if (sideFilter === 'all' || sideFilter === 'side2') {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 2`;
       size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+5, label, font, title)
-        : drawPassportSide(doc, puzzles, base+5, label, font, title);
+        ? drawRegularSide(doc, puzzles, base+5, label, title)
+        : drawPassportSide(doc, puzzles, base+5, label, title);
     }
   }
   return doc;
@@ -546,6 +487,7 @@ generateBtn.addEventListener('click', async () => {
   generateBtn.disabled = true;
   progress.classList.add('visible');
 
+  await PDFKit.preload();
   await new Promise(r => setTimeout(r, 50));
 
   const puzzles = [];

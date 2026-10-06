@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calligraphy Practice Inserts — The Insert Studio</title>
 <script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <link rel="stylesheet" href="../assets/tokens.css">
@@ -367,39 +368,42 @@ function getLineConfig(spacingMM) {
   return { x, a, d, total: x + a + d };
 }
 
+const CAL_INDIGO = PDFKit.COLORS.indigo;
+const styleName = () => state.preset === 'modern' ? 'Modern' : 'Copperplate';
+
+// Header + footer shared by every calligraphy panel. Returns { top, bottom } content bounds (mm).
+function calFrame(doc, px, py, pw, ph, num, title, accent, extraEyebrow) {
+  const top = PDFKit.header(doc, px, py, pw, {
+    eyebrow: 'The Insert Studio · ' + styleName() + (extraEyebrow ? ' · ' + extraEyebrow : ''),
+    title, accent, number: num, accentColor: CAL_INDIGO
+  });
+  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number: num, accentColor: CAL_INDIGO });
+  return { top, bottom };
+}
+
 function drawPracticeGrid(doc, px, py, pw, ph, opts = {}) {
-  const { spacing, slantAngle, showSlant, showAsc, showDesc, showTint, title, word } = opts;
+  const { spacing, slantAngle, showSlant, showAsc, showDesc, showTint, title, word, num } = opts;
   const cfg = PRESETS[state.preset];
   const lc = getLineConfig(spacing);
-  const m = 5;
+  const m = 6;
   const iw = pw - m * 2;
 
-  // Background
-  doc.setFillColor(255, 255, 255);
-  doc.rect(px, py, pw, ph, 'F');
+  const { top, bottom } = calFrame(doc, px, py, pw, ph, num, 'Calligraphy', 'Practice', title || '');
 
-  // Title strip
-  if (title) {
-    doc.setFillColor(14, 12, 10);
-    doc.rect(px, py, pw, 9, 'F');
-    doc.setFont('times', 'italic');
-    doc.setFontSize(6);
-    doc.setTextColor(245, 240, 228);
-    doc.text(title, px + pw / 2, py + 6, { align: 'center' });
-  }
-
-  const startY = py + (title ? 12 : m);
-  const availH = ph - (title ? 12 : m) - m;
+  // Re-fit the ruled lines in the space left between header and footer
+  const startY = top + 2;
+  const availH = bottom - startY;
   const numLines = Math.floor(availH / lc.total);
+  const slack = (availH - numLines * lc.total) / 2;
 
   for (let i = 0; i < numLines; i++) {
-    const by = startY + i * lc.total; // baseline Y
+    const by = startY + slack + lc.a + lc.x + i * lc.total; // baseline Y
 
     // Ascender zone tint
     if (showTint && showAsc) {
       doc.setFillColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
       doc.setGState(new doc.GState({ opacity: 0.04 }));
-      doc.rect(px + m, by - lc.a, iw, lc.a, 'F');
+      doc.rect(px + m, by - lc.x - lc.a, iw, lc.a, 'F');
       doc.setGState(new doc.GState({ opacity: 1 }));
     }
     // X-height tint
@@ -429,7 +433,7 @@ function drawPracticeGrid(doc, px, py, pw, ph, opts = {}) {
     }
 
     // Baseline — bold
-    doc.setDrawColor(20, 18, 14);
+    doc.setDrawColor(PDFKit.COLORS.ink[0], PDFKit.COLORS.ink[1], PDFKit.COLORS.ink[2]);
     doc.setLineWidth(0.4);
     doc.line(px + m, by, px + pw - m, by);
 
@@ -437,17 +441,13 @@ function drawPracticeGrid(doc, px, py, pw, ph, opts = {}) {
     if (showSlant) {
       const angleRad = (90 - slantAngle) * Math.PI / 180;
       const tanA = Math.tan(angleRad);
-      const totalH = lc.total;
-      const slantSpacing = totalH / tanA;
+      const slantSpacing = lc.total / tanA;
       const lineH = lc.a + lc.x + lc.d;
       const lineTop = by - lc.x - lc.a;
-      const lineBot = by + lc.d;
 
-      // Start from left margin, step across
       let sx = px + m - (Math.floor((px + m) / slantSpacing) + 1) * slantSpacing % slantSpacing;
       while (sx < px + pw - m) {
         const tx = sx + lineH * tanA;
-        // Clip to panel: compute visible intersection
         const x1 = Math.max(px + m, Math.min(sx, tx));
         const x2 = Math.min(px + pw - m, Math.max(sx, tx));
         if (x2 > x1) {
@@ -465,7 +465,7 @@ function drawPracticeGrid(doc, px, py, pw, ph, opts = {}) {
 
     // Practice word ghost text
     if (word) {
-      doc.setFont('times', 'italic');
+      doc.setFont(PDFKit.serif(), 'italic');
       doc.setFontSize(lc.x * 2.1);
       doc.setTextColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
       doc.setGState(new doc.GState({ opacity: 0.07 }));
@@ -475,54 +475,35 @@ function drawPracticeGrid(doc, px, py, pw, ph, opts = {}) {
       doc.setGState(new doc.GState({ opacity: 1 }));
     }
   }
-
-  // Outer border
-  doc.setDrawColor(30, 25, 18);
-  doc.setLineWidth(0.5);
-  doc.rect(px, py, pw, ph);
 }
 
 function drawAlphabetPanel(doc, px, py, pw, ph, opts = {}) {
-  const { title } = opts;
-  const m = 5, iw = pw - m * 2;
-  doc.setFillColor(255, 255, 255);
-  doc.rect(px, py, pw, ph, 'F');
+  const C = PDFKit.COLORS, cfg = PRESETS[state.preset];
+  const m = 6, iw = pw - m * 2;
+  const { top, bottom } = calFrame(doc, px, py, pw, ph, opts.num, 'A–Z', 'Guide');
 
-  if (title) {
-    doc.setFillColor(14, 12, 10);
-    doc.rect(px, py, pw, 9, 'F');
-    doc.setFont('times', 'italic');
-    doc.setFontSize(6);
-    doc.setTextColor(245, 240, 228);
-    doc.text('A–Z Guide', px + pw / 2, py + 6, { align: 'center' });
-  }
-
-  const startY = py + (title ? 13 : m + 2);
+  const noteH = 5;
+  const startY = top + 1;
   const cols = 4, rows = 7;
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   const cw = iw / cols;
-  const ch = (ph - startY + py - m) / rows;
+  const ch = (bottom - startY - noteH) / rows;
 
   letters.forEach((lt, i) => {
-    if (i >= 26) return;
     const col = i % cols;
     const row = Math.floor(i / cols);
     const cx = px + m + col * cw;
     const cy = startY + row * ch;
 
-    // Cell border
-    doc.setDrawColor(200, 190, 170);
+    doc.setDrawColor(C.tan[0], C.tan[1], C.tan[2]);
     doc.setLineWidth(0.15);
     doc.rect(cx, cy, cw, ch);
 
     // Letter label
-    doc.setFont('times', 'bold');
-    doc.setFontSize(5);
-    doc.setTextColor(160, 145, 120);
-    doc.text(lt, cx + 1.5, cy + 4.5);
+    PDFKit.set(doc, PDFKit.mono(), 'normal', 5, C.muted);
+    doc.text(lt, cx + 1.5, cy + 3.6);
 
     // Guide baseline in cell
-    const cfg = PRESETS[state.preset];
     doc.setDrawColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
     doc.setLineWidth(0.2);
     const bly = cy + ch * 0.72;
@@ -531,7 +512,7 @@ function drawAlphabetPanel(doc, px, py, pw, ph, opts = {}) {
     doc.line(cx + 1, bly - ch * 0.28, cx + cw - 1, bly - ch * 0.28);
 
     // Ghost letter
-    doc.setFont('times', 'italic');
+    doc.setFont(PDFKit.serif(), 'italic');
     doc.setFontSize(ch * 1.0);
     doc.setTextColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
     doc.setGState(new doc.GState({ opacity: 0.09 }));
@@ -539,33 +520,15 @@ function drawAlphabetPanel(doc, px, py, pw, ph, opts = {}) {
     doc.setGState(new doc.GState({ opacity: 1 }));
   });
 
-  // Lowercase second pass below
-  doc.setFont('times', 'italic');
-  doc.setFontSize(5);
-  doc.setTextColor(180, 160, 130);
-  const notesY = startY + rows * ch + 3;
-  if (notesY < py + ph - 6) {
-    doc.text('Practice writing each letter between the guide lines in each cell.', px + pw / 2, notesY, { align: 'center', maxWidth: iw });
-  }
-
-  doc.setDrawColor(30, 25, 18);
-  doc.setLineWidth(0.5);
-  doc.rect(px, py, pw, ph);
+  PDFKit.set(doc, PDFKit.serif(), 'italic', 6, C.muted);
+  doc.text('Practice writing each letter between the guide lines in each cell.', px + pw / 2, startY + rows * ch + 3.4, { align: 'center', maxWidth: iw });
 }
 
 function drawWarmupPanel(doc, px, py, pw, ph, opts = {}) {
-  const m = 5, iw = pw - m * 2;
-  doc.setFillColor(255, 255, 255);
-  doc.rect(px, py, pw, ph, 'F');
+  const C = PDFKit.COLORS, cfg = PRESETS[state.preset];
+  const m = 6, iw = pw - m * 2;
+  const { top, bottom } = calFrame(doc, px, py, pw, ph, opts.num, 'Warm-up', 'Strokes');
 
-  doc.setFillColor(14, 12, 10);
-  doc.rect(px, py, pw, 9, 'F');
-  doc.setFont('times', 'italic');
-  doc.setFontSize(6);
-  doc.setTextColor(245, 240, 228);
-  doc.text('Warm-up Strokes', px + pw / 2, py + 6, { align: 'center' });
-
-  const cfg = PRESETS[state.preset];
   const strokes = [
     { name: 'Upstrokes',    hint: 'thin, hairline up' },
     { name: 'Downstrokes',  hint: 'thick, shaded down' },
@@ -575,106 +538,79 @@ function drawWarmupPanel(doc, px, py, pw, ph, opts = {}) {
     { name: 'Underturn',    hint: 'u-shape' },
   ];
 
-  const sectionH = (ph - 12) / strokes.length;
+  const sectionH = (bottom - top - 1) / strokes.length;
 
   strokes.forEach((s, i) => {
-    const sy = py + 12 + i * sectionH;
+    const sy = top + 1 + i * sectionH;
 
-    // Label
-    doc.setFont('times', 'italic');
-    doc.setFontSize(4.5);
-    doc.setTextColor(120, 100, 70);
-    doc.text(`${s.name}  ·  ${s.hint}`, px + m, sy + 4);
+    PDFKit.set(doc, PDFKit.mono(), 'normal', 4.8, C.rust);
+    PDFKit.text(doc, `${s.name.toUpperCase()}  ·  ${s.hint}`, px + m, sy + 4, null, 0.3);
 
-    // Baseline
-    doc.setDrawColor(20, 18, 14);
+    const bly = sy + sectionH * 0.82;
+    doc.setDrawColor(C.ink[0], C.ink[1], C.ink[2]);
     doc.setLineWidth(0.35);
-    const bly = sy + sectionH * 0.78;
     doc.line(px + m, bly, px + pw - m, bly);
-    // X-height
     doc.setDrawColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
     doc.setLineWidth(0.15);
     doc.line(px + m, bly - sectionH * 0.3, px + pw - m, bly - sectionH * 0.3);
 
-    // Tint
     doc.setFillColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
     doc.setGState(new doc.GState({ opacity: 0.05 }));
     doc.rect(px + m, bly - sectionH * 0.3, iw, sectionH * 0.3, 'F');
     doc.setGState(new doc.GState({ opacity: 1 }));
 
-    // Divider
     if (i > 0) {
-      doc.setDrawColor(210, 200, 180);
+      doc.setDrawColor(C.rule[0], C.rule[1], C.rule[2]);
       doc.setLineWidth(0.1);
       doc.line(px + m, sy, px + pw - m, sy);
     }
   });
-
-  doc.setDrawColor(30, 25, 18);
-  doc.setLineWidth(0.5);
-  doc.rect(px, py, pw, ph);
 }
 
-function drawInkLogPanel(doc, px, py, pw, ph) {
-  const m = 5, iw = pw - m * 2;
-  doc.setFillColor(255, 255, 255);
-  doc.rect(px, py, pw, ph, 'F');
-
-  doc.setFillColor(14, 12, 10);
-  doc.rect(px, py, pw, 9, 'F');
-  doc.setFont('times', 'italic');
-  doc.setFontSize(6);
-  doc.setTextColor(245, 240, 228);
-  doc.text('Ink & Tools Log', px + pw / 2, py + 6, { align: 'center' });
+function drawInkLogPanel(doc, px, py, pw, ph, opts = {}) {
+  const C = PDFKit.COLORS;
+  const m = 6, iw = pw - m * 2;
+  const { top, bottom } = calFrame(doc, px, py, pw, ph, opts.num, 'Ink & Tools', 'Log');
 
   const entries = 5;
-  const entryH = (ph - 16) / entries;
-  const cfg = PRESETS[state.preset];
+  const entryH = (bottom - top - 1) / entries;
 
   for (let i = 0; i < entries; i++) {
-    const ey = py + 14 + i * entryH;
+    const ey = top + 1 + i * entryH;
 
-    doc.setDrawColor(190, 175, 150);
+    doc.setDrawColor(C.tan[0], C.tan[1], C.tan[2]);
     doc.setLineWidth(0.2);
-    doc.rect(px + m, ey, iw, entryH - 1);
+    doc.rect(px + m, ey, iw, entryH - 1.2);
 
     // Swatch box
-    const swatchW = 14, swatchH = entryH * 0.5;
-    doc.setDrawColor(160, 145, 120);
+    const swatchW = 14, swatchH = Math.min(entryH * 0.5, 10);
+    doc.setDrawColor(C.muted[0], C.muted[1], C.muted[2]);
     doc.setLineWidth(0.2);
-    doc.rect(px + m + 1, ey + entryH * 0.25, swatchW, swatchH);
+    doc.rect(px + m + 1.5, ey + (entryH - 1.2 - swatchH) / 2, swatchW, swatchH);
 
     // Fields
-    const fx = px + m + swatchW + 4;
-    const fw = iw - swatchW - 5;
-    const fields = [['Ink', fw * 0.5], ['Nib', fw * 0.25], ['Date', fw * 0.25]];
+    const fx = px + m + swatchW + 5;
+    const fw = iw - swatchW - 6;
+    const fields = [['INK', fw * 0.5], ['NIB', fw * 0.25], ['DATE', fw * 0.25]];
     let fx2 = fx;
     fields.forEach(([label, w]) => {
-      doc.setFont('times', 'italic');
-      doc.setFontSize(3.8);
-      doc.setTextColor(140, 120, 90);
-      doc.text(label, fx2, ey + 5);
-      doc.setDrawColor(180, 165, 140);
+      PDFKit.set(doc, PDFKit.mono(), 'normal', 4.2, C.rust);
+      PDFKit.text(doc, label, fx2, ey + 4.6, null, 0.4);
+      doc.setDrawColor(C.tan[0], C.tan[1], C.tan[2]);
       doc.setLineWidth(0.15);
       doc.setLineDashPattern([0.5, 0.8], 0);
-      doc.line(fx2, ey + 7.5, fx2 + w - 2, ey + 7.5);
+      doc.line(fx2, ey + 7.2, fx2 + w - 2, ey + 7.2);
       doc.setLineDashPattern([], 0);
       fx2 += w;
     });
 
     // Notes line
-    doc.setFont('times', 'italic');
-    doc.setFontSize(3.5);
-    doc.setTextColor(160, 140, 110);
-    doc.text('Notes:', px + m + swatchW + 4, ey + entryH * 0.72);
-    doc.setDrawColor(190, 175, 150);
+    PDFKit.set(doc, PDFKit.mono(), 'normal', 4.2, C.muted);
+    PDFKit.text(doc, 'NOTES', fx, ey + entryH * 0.74, null, 0.4);
+    doc.setDrawColor(C.tan[0], C.tan[1], C.tan[2]);
     doc.setLineWidth(0.15);
-    doc.line(px + m + swatchW + 16, ey + entryH * 0.73, px + pw - m - 1, ey + entryH * 0.73);
+    doc.line(fx + 11, ey + entryH * 0.74 + 0.4, px + pw - m - 1.5, ey + entryH * 0.74 + 0.4);
   }
-
-  doc.setDrawColor(30, 25, 18);
-  doc.setLineWidth(0.5);
-  doc.rect(px, py, pw, ph);
 }
 
 // ── Build right panel ─────────────────────────────────────────────────────────
@@ -686,13 +622,14 @@ function drawRightPanel(doc, px, py, pw, ph, opts) {
   } else if (state.mode === 'warmup') {
     drawWarmupPanel(doc, px, py, pw, ph, opts);
   } else if (state.mode === 'inklog') {
-    drawInkLogPanel(doc, px, py, pw, ph);
+    drawInkLogPanel(doc, px, py, pw, ph, opts);
   }
 }
 
 // ── Build doc ─────────────────────────────────────────────────────────────────
 function buildDoc() {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  PDFKit.register(doc);
   const W = 297, H = 210;
   const size = getSize();
   const colW = size === 'regular' ? 110 : 134;
@@ -701,7 +638,7 @@ function buildDoc() {
   const title = getTitle();
   const word  = getWord();
 
-  const opts = {
+  const base = {
     spacing: state.spacing,
     slantAngle: state.slant,
     showSlant: state.toggles.slant,
@@ -711,32 +648,24 @@ function buildDoc() {
     title,
     word,
   };
+  const perPage = size === 'regular' ? 2 : 4;
 
   for (let i = 0; i < count; i++) {
     if (i > 0) doc.addPage();
+    const n = (k) => ({ ...base, num: i * perPage + k });
 
     if (size === 'regular') {
-      // Left: practice grid, Right: selected panel
-      drawPracticeGrid(doc, 0, 0, colW, H, opts);
-      drawRightPanel(doc, colW, 0, colW, H, opts);
+      drawPracticeGrid(doc, 0, 0, colW, H, n(1));
+      drawRightPanel(doc, colW, 0, colW, H, n(2));
+      PDFKit.marks(doc, 'regular', { label: 'Calligraphy', title });
     } else {
-      // Passport: 4 panels on A4
       const sx = (W - colW * 2) / 2, sy = (H - ph * 2) / 2;
-      drawPracticeGrid(doc, sx, sy, colW, ph, opts);
-      drawRightPanel(doc, sx + colW, sy, colW, ph, opts);
-      drawPracticeGrid(doc, sx, sy + ph, colW, ph, opts);
-      drawRightPanel(doc, sx + colW, sy + ph, colW, ph, opts);
+      drawPracticeGrid(doc, sx, sy, colW, ph, n(1));
+      drawRightPanel(doc, sx + colW, sy, colW, ph, n(2));
+      drawPracticeGrid(doc, sx, sy + ph, colW, ph, n(3));
+      drawRightPanel(doc, sx + colW, sy + ph, colW, ph, n(4));
+      PDFKit.marks(doc, 'passport', { label: 'Calligraphy', title });
     }
-
-    // Fold/cut lines
-    doc.setDrawColor(100, 100, 100); doc.setLineWidth(0.25);
-    doc.setLineDashPattern([2, 1.5], 0); doc.line(colW, 0, colW, H);
-    doc.setLineDashPattern([0.8, 2], 0); doc.setDrawColor(80, 80, 80);
-    doc.line(2 * colW, 0, 2 * colW, H);
-    doc.setLineDashPattern([], 0);
-    doc.setFont('times', 'italic'); doc.setFontSize(3.8); doc.setTextColor(140, 130, 110);
-    doc.text('--- fold', 2 * colW + 2, H / 2 - 4);
-    doc.text('... cut', 2 * colW + 2, H / 2);
   }
   return doc;
 }
@@ -750,6 +679,7 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
   await new Promise(r => setTimeout(r, 80));
   setProgress(75, 'Drawing guide lines...');
   await new Promise(r => setTimeout(r, 80));
+  await PDFKit.preload();
   const doc = buildDoc();
   const slug = state.preset + '-calligraphy';
   setProgress(100, 'Done!');

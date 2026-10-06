@@ -379,189 +379,110 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 
 // ── PDF drawing ───────────────────────────────────────────────────────────────
 function drawNonogramPDF(doc, px, py, pw, ph, grid, puzzleNum, showSolution) {
+  const C = PDFKit.COLORS;
   const rowClues = getRowClues(grid);
   const colClues = getColClues(grid);
   const rows = grid.length, cols = grid[0].length;
-  const m = 3;
+  const diff = getDifficulty(cols, rows);
 
-  doc.setFillColor(255,255,255); doc.rect(px,py,pw,ph,'F');
+  // Header + footer (replace the old dark title band)
+  const top = PDFKit.header(doc, px, py, pw, opts.numbers
+    ? { eyebrow: `The Insert Studio · ${cols}×${rows} · ${diff.label}`, title: 'Nonogram',
+        accent: showSolution ? 'Solution' : `No. ${puzzleNum}`, number: puzzleNum }
+    : { eyebrow: `The Insert Studio · ${cols}×${rows} · ${diff.label}`, title: 'Nonogram',
+        accent: showSolution ? 'Solution' : '' });
+  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number: opts.numbers ? puzzleNum : null });
 
-  // Header bar
-  const headerH = opts.numbers ? 8 : 0;
-  if (opts.numbers) {
-    doc.setFillColor(15,12,8); doc.rect(px,py,pw,headerH,'F');
-    doc.setFont('times','bold'); doc.setFontSize(5.5); doc.setTextColor(245,240,228);
-    const diff = getDifficulty(cols,rows);
-    const label = showSolution ? `#${puzzleNum} Solution` : `#${puzzleNum} · ${diff.label} · ${cols}×${rows}`;
-    doc.text(label, px+pw/2, py+5.5, {align:'center'});
-  }
-
-  // Calculate clue area sizes
-  const maxRowClueLen = Math.max(...rowClues.map(c => c.length));
-  const maxColClueLen = Math.max(...colClues.map(c => c.length));
-
+  const m = 6;
   const availW = pw - m*2;
-  const availH = ph - m*2 - headerH;
+  const availH = bottom - top - 2;
+  const PT = 0.3528;
+  const maxRowN = Math.max(...rowClues.map(c => c.length));
+  const maxColN = Math.max(...colClues.map(c => c.length));
 
-  // Cell size
-  const clueColW = maxRowClueLen * 4.5 + 2;
-  const clueRowH = maxColClueLen * 4 + 2;
-  const gridW = availW - clueColW;
-  const gridH = availH - clueRowH;
-  const cellW = Math.min(gridW / cols, gridH / rows);
-  const cellH = cellW;
+  // Size clues (DM Mono, never below 6pt) and the grid cells they leave room for
+  const layout = (fs) => {
+    doc.setFont(PDFKit.mono(), 'normal'); doc.setFontSize(fs);
+    const gap = doc.getTextWidth('  ');
+    const rowW = Math.max(...rowClues.map(c => doc.getTextWidth(c.join('  '))));
+    const clueColW = rowW + 2;
+    const lineH = fs * PT * 1.2;
+    const clueRowH = maxColN * lineH + 1.5;
+    const cell = Math.min((availW - clueColW) / cols, (availH - clueRowH) / rows);
+    return { fs, clueColW, clueRowH, lineH, cell };
+  };
+  let L = layout(7);
+  const fs2 = Math.max(6, Math.min(7, L.cell / PT * 0.62));
+  if (fs2 !== 7) L = layout(fs2);
+  const { fs, clueColW, clueRowH, lineH, cell } = L;
 
-  // Center the whole puzzle
-  const totalW = clueColW + cols * cellW;
-  const totalH = clueRowH + rows * cellH;
-  const ox = px + m + (availW - totalW) / 2;
-  const oy = py + headerH + m + (availH - totalH) / 2;
+  const totalW = clueColW + cols * cell, totalH = clueRowH + rows * cell;
+  const gx = px + m + (availW - totalW) / 2 + clueColW;
+  const gy = top + 1 + (availH - totalH) / 2 + clueRowH;
 
-  const gx = ox + clueColW; // grid origin x
-  const gy = oy + clueRowH; // grid origin y
-
-  // ── Column clues ──
-  doc.setFont('times','normal'); doc.setFontSize(Math.min(7, cellW * 1.7)); // legible clues (was 4.5pt)
-  doc.setTextColor(20,18,14);
+  // Clues
+  PDFKit.set(doc, PDFKit.mono(), 'normal', fs, C.ink);
   colClues.forEach((clue, c) => {
-    const cx = gx + c * cellW + cellW / 2;
-    const startY = gy - clue.length * 4;
+    const cx = gx + c * cell + cell / 2;
     clue.forEach((n, i) => {
-      const tw = doc.getTextWidth(String(n));
-      doc.text(String(n), cx - tw/2, startY + i * 4 + 3.5);
+      doc.text(String(n), cx, gy - 1 - (clue.length - 1 - i) * lineH - fs * PT * 0.15, { align: 'center' });
     });
   });
-
-  // ── Row clues ──
   rowClues.forEach((clue, r) => {
-    const cy = gy + r * cellH + cellH * 0.68;
-    const clueStr = clue.join('  ');
-    const tw = doc.getTextWidth(clueStr);
-    doc.text(clueStr, gx - tw - 1.5, cy);
+    doc.text(clue.join('  '), gx - 1.5, gy + r * cell + cell / 2 + fs * PT * 0.35, { align: 'right' });
   });
 
-  // ── Grid cells ──
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const cx = gx + c * cellW;
-      const cy = gy + r * cellH;
+  // Thin tan grid
+  doc.setDrawColor(C.tan[0], C.tan[1], C.tan[2]); doc.setLineWidth(0.15);
+  for (let i = 0; i <= cols; i++) doc.line(gx + i * cell, gy, gx + i * cell, gy + rows * cell);
+  for (let i = 0; i <= rows; i++) doc.line(gx, gy + i * cell, gx + cols * cell, gy + i * cell);
 
-      if (showSolution && grid[r][c]) {
-        doc.setFillColor(15,12,8); doc.rect(cx,cy,cellW,cellH,'F');
-      } else {
-        // Subtle alternating bg for 5×5 blocks
-        if (opts.bold5 && (Math.floor(r/5) + Math.floor(c/5)) % 2 === 1) {
-          doc.setFillColor(248,245,240); doc.rect(cx,cy,cellW,cellH,'F');
-        }
-      }
-
-      // Cell border
-      const is5r = opts.bold5 && r % 5 === 0 && rows > 10;
-      const is5c = opts.bold5 && c % 5 === 0 && cols > 10;
-      doc.setDrawColor(is5r||is5c ? 80:180, is5r||is5c ? 70:170, is5r||is5c ? 55:145);
-      doc.setLineWidth(is5r||is5c ? 0.5 : 0.15);
-      doc.rect(cx, cy, cellW, cellH);
-    }
+  // Solution fill
+  if (showSolution) {
+    doc.setFillColor(C.ink[0], C.ink[1], C.ink[2]);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++)
+      if (grid[r][c]) doc.rect(gx + c * cell, gy + r * cell, cell, cell, 'F');
   }
-
-  // Heavy outer grid border
-  doc.setDrawColor(15,12,8); doc.setLineWidth(0.7);
-  doc.rect(gx, gy, cols*cellW, rows*cellH);
 
   // Bold every-5 lines
+  doc.setDrawColor(C.ink[0], C.ink[1], C.ink[2]);
   if (opts.bold5 && cols > 5) {
-    doc.setDrawColor(60,55,45); doc.setLineWidth(0.45);
-    for (let c = 5; c < cols; c += 5) doc.line(gx+c*cellW, gy, gx+c*cellW, gy+rows*cellH);
-    for (let r = 5; r < rows; r += 5) doc.line(gx, gy+r*cellH, gx+cols*cellW, gy+r*cellH);
+    doc.setLineWidth(0.3);
+    for (let c = 5; c < cols; c += 5) doc.line(gx + c * cell, gy, gx + c * cell, gy + rows * cell);
+    for (let r = 5; r < rows; r += 5) doc.line(gx, gy + r * cell, gx + cols * cell, gy + r * cell);
   }
+  // Outer border
+  doc.setLineWidth(0.6);
+  doc.rect(gx, gy, cols * cell, rows * cell);
+}
 
-  // Panel border
-  doc.setDrawColor(15,12,8); doc.setLineWidth(0.5);
-  doc.rect(px,py,pw,ph);
+// Regular fold/cut marks for a 180°-rotated back page (PDFKit.marks mirrored: waste strip on the left).
+function drawRotatedRegularMarks(doc) {
+  const C = PDFKit.COLORS, W = 297, H = 210, colW = 110;
+  doc.setLineDashPattern([], 0);
+  doc.setDrawColor(...C.gold); doc.setLineWidth(0.25);
+  doc.setLineDashPattern([2, 1.5], 0); doc.line(W - colW, 0, W - colW, H);
+  doc.setLineDashPattern([0.8, 2], 0); doc.line(W - 2 * colW, 0, W - 2 * colW, H);
+  doc.setLineDashPattern([], 0);
+  PDFKit.set(doc, PDFKit.mono(), 'normal', 3.6, C.gold);
+  PDFKit.text(doc, '- - -  FOLD AT 110MM', 2, H / 2 - 4, null, 0.3);
+  PDFKit.text(doc, '· · ·  CUT AT 220MM', 2, H / 2, null, 0.3);
 }
 
 // ── Cover page ────────────────────────────────────────────────────────────────
 function drawCoverPage(doc, count, cols, rows) {
-  const W=297, H=210, colW=110, m=8;
-
-  // Left panel — blank
-  doc.setFillColor(253,250,245); doc.rect(0,0,colW,H,'F');
-
-  // Right panel — cover face
-  doc.setFillColor(253,250,245); doc.rect(colW,0,colW,H,'F');
-
-  const fx=colW+m, fy=m, fw=colW-m*2, fh=H-m*2;
-  const cx=fx+fw/2;
-
-  // Outer frame
-  doc.setDrawColor(30,25,18); doc.setLineWidth(0.8); doc.rect(fx,fy,fw,fh);
-  // Inner frame
-  doc.setLineWidth(0.25); doc.rect(fx+3,fy+3,fw-6,fh-6);
-
-  // Corner flourishes
-  const cs=5;
-  for(const[ox,oy,sx,sy] of [[fx+3,fy+3,1,1],[fx+fw-3,fy+3,-1,1],[fx+3,fy+fh-3,1,-1],[fx+fw-3,fy+fh-3,-1,-1]]){
-    doc.setLineWidth(0.5); doc.setDrawColor(139,58,26);
-    doc.line(ox,oy,ox+sx*cs,oy); doc.line(ox,oy,ox,oy+sy*cs);
-  }
-
-  // Top ornament
-  doc.setFont('times','normal'); doc.setFontSize(7); doc.setTextColor(139,58,26);
-  PDFKit.ornament(doc, cx, fy+12.6, 1.5);
-
-  // Title
-  doc.setFont('times','bolditalic'); doc.setFontSize(26); doc.setTextColor(15,12,8);
-  doc.text('Nonogram', cx, fy+fh*0.36+13, {align:'center'});
-
-  // Gold rules
-  doc.setDrawColor(139,58,26); doc.setLineWidth(0.4);
-  doc.line(fx+12, fy+fh*0.36+17, fx+fw-12, fy+fh*0.36+17);
-  doc.setLineWidth(0.15);
-  doc.line(fx+12, fy+fh*0.36+19, fx+fw-12, fy+fh*0.36+19);
-
-  // Subtitle
-  doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(100,75,40);
-  doc.text('Logic Puzzle Inserts', cx, fy+fh*0.36+24, {align:'center'});
-
-  // Grid size & count info
   const diff = getDifficulty(cols, rows);
-  doc.setFont('times','italic'); doc.setFontSize(6); doc.setTextColor(80,60,35);
-  doc.text(`${cols}×${rows} · ${diff.label}`, cx, fy+fh*0.62, {align:'center'});
-  doc.setFont('times','normal'); doc.setFontSize(5); doc.setTextColor(130,110,75);
-  doc.text(`${count} puzzle${count!==1?'s':''}`, cx, fy+fh*0.62+7, {align:'center'});
-
-  // Grid preview decoration — tiny ghost grid
-  const previewSize = Math.min(cols, rows, 10);
-  const cellSz = Math.min(fw*0.55/previewSize, 4.5);
-  const gw = previewSize*cellSz, gh = previewSize*cellSz;
-  const gox = cx-gw/2, goy = fy+fh*0.67;
-  doc.setDrawColor(200,185,160); doc.setLineWidth(0.1);
-  for(let r=0;r<=previewSize;r++) doc.line(gox, goy+r*cellSz, gox+gw, goy+r*cellSz);
-  for(let c=0;c<=previewSize;c++) doc.line(gox+c*cellSz, goy, gox+c*cellSz, goy+gh);
-  // Fill some cells of the ghost grid
-  doc.setFillColor(200,185,160);
-  const pattern=[[0,1],[0,3],[1,0],[1,2],[2,1],[2,4],[3,0],[3,3],[4,2],[4,4],[5,1],[6,0],[6,3],[7,2],[8,1],[8,4],[9,0],[9,3]];
-  pattern.forEach(([r,c])=>{ if(r<previewSize&&c<previewSize){ doc.setGState(new doc.GState({opacity:0.35})); doc.rect(gox+c*cellSz,goy+r*cellSz,cellSz,cellSz,'F'); doc.setGState(new doc.GState({opacity:1})); }});
-  doc.setDrawColor(80,60,35); doc.setLineWidth(0.3);
-  doc.rect(gox, goy, gw, gh);
-
-  // Bottom ornament
-  doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(139,58,26);
-  doc.setFillColor(doc.getTextColor()); PDFKit.star(doc, cx, fy+fh-7.5, 1.8);
-
-  // Fold/cut lines
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-  doc.setLineDashPattern([],0);
-  doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,130,110);
-  doc.text('--- fold', 2*colW+2, H/2-4);
-  doc.text('... cut',  2*colW+2, H/2);
+  PDFKit.cover(doc, {
+    kicker: 'Nonogram', title: 'Nonogram Puzzles',
+    subtitle: `${cols}×${rows} · ${diff.label} · ${count} puzzle${count !== 1 ? 's' : ''}`
+  });
+  PDFKit.marks(doc, 'regular', { label: 'Cover' });
 }
 
 // ── Build doc ─────────────────────────────────────────────────────────────────
 function buildDoc(allGrids) {
   const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+  PDFKit.register(doc);
   const W=297, H=210;
   const nbsize = document.querySelector('input[name="nbsize"]:checked')?.value || 'regular';
   const colW = nbsize==='regular' ? 110 : 134;
@@ -591,8 +512,6 @@ function buildDoc(allGrids) {
         if (opts.solution) {
           drawNonogramPDF(doc, W-colW, 0, colW, H, grid, i+1, true);   // rotated left = orig right
         } else {
-          doc.setFillColor(255,255,255); doc.rect(W-colW,0,colW,H,'F');
-          doc.setDrawColor(15,12,8); doc.setLineWidth(0.5); doc.rect(W-colW,0,colW,H);
         }
         drawNonogramPDF(doc, W-2*colW, 0, colW, H, grid, i+1, false); // rotated right = orig left
       } else {
@@ -603,14 +522,9 @@ function buildDoc(allGrids) {
         drawNonogramPDF(doc, W-sx-2*colW,  H-sy-2*ph,  colW, ph, grid, i+1, opts.solution);
       }
 
-      // Fold/cut lines (mirrored for rotated page)
-      doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-      doc.setLineDashPattern([2,1.5],0); doc.line(W-colW,0,W-colW,H);
-      doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(W-2*colW,0,W-2*colW,H);
-      doc.setLineDashPattern([],0);
-      doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,130,110);
-      doc.text('--- fold', 2, H/2-4);
-      doc.text('... cut',  2, H/2);
+      // Fold/cut marks (mirrored for rotated page)
+      if (nbsize === 'regular') drawRotatedRegularMarks(doc);
+      else PDFKit.marks(doc, 'passport', { label: 'Back' });
 
     } else {
       // Normal (odd pages, or short-edge, or manual)
@@ -619,8 +533,6 @@ function buildDoc(allGrids) {
         if (opts.solution) {
           drawNonogramPDF(doc, colW, 0, colW, ph, grid, i+1, true);
         } else {
-          doc.setFillColor(255,255,255); doc.rect(colW,0,colW,ph,'F');
-          doc.setDrawColor(15,12,8); doc.setLineWidth(0.5); doc.rect(colW,0,colW,ph);
         }
       } else {
         const sx=(W-colW*2)/2, sy=(H-ph*2)/2;
@@ -630,14 +542,9 @@ function buildDoc(allGrids) {
         drawNonogramPDF(doc, sx+colW, sy+ph, colW, ph, grid, i+1, opts.solution);
       }
 
-      // Fold/cut lines
-      doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-      doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-      doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-      doc.setLineDashPattern([],0);
-      doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,130,110);
-      doc.text('--- fold', 2*colW+2, H/2-4);
-      doc.text('... cut',  2*colW+2, H/2);
+      // Fold/cut marks
+      if (nbsize === 'regular') PDFKit.marks(doc, 'regular', { label: 'Puzzle · Solution' });
+      else PDFKit.marks(doc, 'passport', { label: 'Puzzle · Solution' });
     }
   });
   return doc;
@@ -678,6 +585,7 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
   }
   setProgress(90,'Laying out PDF...');
   await new Promise(r => setTimeout(r,80));
+  await PDFKit.preload();
   const doc = buildDoc(allGrids);
   setProgress(100,'Done!');
   await new Promise(r => setTimeout(r,300));

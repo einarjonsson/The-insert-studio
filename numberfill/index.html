@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Number Fill-In Generator — The Insert Studio</title>
 <script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
 <script src="fillin.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
@@ -78,9 +79,13 @@
       <!-- Font -->
       <div class="section">
         <div class="section-title">Font Style</div>
-        <div class="radio-group cols-3">
+        <div class="radio-group cols-2">
           <label class="radio-option">
-            <input type="radio" name="font" value="helvetica" checked>
+            <input type="radio" name="font" value="studio" checked>
+            <span class="radio-btn"><span class="rb-title" style="font-family:'DM Mono',monospace">Studio</span><span class="rb-sub">site look</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="font" value="helvetica">
             <span class="radio-btn"><span class="rb-title" style="font-family:sans-serif">Classic</span><span class="rb-sub">clean</span></span>
           </label>
           <label class="radio-option">
@@ -204,7 +209,8 @@ const modalClose  = document.getElementById('modalClose');
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const getSize       = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
 const getDifficulty = () => document.querySelector('input[name="difficulty"]:checked')?.value || 'medium';
-const getFont       = () => document.querySelector('input[name="font"]:checked')?.value || 'helvetica';
+const getFont       = () => document.querySelector('input[name="font"]:checked')?.value || 'studio';
+const F = () => PDFKit.family(getFont());
 const getCover      = () => document.querySelector('input[name="cover"]:checked')?.value || 'none';
 const getTitle      = () => document.getElementById('customTitle')?.value.trim() || '';
 
@@ -242,32 +248,36 @@ function setProgress(pct, text) {
 }
 
 // ── PDF Drawing ────────────────────────────────────────────────────────────────
-function drawFillInPage(doc, puzzle, number, ox, oy, pw, ph, font, size) {
-  const L = FillIn.layout(puzzle, pw, ph, size);
+const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+
+function drawFillInPage(doc, puzzle, number, ox, oy, pw, ph, size) {
+  const C = PDFKit.COLORS;
+  const top = PDFKit.header(doc, ox, oy, pw, {
+    eyebrow: 'The Insert Studio · ' + DIFF_LABEL[getDifficulty()],
+    title: 'Number', accent: 'Fill-In', number
+  });
+  const bottom = PDFKit.footer(doc, ox, oy, pw, ph, { number });
+  const L = FillIn.layout(puzzle, pw, ph, size, { top: top - oy + 1.2, bottom: bottom - oy - 0.5, side: 7 });
   const { n, cell, gx, gy } = L;
 
-  // Title
-  doc.setFont(font, 'bold'); doc.setFontSize(7); doc.setTextColor(30, 30, 30);
-  doc.text(`Number Fill-In ${number}`, ox + L.margin, oy + L.margin + 3.5);
-
-  // Grid: black blocks, white cells, thin rules
+  // Grid: black blocks, wash for written-in numbers, tan rules
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
       const x = ox + gx + c * cell, y = oy + gy + r * cell;
-      if (puzzle.black[r][c]) { doc.setFillColor(36, 30, 24); doc.rect(x, y, cell, cell, 'F'); }
-      else if (puzzle.shown[r][c]) { doc.setFillColor(245, 238, 222); doc.rect(x, y, cell, cell, 'F'); }
+      if (puzzle.black[r][c]) { doc.setFillColor(...C.ink); doc.rect(x, y, cell, cell, 'F'); }
+      else if (puzzle.shown[r][c]) { doc.setFillColor(...C.wash); doc.rect(x, y, cell, cell, 'F'); }
     }
   }
-  doc.setDrawColor(150, 142, 128); doc.setLineWidth(0.15);
+  doc.setDrawColor(...C.tan); doc.setLineWidth(0.15);
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
     if (!puzzle.black[r][c]) doc.rect(ox + gx + c * cell, oy + gy + r * cell, cell, cell);
   }
-  doc.setDrawColor(40, 40, 40); doc.setLineWidth(0.45);
+  doc.setDrawColor(...C.ink); doc.setLineWidth(0.5);
   doc.rect(ox + gx, oy + gy, cell * n, cell * n);
 
   // Numbers that are already written in
   const gfs = cell * 2.835 * 0.58, gh = gfs / 2.835 * 0.72;
-  doc.setFont(font, 'bold'); doc.setFontSize(gfs); doc.setTextColor(20, 20, 20);
+  doc.setFont(F(), getFont() === 'studio' ? 'bold' : 'bold'); doc.setFontSize(gfs); doc.setTextColor(...C.ink);
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
     const v = puzzle.shown[r][c];
     if (v) doc.text(String(v), ox + gx + c * cell + cell / 2, oy + gy + r * cell + cell / 2 + gh / 2, { align: 'center' });
@@ -276,91 +286,48 @@ function drawFillInPage(doc, puzzle, number, ox, oy, pw, ph, font, size) {
   // Number list, grouped by length
   for (const col of L.columns) {
     if (col.header) {
-      doc.setFont(font, 'bold'); doc.setFontSize(L.fontPt - 1.4); doc.setTextColor(120, 110, 95);
+      PDFKit.set(doc, PDFKit.mono(), 'normal', L.fontPt - 1.4, C.rust);
       doc.text(col.header.toUpperCase(), ox + col.x, oy + col.y + 2.2);
     }
-    doc.setFont(font, 'normal'); doc.setFontSize(L.fontPt); doc.setTextColor(30, 30, 30);
+    doc.setFont(F(), 'normal'); doc.setFontSize(L.fontPt); doc.setTextColor(...C.ink);
     col.nums.forEach((s, i) => doc.text(s, ox + col.x, oy + col.y + L.headH + (i + 0.8) * L.lineH));
   }
 }
 
-function drawRegularSide(doc, puzzles, startIdx, sideLabel, font, title) {
-  const W = 297, H = 210, colW = 110, halfH = H / 2;
+function drawRegularSide(doc, puzzles, startIdx, sideLabel, title) {
+  const colW = 110, halfH = 105;
   const panels = [[0, 0, startIdx],[0, 1, startIdx+1],[1, 0, startIdx+2],[1, 1, startIdx+3]];
   for (const [col, row, idx] of panels) {
-    if (idx - 1 < puzzles.length) {
-      drawFillInPage(doc, puzzles[idx-1], idx, col*colW, row*halfH, colW, halfH, font, 'regular');
-    }
+    if (idx - 1 < puzzles.length) drawFillInPage(doc, puzzles[idx-1], idx, col*colW, row*halfH, colW, halfH, 'regular');
   }
-  // Fold + cut lines
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-  doc.setLineDashPattern([],0);
-  doc.setDrawColor(180,180,180); doc.setLineWidth(0.12); doc.setLineDashPattern([1,2],0);
-  doc.line(0,H/2,2*colW,H/2); doc.setLineDashPattern([],0);
-  doc.setFontSize(4); doc.setFont(font,'normal'); doc.setTextColor(120,120,120);
-  doc.text('--- fold at 110mm', 2*colW+2, H/2-4);
-  doc.text('... cut at 220mm', 2*colW+2, H/2);
-  doc.text(sideLabel, 2*colW+2, H/2+4);
-  if (title) { doc.setFontSize(5); doc.text(title, W/2, H-3, {align:'center'}); }
+  PDFKit.marks(doc, 'regular', { label: sideLabel, title, horizontal: true });
 }
 
-function drawPassportSide(doc, puzzles, startIdx, sideLabel, font, title) {
+function drawPassportSide(doc, puzzles, startIdx, sideLabel, title) {
   const W = 297, H = 210, pw = 134, ph = 98;
-  const totalW = pw*2, totalH = ph*2;
-  const startX = (W-totalW)/2, startY = (H-totalH)/2;
+  const startX = (W-pw*2)/2, startY = (H-ph*2)/2;
   const panels = [[0,0,startIdx],[1,0,startIdx+1],[0,1,startIdx+2],[1,1,startIdx+3]];
   for (const [col,row,idx] of panels) {
-    if (idx-1 < puzzles.length) {
-      drawFillInPage(doc, puzzles[idx-1], idx, startX+col*pw, startY+row*ph, pw, ph, font, 'passport');
-    }
+    if (idx-1 < puzzles.length) drawFillInPage(doc, puzzles[idx-1], idx, startX+col*pw, startY+row*ph, pw, ph, 'passport');
   }
-  doc.setDrawColor(160,160,160); doc.setLineWidth(0.15); doc.setLineDashPattern([],0);
-  for (let c=0;c<2;c++) for (let r=0;r<2;r++) doc.rect(startX+c*pw,startY+r*ph,pw,ph);
-  doc.setDrawColor(80,80,80); doc.setLineWidth(0.25); doc.setLineDashPattern([0.8,2],0);
-  doc.line(startX+pw,startY-4,startX+pw,startY+totalH+4);
-  doc.line(startX-4,startY+ph,startX+totalW+4,startY+ph);
-  doc.setLineDashPattern([],0);
-  doc.setFontSize(4); doc.setFont(font,'normal'); doc.setTextColor(120,120,120);
-  doc.text('... cut at centre | '+sideLabel, W/2, startY-4, {align:'center'});
-  if (title) { doc.setFontSize(5); doc.text(title, W/2, H-3, {align:'center'}); }
+  PDFKit.marks(doc, 'passport', { label: sideLabel, title });
 }
 
-function drawCoverPage(doc, title, font) {
-  const W=297, H=210, colW=110, margin=8;
-  const fx=colW+margin, fy=margin, fw=colW-margin*2, fh=H-margin*2;
-  doc.setDrawColor(80,80,80); doc.setLineWidth(0.8); doc.rect(fx,fy,fw,fh);
-  doc.setLineWidth(0.25); doc.rect(fx+3,fy+3,fw-6,fh-6);
-  const cs=5;
-  for (const [ox,oy,sx,sy] of [[fx+3,fy+3,1,1],[fx+fw-3,fy+3,-1,1],[fx+3,fy+fh-3,1,-1],[fx+fw-3,fy+fh-3,-1,-1]]) {
-    doc.setLineWidth(0.5);
-    doc.line(ox,oy,ox+sx*cs,oy); doc.line(ox,oy,ox,oy+sy*cs);
-  }
-  const cx=fx+fw/2, cy=fy+fh/2;
-  if (title) {
-    doc.setFont(font,'bold'); doc.setTextColor(30,30,30); doc.setFontSize(11);
-    doc.text(title, cx, cy-4, {align:'center', maxWidth:fw-16});
-    const lw=Math.min(doc.getTextWidth(title)+8,fw-20);
-    doc.setLineWidth(0.3); doc.setDrawColor(120,120,120);
-    doc.line(cx-lw/2,cy+1,cx+lw/2,cy+1);
-    doc.setFont(font,'normal'); doc.setFontSize(6); doc.setTextColor(100,100,100);
-    doc.text('NUMBER FILL-IN PUZZLES', cx, cy+7, {align:'center'});
-  } else {
-    doc.setFont(font,'normal'); doc.setFontSize(5); doc.setTextColor(160,160,160);
-    doc.text('MY NUMBER FILL-IN BOOK', cx, cy-14, {align:'center'});
-    doc.setDrawColor(180,180,180); doc.setLineWidth(0.2);
-    for (let i=-1;i<=1;i++) doc.line(fx+12,cy+i*8,fx+fw-12,cy+i*8);
-  }
+function drawCoverPage(doc, title, count) {
+  PDFKit.cover(doc, {
+    kicker: 'Number Fill-In', title: title || 'Number Fill-In Puzzles', blank: !title,
+    subtitle: `${DIFF_LABEL[getDifficulty()]} · ${count} puzzles`
+  });
 }
 
 function buildDoc(puzzles, size, pages, sideFilter) {
   const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
-  const font = getFont(), title = getTitle();
+  PDFKit.register(doc);
+  const title = getTitle();
   let first = true;
 
   if (getCover() === 'cover' && sideFilter !== 'side2') {
-    drawCoverPage(doc, title, font);
+    drawCoverPage(doc, title, pages * 8);
     first = false;
   }
 
@@ -374,15 +341,15 @@ function buildDoc(puzzles, size, pages, sideFilter) {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 1`;
       size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+1, label, font, title)
-        : drawPassportSide(doc, puzzles, base+1, label, font, title);
+        ? drawRegularSide(doc, puzzles, base+1, label, title)
+        : drawPassportSide(doc, puzzles, base+1, label, title);
     }
     if (sideFilter === 'all' || sideFilter === 'side2') {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 2`;
       size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+5, label, font, title)
-        : drawPassportSide(doc, puzzles, base+5, label, font, title);
+        ? drawRegularSide(doc, puzzles, base+5, label, title)
+        : drawPassportSide(doc, puzzles, base+5, label, title);
     }
   }
   return doc;
@@ -398,6 +365,7 @@ generateBtn.addEventListener('click', async () => {
   generateBtn.disabled = true;
   progress.classList.add('visible');
 
+  await PDFKit.preload();
   await new Promise(r => setTimeout(r, 50));
 
   const puzzles = [];

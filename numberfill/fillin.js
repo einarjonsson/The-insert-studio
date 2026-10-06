@@ -232,8 +232,12 @@
 
   // ── Page layout (all in mm, relative to the panel's top-left) ────────────────
   // layout.gx/gy/cell: grid; layout.columns: [{x, y, len, nums, header}] for the number list.
-  function layout(puzzle, pw, ph, size) {
-    const n = puzzle.n, margin = 5, titleH = 8;
+  // opts (all mm, relative to the panel): { top, bottom, side } = content area; defaults suit the preview canvas.
+  function layout(puzzle, pw, ph, size, opts) {
+    opts = opts || {};
+    const n = puzzle.n, margin = opts.side != null ? opts.side : 5, titleH = 8;
+    const top = opts.top != null ? opts.top : 5 + titleH;       // y where grid starts
+    const bottom = opts.bottom != null ? opts.bottom : ph - 5;  // y where content must end
     const fontPt = size === 'passport' ? 7 : 6.2;
     const lineH = fontPt / 2.835 * 1.5;
     const digitW = fontPt / 2.835 * 0.62;
@@ -256,24 +260,24 @@
 
     let cell, gx, gy, listX, listY, packed;
     if (size === 'passport') {
-      const availH = ph - margin * 2 - titleH;
+      const availH = bottom - top;
       const rows = Math.floor((availH - headH) / lineH);
       for (cell = Math.min(7.5, availH / n); cell > 3; cell -= 0.05) {
         packed = pack(rows, pw - margin * 2 - cell * n - 6);
         if (packed) break;
       }
-      gx = margin; gy = margin + titleH;
+      gx = margin; gy = top;
       listX = gx + cell * n + 6; listY = gy;
     } else {
       const availW = pw - margin * 2;
       for (cell = Math.min(8, availW / n); cell > 3; cell -= 0.05) {
-        const listH = ph - margin * 2 - titleH - cell * n - 3;
+        const listH = bottom - top - cell * n - 3;
         const rows = Math.floor((listH - headH) / lineH);
         if (rows < 3) continue;
         packed = pack(rows, availW);
         if (packed) break;
       }
-      gx = margin + (availW - cell * n) / 2; gy = margin + titleH;
+      gx = margin + (availW - cell * n) / 2; gy = top;
       listX = margin + (availW - (packed ? packed.totalW : 0)) / 2; listY = gy + cell * n + 3;
     }
     if (!packed) packed = { cols: [], totalW: 0 };

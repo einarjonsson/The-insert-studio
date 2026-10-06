@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>D&D Insert Generator — The Insert Studio</title>
 <script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <link rel="stylesheet" href="../assets/tokens.css">
@@ -426,7 +427,7 @@ function drawCoverPage(doc, info) {
 
   // Top ornament
   doc.setFont('times','normal'); doc.setFontSize(7); doc.setTextColor(154,123,42);
-  doc.text('✦ · ✦', cx, fy+14, {align:'center'});
+  PDFKit.ornament(doc, cx, fy+12.6, 1.5);
 
   // "FIELD MANUAL" — main title
   doc.setFont('times','bolditalic'); doc.setFontSize(18); doc.setTextColor(20,13,6);
@@ -468,7 +469,7 @@ function drawCoverPage(doc, info) {
 
   // Bottom ornament
   doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(154,123,42);
-  doc.text('✦', cx, fy+fh-6, {align:'center'});
+  doc.setFillColor(doc.getTextColor()); PDFKit.star(doc, cx, fy+fh-7.5, 1.8);
 
   // Fold/cut lines
   doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
@@ -590,7 +591,8 @@ function drawCharSheet(doc, px, py, pw, ph, info) {
   // HP current tracker box
   pD(doc,80,30,20,0.3); doc.rect(px+m,cy,iw,8);
   pF(doc,3.5,'italic','times'); pC(doc,100,80,45);
-  doc.text('Current HP tracker  □□□□□ □□□□□ □□□□□ □□□□□ □□□□□', px+m+1.5, cy+5);
+  doc.text('Current HP tracker', px+m+1.5, cy+5);
+  { const lw = doc.getTextWidth('Current HP tracker'); doc.setLineWidth(0.15); let bx = px+m+4+lw; const bs = Math.min(2.2, (iw-lw-8)/(25+4*1.5+24*0.5)); for(let g=0; g<5; g++){ bx = PDFKit.boxes(doc, bx, cy+4, 5, bs, 0.5) + 1.8; } }
   cy+=12;
 
   // Saving throws + Skills (2 columns)
@@ -778,7 +780,7 @@ function drawLootLedger(doc, px, py, pw, ph, info) {
     const cx2=px+m+i*(cboxW+1);
     pD(doc,80,30,20,0.4); doc.rect(cx2,cy,cboxW,16);
     // Gold coin colour for GP
-    if(i===1){doc.setFillColor(220,185,80,0.12);doc.rect(cx2,cy,cboxW,16,'F');}
+    if(i===1){doc.setFillColor(243,231,196);doc.rect(cx2,cy,cboxW,16,'F');}
     pF(doc,3,'bold','times'); pC(doc,100,25,25);
     const [abbr,name]=l.split('\n');
     doc.text(abbr, cx2+cboxW/2, cy+4, {align:'center'});

@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D&D Insert Generator — The Insert Studio</title>
+<script src="../assets/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/studio.css">
+<script src="../assets/studio.js" defer></script>
+<style>
+/* dnd-specific styles; shared styles live in ../assets/studio.css */
+.logo { display: flex; align-items: center; gap: 12px; }
+:root { --parchment-deep: #ddd4b0; }
+/* Parchment texture overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 999; pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px;
+}
+/* ── Back nav ── */
+/* ── Header ── */
+.logo-shield {
+  width: 32px; height: 32px;
+  background: var(--crimson);
+  clip-path: none; border-radius: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; color: var(--parchment); flex-shrink: 0;
+}
+/* ── Main layout ── */
+/* ── Settings panel ── */
+.section-title::before { content: '⚔'; color: var(--crimson); font-size: 0.7rem; }
+/* Insert type cards */
+.insert-grid { display: flex; flex-direction: column; gap: 6px; }
+.insert-card {
+  border: 1.5px solid var(--rule); border-radius: 2px;
+  background: var(--parchment); overflow: hidden;
+  transition: border-color 0.12s;
+}
+.insert-card:hover { border-color: var(--crimson); }
+.insert-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+}
+.insert-card-title { display: flex; align-items: center; gap: 10px; }
+.insert-icon { font-size: 1.1rem; }
+.insert-name { font-size: 0.78rem; font-weight: 500; display: block; }
+.insert-desc { font-size: 0.6rem; color: var(--muted); margin-top: 1px; }
+.insert-controls { display: flex; align-items: center; gap: 8px; }
+.qty-btn {
+  width: 26px; height: 26px; border: 1.5px solid var(--rule);
+  background: var(--warm); border-radius: 2px; font-size: 1rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace; transition: all 0.12s; color: var(--ink);
+}
+.qty-btn:hover { border-color: var(--crimson); background: var(--crimson); color: white; }
+.qty-val { font-family: 'Playfair Display', serif; font-size: 1.1rem; min-width: 22px; text-align: center; color: var(--crimson); }
+.qty-label { font-size: 0.56rem; color: var(--muted); }
+/* Text inputs */
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.input-label { font-size: 0.6rem; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.08em; }
+/* Radio */
+.rb-title { display: block; font-size: 0.76rem; font-weight: 500; margin-bottom: 1px; }
+.rb-sub { display: block; font-size: 0.6rem; color: var(--muted); }
+/* Duplex */
+/* Generate */
+/* ── Preview ── */
+.preview-tabs { display: flex; gap: 3px; }
+.preview-tab {
+  font-size: 0.56rem; letter-spacing: 0.08em; padding: 4px 10px;
+  border: 1px solid rgba(154,123,42,0.3); cursor: pointer;
+  background: rgba(242,234,214,0.06); color: rgba(194,168,100,0.4);
+  transition: all 0.12s; font-family: 'DM Mono', monospace;
+}
+.preview-tab.active { background: var(--crimson); color: var(--parchment); border-color: var(--crimson); }
+.preview-sheet {
+  width: 100%; max-width: 680px; position: relative; z-index: 1;
+  background: white; box-shadow: var(--shadow-lg), 0 0 0 1px rgba(154,123,42,0.3);
+  overflow: hidden; aspect-ratio: 297 / 210;
+}
+/* ── Modal ── */
+</style>
+</head>
+<body>
+
+<nav class="topbar" data-tool="dnd"><a href="../">← The Insert Studio</a></nav>
+
+<header>
+  <div class="logo">
+    <div class="logo-shield">⚔</div>
+    D&amp;D <em>Inserts</em>
+  </div>
+  <div class="header-tag">Campaign Field Manual</div>
+</header>
+
+<main>
+  <aside class="settings-panel">
+    <div class="settings-inner">
+
+      <!-- Character info -->
+      <div class="section">
+        <div class="section-title">Character & Campaign</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div>
+            <div class="input-label">Character Name</div>
+            <input type="text" id="charName" class="text-input" placeholder="e.g. Aldric Stonehammer">
+          </div>
+          <div class="input-row">
+            <div>
+              <div class="input-label">Class</div>
+              <input type="text" id="charClass" class="text-input" placeholder="Fighter">
+            </div>
+            <div>
+              <div class="input-label">Race</div>
+              <input type="text" id="charRace" class="text-input" placeholder="Dwarf">
+            </div>
+          </div>
+          <div class="input-row">
+            <div>
+              <div class="input-label">Level</div>
+              <input type="text" id="charLevel" class="text-input" placeholder="1">
+            </div>
+            <div>
+              <div class="input-label">Campaign</div>
+              <input type="text" id="campaignName" class="text-input" placeholder="Lost Mine…">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Insert types -->
+      <div class="section">
+        <div class="section-title">Insert Types</div>
+        <div class="insert-grid">
+
+          <div class="insert-card">
+            <div class="insert-card-header">
+              <div class="insert-card-title">
+                <span class="insert-icon">🧙</span>
+                <div>
+                  <span class="insert-name">Character Sheet</span>
+                  <span class="insert-desc">Stats · Skills · Saving Throws · Notes</span>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <div style="font-size:0.62rem;color:var(--muted);padding:4px 8px;border:1.5px solid var(--rule-light);border-radius:2px;background:var(--parchment);">Always included</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="insert-card">
+            <div class="insert-card-header">
+              <div class="insert-card-title">
+                <span class="insert-icon">📜</span>
+                <div>
+                  <span class="insert-name">Session Notes</span>
+                  <span class="insert-desc">Log, NPCs, decisions, cliffhanger</span>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <button class="qty-btn" onclick="changeQty('session',-1)">−</button>
+                <div><div class="qty-val" id="qty-session">4</div><div class="qty-label">copies</div></div>
+                <button class="qty-btn" onclick="changeQty('session',1)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="insert-card">
+            <div class="insert-card-header">
+              <div class="insert-card-title">
+                <span class="insert-icon">⚔️</span>
+                <div>
+                  <span class="insert-name">Encounter Tracker</span>
+                  <span class="insert-desc">Initiative, HP, conditions, rounds</span>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <button class="qty-btn" onclick="changeQty('encounter',-1)">−</button>
+                <div><div class="qty-val" id="qty-encounter">4</div><div class="qty-label">copies</div></div>
+                <button class="qty-btn" onclick="changeQty('encounter',1)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="insert-card">
+            <div class="insert-card-header">
+              <div class="insert-card-title">
+                <span class="insert-icon">💰</span>
+                <div>
+                  <span class="insert-name">Loot Ledger</span>
+                  <span class="insert-desc">Gold, items, attunement slots</span>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <button class="qty-btn" onclick="changeQty('loot',-1)">−</button>
+                <div><div class="qty-val" id="qty-loot">2</div><div class="qty-label">copies</div></div>
+                <button class="qty-btn" onclick="changeQty('loot',1)">+</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Printer -->
+      <div class="section">
+        <div class="section-title">Printer</div>
+        <div id="duplexBanner" class="duplex-banner manual">
+          <span>⚠</span>
+          <span>Two PDFs — Side 1 first, then Side 2 after reinserting. <a href="#" id="duplexOverride" style="color:var(--crimson)">My printer supports duplex →</a></span>
+        </div>
+      </div>
+
+    </div>
+    <div class="settings-footer">
+      <button class="generate-btn" id="generateBtn">⚔ Generate Insert Pack</button>
+      <div class="progress" id="progress">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText">Forging your inserts...</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Preview -->
+  <section class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-label">Live Preview</span>
+      <div class="preview-tabs">
+        <button class="preview-tab active" onclick="setTab('char')">Character</button>
+        <button class="preview-tab" onclick="setTab('session')">Session</button>
+        <button class="preview-tab" onclick="setTab('encounter')">Encounter</button>
+        <button class="preview-tab" onclick="setTab('loot')">Loot</button>
+      </div>
+    </div>
+    <div class="preview-sheet"><canvas id="previewCanvas"></canvas></div>
+    <div class="preview-info">
+      <div class="preview-stat"><span class="preview-stat-val" id="statTotal">11</span><span class="preview-stat-label">Total Pages</span></div>
+      <div class="preview-stat"><span class="preview-stat-val" id="statSheets">6</span><span class="preview-stat-label">Sheets</span></div>
+      <div class="preview-stat"><span class="preview-stat-val">A4</span><span class="preview-stat-label">Landscape</span></div>
+    </div>
+  </section>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Two-step printing</div>
+    <div class="modal-sub">Manual duplex</div>
+    <div id="modalSteps"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalBtn1">Download Side 1</button>
+      <button class="modal-btn ghost" id="modalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const qty = { char: 1, session: 4, encounter: 4, loot: 2 };
+let duplexSupported = false;
+let currentTab = 'char';
+let generatedDoc = null;
+
+const PW = 110, PH = 210; // Regular TN panel mm
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function changeQty(type, delta) {
+  qty[type] = Math.max(0, qty[type] + delta);
+  document.getElementById('qty-' + type).textContent = qty[type];
+  updateStats(); updatePreview();
+}
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.preview-tab').forEach((t,i) => {
+    t.classList.toggle('active', ['char','session','encounter','loot'][i] === tab);
+  });
+  updatePreview();
+}
+
+function updateStats() {
+  const total = Object.values(qty).reduce((a,b)=>a+b,0);
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statSheets').textContent = Math.ceil(total/2);
+}
+
+function setProgress(pct, text) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = text;
+}
+
+const getChar = () => ({
+  name: document.getElementById('charName').value || 'Character Name',
+  cls:  document.getElementById('charClass').value || 'Class',
+  race: document.getElementById('charRace').value || 'Race',
+  level: document.getElementById('charLevel').value || '1',
+  campaign: document.getElementById('campaignName').value || 'Campaign',
+});
+
+document.querySelectorAll('.text-input').forEach(el => el.addEventListener('input', updatePreview));
+
+document.getElementById('duplexBanner').addEventListener('click', e => {
+  if (e.target.id === 'duplexOverride') {
+    e.preventDefault();
+    duplexSupported = true;
+    const b = document.getElementById('duplexBanner');
+    b.className = 'duplex-banner supported';
+    b.innerHTML = '<span>✓</span><span>Duplex enabled — one combined PDF.</span>';
+  }
+});
+
+document.getElementById('modalClose').addEventListener('click', () => document.getElementById('modalOverlay').classList.remove('visible'));
+document.getElementById('modalOverlay').addEventListener('click', e => { if(e.target === document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('visible'); });
+
+// ── PDF DRAWING HELPERS ───────────────────────────────────────────────────────
+function pF(doc, size, style='normal', face='times') { doc.setFont(face, style); doc.setFontSize(size); }
+function pC(doc, r, g, b) { doc.setTextColor(r,g,b); }
+function pD(doc, r, g, b, lw=0.3) { doc.setDrawColor(r,g,b); doc.setLineWidth(lw); }
+
+// Ornate runic border
+function drawDndBorder(doc, x, y, w, h) {
+  // Outer
+  pD(doc, 80,30,20, 0.7); doc.rect(x,y,w,h);
+  // Inner thin
+  pD(doc, 80,30,20, 0.25); doc.rect(x+1.5,y+1.5,w-3,h-3);
+  // Corner runes — diamond shapes
+  const cs = 4;
+  pD(doc, 154,123,42, 0.5);
+  for (const [cx,cy] of [[x+3,y+3],[x+w-3,y+3],[x+3,y+h-3],[x+w-3,y+h-3]]) {
+    doc.line(cx,cy-cs,cx+cs,cy); doc.line(cx+cs,cy,cx,cy+cs);
+    doc.line(cx,cy+cs,cx-cs,cy); doc.line(cx-cs,cy,cx,cy-cs);
+  }
+}
+
+// Section header with crimson rule
+function dndSectionHeader(doc, text, x, y, w, fs=5) {
+  pF(doc, fs, 'bold', 'times');
+  pC(doc, 100,25,25);
+  doc.text(text.toUpperCase(), x, y);
+  const tw = doc.getTextWidth(text.toUpperCase());
+  pD(doc, 154,123,42, 0.25);
+  doc.line(x+tw+2, y-0.5, x+w, y-0.5);
+}
+
+// Stat box (ability score)
+function drawAbilityBox(doc, x, y, w, h, label, score) {
+  // Box
+  pD(doc, 80,30,20, 0.4); doc.rect(x,y,w,h);
+  // Label
+  pF(doc, 3.5, 'bold', 'times'); pC(doc, 100,25,25);
+  doc.text(label, x+w/2, y+4, {align:'center'});
+  // Score (big)
+  pF(doc, 9, 'bold', 'times'); pC(doc, 20,10,5);
+  doc.text(score, x+w/2, y+h*0.62, {align:'center'});
+  // Modifier circle
+  const mod = Math.floor((parseInt(score)||10-10)/2);
+  const modStr = (mod>=0?'+':'')+mod;
+  pD(doc, 154,123,42, 0.3);
+  doc.circle(x+w/2, y+h-3, 3);
+  pF(doc, 4, 'bold', 'times'); pC(doc, 80,30,20);
+  doc.text(modStr, x+w/2, y+h-1.5, {align:'center'});
+}
+
+// Ruled lines
+function dndLines(doc, x, y, w, n, gap=4.5) {
+  pD(doc, 180,155,110, 0.18);
+  for (let i=0;i<n;i++) doc.line(x, y+i*gap, x+w, y+i*gap);
+}
+
+// Field with dotted underline
+function dndField(doc, label, x, y, w, fs=4) {
+  pF(doc, fs, 'italic', 'times'); pC(doc, 100,80,45);
+  doc.text(label, x, y);
+  const lw = doc.getTextWidth(label);
+  pD(doc, 180,155,110, 0.2);
+  doc.setLineDashPattern([0.5,0.8],0);
+  doc.line(x+lw+1.5, y+0.5, x+w, y+0.5);
+  doc.setLineDashPattern([],0);
+}
+
+// Checkbox row
+function dndCheck(doc, label, x, y, checked=false) {
+  pD(doc, 120,80,40, 0.25); doc.rect(x, y-3, 3, 3);
+  pF(doc, 4, 'normal', 'times'); pC(doc, 30,20,10);
+  doc.text(label, x+4.5, y);
+}
+
+// ── COVER PAGE ─────────────────────────────────────────────────────────────────
+function drawCoverPage(doc, info) {
+  const W=297, H=210, colW=110, m=8;
+
+  // Left panel — blank (folds behind cover)
+  doc.setFillColor(253,250,245);
+  doc.rect(0, 0, colW, H, 'F');
+
+  // Right panel — cover face
+  doc.setFillColor(253,250,245);
+  doc.rect(colW, 0, colW, H, 'F');
+
+  const fx=colW+m, fy=m, fw=colW-m*2, fh=H-m*2;
+
+  // Outer frame
+  doc.setDrawColor(80,60,30); doc.setLineWidth(0.8);
+  doc.rect(fx, fy, fw, fh);
+  // Inner frame
+  doc.setLineWidth(0.25);
+  doc.rect(fx+3, fy+3, fw-6, fh-6);
+
+  // Corner flourishes (matching wordsearch style)
+  const cs=5;
+  for(const[ox,oy,sx,sy] of [
+    [fx+3,fy+3,1,1],[fx+fw-3,fy+3,-1,1],
+    [fx+3,fy+fh-3,1,-1],[fx+fw-3,fy+fh-3,-1,-1]
+  ]){
+    doc.setLineWidth(0.5); doc.setDrawColor(139,58,26);
+    doc.line(ox,oy,ox+sx*cs,oy);
+    doc.line(ox,oy,ox,oy+sy*cs);
+  }
+
+  const cx = fx+fw/2;
+
+  // Top ornament
+  doc.setFont('times','normal'); doc.setFontSize(7); doc.setTextColor(154,123,42);
+  doc.text('✦ · ✦', cx, fy+14, {align:'center'});
+
+  // "FIELD MANUAL" — main title
+  doc.setFont('times','bolditalic'); doc.setFontSize(18); doc.setTextColor(20,13,6);
+  doc.text('Field', cx, fy+fh*0.38, {align:'center'});
+  doc.text('Manual', cx, fy+fh*0.38+14, {align:'center'});
+
+  // Gold rule under title
+  doc.setDrawColor(139,58,26); doc.setLineWidth(0.4);
+  doc.line(fx+12, fy+fh*0.38+17, fx+fw-12, fy+fh*0.38+17);
+  doc.setLineWidth(0.15);
+  doc.line(fx+12, fy+fh*0.38+19, fx+fw-12, fy+fh*0.38+19);
+
+  // Subtitle
+  doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(100,75,40);
+  doc.text('D&D Campaign Insert Pack', cx, fy+fh*0.38+24, {align:'center'});
+
+  // Character name block (if set)
+  const hasName = info.name && info.name !== 'Character Name';
+  if(hasName) {
+    doc.setFont('times','bold'); doc.setFontSize(8); doc.setTextColor(30,20,10);
+    doc.text(info.name, cx, fy+fh*0.7, {align:'center'});
+    const meta=[info.cls, info.race, info.level ? `Level ${info.level}` : ''].filter(Boolean).join(' · ');
+    doc.setFont('times','italic'); doc.setFontSize(5); doc.setTextColor(120,90,55);
+    doc.text(meta, cx, fy+fh*0.7+6, {align:'center'});
+  } else {
+    // Blank name lines
+    doc.setFont('times','italic'); doc.setFontSize(5); doc.setTextColor(160,140,100);
+    doc.text('Character:', fx+10, fy+fh*0.7);
+    doc.setDrawColor(180,160,120); doc.setLineWidth(0.2);
+    doc.line(fx+28, fy+fh*0.7+0.5, fx+fw-6, fy+fh*0.7+0.5);
+    doc.text('Campaign:', fx+10, fy+fh*0.7+8);
+    doc.line(fx+28, fy+fh*0.7+8.5, fx+fw-6, fy+fh*0.7+8.5);
+  }
+
+  if(info.campaign && info.campaign !== 'Campaign') {
+    doc.setFont('times','italic'); doc.setFontSize(5); doc.setTextColor(120,90,55);
+    doc.text(info.campaign, cx, fy+fh*0.7+(hasName?12:16), {align:'center'});
+  }
+
+  // Bottom ornament
+  doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(154,123,42);
+  doc.text('✦', cx, fy+fh-6, {align:'center'});
+
+  // Fold/cut lines
+  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
+  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
+  doc.setLineDashPattern([],0);
+  doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,110,60);
+  doc.text('--- fold', 2*colW+2, H/2-4);
+  doc.text('... cut',  2*colW+2, H/2);
+}
+
+// ── CHARACTER BACK ─────────────────────────────────────────────────────────────
+function drawCharBack(doc, px, py, pw, ph, info) {
+  const m=5, iw=pw-m*2;
+  doc.setFillColor(246,240,220); doc.rect(px,py,pw,ph,'F');
+  drawDndBorder(doc,px,py,pw,ph);
+
+  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
+  pF(doc,7,'bold','times'); pC(doc,212,180,120);
+  doc.text('Character — Notes', px+pw/2, py+7.5, {align:'center'});
+
+  let cy=py+15;
+
+  // Personality traits
+  dndSectionHeader(doc,'Personality Traits',px+m,cy,iw,4.8); cy+=5;
+  dndLines(doc,px+m,cy,iw,3); cy+=3*4.5+6;
+
+  // Ideals
+  dndSectionHeader(doc,'Ideals',px+m,cy,iw,4.8); cy+=5;
+  dndLines(doc,px+m,cy,iw,2); cy+=2*4.5+6;
+
+  // Bonds
+  dndSectionHeader(doc,'Bonds',px+m,cy,iw,4.8); cy+=5;
+  dndLines(doc,px+m,cy,iw,2); cy+=2*4.5+6;
+
+  // Flaws
+  dndSectionHeader(doc,'Flaws',px+m,cy,iw,4.8); cy+=5;
+  dndLines(doc,px+m,cy,iw,2); cy+=2*4.5+6;
+
+  // Physical appearance
+  dndSectionHeader(doc,'Appearance',px+m,cy,iw,4.8); cy+=5;
+  const appFields=[['Age',''],['Height',''],['Weight',''],['Eyes',''],['Hair',''],['Skin','']];
+  const afw=(iw-2)/3;
+  appFields.forEach(([l],i)=>{
+    const col=i%3, row=Math.floor(i/3);
+    const ax=px+m+col*(afw+1), ay=cy+row*8;
+    pF(doc,3.5,'italic','times'); pC(doc,100,80,45);
+    doc.text(l,ax,ay+3.5);
+    pD(doc,180,155,110,0.18);
+    doc.setLineDashPattern([0.5,0.8],0);
+    doc.line(ax,ay+5,ax+afw,ay+5);
+    doc.setLineDashPattern([],0);
+  });
+  cy+=2*8+8;
+
+  // Backstory
+  if(cy<py+ph-24){
+    dndSectionHeader(doc,'Backstory',px+m,cy,iw,4.8); cy+=5;
+    dndLines(doc,px+m,cy,iw,Math.floor((py+ph-m-6-cy)/4.5));
+  }
+
+  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
+  doc.text('D&D Field Manual · Character Notes', px+pw/2, py+ph-m+1, {align:'center'});
+}
+
+// ── CHARACTER SHEET ───────────────────────────────────────────────────────────
+function drawCharSheet(doc, px, py, pw, ph, info) {
+  const m=5, iw=pw-m*2;
+  doc.setFillColor(246,240,220); doc.rect(px,py,pw,ph,'F');
+  drawDndBorder(doc,px,py,pw,ph);
+
+  // Dark header bar
+  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
+  pF(doc,7.5,'bold','times'); pC(doc,212,180,120);
+  doc.text(info.name||'Character Sheet', px+pw/2, py+7.5, {align:'center'});
+
+  let cy = py+15;
+
+  // Class / Race / Level / Campaign row
+  const meta = [{l:'Class',v:info.cls},{l:'Race',v:info.race},{l:'Level',v:info.level},{l:'Campaign',v:info.campaign}];
+  const mw = iw/4 - 1;
+  meta.forEach(({l,v},i) => {
+    const mx = px+m+i*(mw+1.3);
+    pF(doc,3.2,'bold','times'); pC(doc,140,100,50);
+    doc.text(l.toUpperCase(), mx, cy);
+    pF(doc,4.8,'normal','times'); pC(doc,20,10,5);
+    let val = v||'—';
+    while(doc.getTextWidth(val)>mw-0.5&&val.length>2) val=val.slice(0,-1);
+    doc.text(val, mx, cy+5);
+  });
+  cy+=10;
+
+  // Thin crimson rule
+  pD(doc,139,26,26,0.4); doc.line(px+m,cy,px+pw-m,cy); cy+=4;
+
+  // ── Ability scores 2×3 grid ──
+  dndSectionHeader(doc,'Ability Scores',px+m,cy,iw,4.5); cy+=3;
+  const abilities = ['STR','DEX','CON','INT','WIS','CHA'];
+  const abW = iw/3-1, abH = 18;
+  abilities.forEach((ab,i) => {
+    const col=i%3, row=Math.floor(i/3);
+    drawAbilityBox(doc, px+m+col*(abW+1.5), cy+row*(abH+2), abW, abH, ab, '10');
+  });
+  cy += 2*(abH+2)+4;
+
+  // Combat stats row
+  dndSectionHeader(doc,'Combat',px+m,cy,iw,4.5); cy+=4;
+  const combat = [['AC',''],['HP Max',''],['Initiative',''],['Speed',''],['Prof Bonus','']];
+  const cw = iw/5-0.8;
+  combat.forEach(([l,v],i) => {
+    const cx2 = px+m+i*(cw+1);
+    pD(doc,80,30,20,0.3); doc.rect(cx2,cy,cw,10);
+    pF(doc,3,'bold','times'); pC(doc,100,25,25);
+    doc.text(l, cx2+cw/2, cy+3.5, {align:'center'});
+    pD(doc,180,155,110,0.18); doc.line(cx2+1,cy+6,cx2+cw-1,cy+6);
+  });
+  cy+=14;
+
+  // HP current tracker box
+  pD(doc,80,30,20,0.3); doc.rect(px+m,cy,iw,8);
+  pF(doc,3.5,'italic','times'); pC(doc,100,80,45);
+  doc.text('Current HP tracker  □□□□□ □□□□□ □□□□□ □□□□□ □□□□□', px+m+1.5, cy+5);
+  cy+=12;
+
+  // Saving throws + Skills (2 columns)
+  const colL = iw*0.42, colR = iw*0.55;
+  const baseX2 = px+m, baseX3 = px+m+colL+3;
+
+  // Saving throws
+  dndSectionHeader(doc,'Saving Throws',baseX2,cy,colL,4.5); cy+=3;
+  ['Strength','Dexterity','Constitution','Intelligence','Wisdom','Charisma'].forEach((s,i) => {
+    dndCheck(doc,s,baseX2,cy+i*5);
+  });
+  const saveEndY = cy+6*5;
+
+  // Skills
+  let skillY = py+15; // reset — skills go alongside saves
+  const skillsX = baseX3;
+  dndSectionHeader(doc,'Skills',skillsX,cy,colR,4.5);
+  const skills = ['Acrobatics (Dex)','Animal Handling (Wis)','Arcana (Int)','Athletics (Str)','Deception (Cha)','History (Int)','Insight (Wis)','Intimidation (Cha)','Investigation (Int)','Medicine (Wis)','Nature (Int)','Perception (Wis)','Performance (Cha)','Persuasion (Cha)','Religion (Int)','Sleight of Hand (Dex)','Stealth (Dex)','Survival (Wis)'];
+  skills.forEach((s,i) => { dndCheck(doc,s,skillsX,cy+3+i*4.5); });
+
+  cy = Math.max(saveEndY, cy+skills.length*4.5+3)+3;
+
+  // Proficiencies & notes
+  if (cy < py+ph-20) {
+    dndSectionHeader(doc,'Proficiencies & Languages',px+m,cy,iw,4.5); cy+=4;
+    dndLines(doc,px+m,cy,iw,3,4.5);
+  }
+
+  // Page footer
+  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
+  doc.text('D&D Field Manual · Character Sheet', px+pw/2, py+ph-m+1, {align:'center'});
+}
+
+// ── SESSION NOTES ─────────────────────────────────────────────────────────────
+function drawSessionNotes(doc, px, py, pw, ph, info) {
+  const m=5, iw=pw-m*2;
+  doc.setFillColor(246,240,220); doc.rect(px,py,pw,ph,'F');
+  drawDndBorder(doc,px,py,pw,ph);
+
+  // Header
+  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
+  pF(doc,7,'bold','times'); pC(doc,212,180,120);
+  doc.text('Session Notes', px+pw/2, py+7.5, {align:'center'});
+  if(info.campaign) {
+    pF(doc,3.8,'italic','times'); pC(doc,154,123,42);
+    doc.text(info.campaign, px+pw-m, py+9.5, {align:'right'});
+  }
+
+  let cy=py+15;
+
+  // Session # / Date / Location
+  dndField(doc,'Session #', px+m, cy, iw*0.3, 4); 
+  dndField(doc,'Date', px+m+iw*0.33, cy, iw*0.3, 4);
+  dndField(doc,'Location', px+m+iw*0.66, cy, iw*0.34, 4);
+  cy+=8;
+
+  // What happened
+  dndSectionHeader(doc,'What Happened',px+m,cy,iw,4.8); cy+=5;
+  dndLines(doc,px+m,cy,iw,6); cy+=6*4.5+5;
+
+  // Key NPCs met
+  dndSectionHeader(doc,'NPCs Encountered',px+m,cy,iw,4.8); cy+=5;
+  for(let i=0;i<3;i++) {
+    dndField(doc,'Name:',px+m,cy,iw*0.38,4);
+    dndField(doc,'Note:',px+m+iw*0.42,cy,iw*0.58,4);
+    cy+=6.5;
+  }
+  cy+=3;
+
+  // Decisions made
+  dndSectionHeader(doc,'Key Decisions',px+m,cy,iw,4.8); cy+=5;
+  dndLines(doc,px+m,cy,iw,3); cy+=3*4.5+5;
+
+  // Cliffhanger / next session
+  if(cy < py+ph-22) {
+    dndSectionHeader(doc,'Cliffhanger / Next Session',px+m,cy,iw,4.8); cy+=5;
+    dndLines(doc,px+m,cy,iw,Math.floor((py+ph-m-4-cy)/4.5));
+  }
+
+  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
+  doc.text('D&D Field Manual · Session Notes', px+pw/2, py+ph-m+1, {align:'center'});
+}
+
+// ── ENCOUNTER TRACKER ─────────────────────────────────────────────────────────
+function drawEncounterTracker(doc, px, py, pw, ph, info) {
+  const m=5, iw=pw-m*2;
+  doc.setFillColor(242,235,212); doc.rect(px,py,pw,ph,'F');
+  drawDndBorder(doc,px,py,pw,ph);
+
+  // Header
+  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
+  pF(doc,7,'bold','times'); pC(doc,212,180,120);
+  doc.text('Encounter Tracker', px+pw/2, py+7.5, {align:'center'});
+
+  let cy=py+15;
+
+  // Round counter — 10 boxes
+  dndSectionHeader(doc,'Round',px+m,cy,24,4.5);
+  pF(doc,3.5,'normal','times'); pC(doc,100,75,35);
+  const rboxW=5.5, rboxH=5.5;
+  for(let r=0;r<10;r++) {
+    const rx=px+m+28+r*(rboxW+1.5);
+    pD(doc,80,30,20,0.35); doc.rect(rx,cy-4,rboxW,rboxH);
+    pF(doc,3,'normal','times'); pC(doc,120,90,45);
+    doc.text(String(r+1),rx+rboxW/2,cy-0.3,{align:'center'});
+  }
+  cy+=5;
+
+  // Encounter name field
+  dndField(doc,'Encounter name / location:', px+m, cy, iw, 4); cy+=8;
+
+  // Initiative table
+  dndSectionHeader(doc,'Initiative Order',px+m,cy,iw,4.8); cy+=4;
+
+  const cols = [
+    {label:'Init',w:0.08},{label:'Name / Monster',w:0.28},
+    {label:'HP Max',w:0.12},{label:'HP Current',w:0.16},
+    {label:'AC',w:0.08},{label:'Conditions',w:0.28}
+  ];
+  const rowH = (ph - cy + py - m - 20) / 8;
+  const clampedRowH = Math.min(rowH, 10);
+
+  // Header row
+  doc.setFillColor(40,25,10); doc.rect(px+m,cy,iw,5,'F');
+  let hx=px+m;
+  cols.forEach(col=>{
+    pF(doc,3.2,'bold','times'); pC(doc,210,175,110);
+    doc.text(col.label,hx+col.w*iw/2,cy+3.6,{align:'center'});
+    hx+=col.w*iw;
+  });
+  cy+=5;
+
+  // 8 initiative rows
+  for(let r=0;r<8;r++){
+    if(r%2===0){doc.setFillColor(250,245,230);doc.rect(px+m,cy,iw,clampedRowH,'F');}
+    let rx=px+m;
+    cols.forEach((col,ci)=>{
+      if(ci>0){pD(doc,200,175,130,0.12);doc.line(rx,cy,rx,cy+clampedRowH);}
+      // HP current — draw a small fill bar guide
+      if(ci===3){
+        pD(doc,200,175,130,0.15); doc.rect(rx+0.5,cy+1,col.w*iw-1,clampedRowH-2);
+      }
+      rx+=col.w*iw;
+    });
+    pD(doc,200,175,130,0.15); doc.line(px+m,cy+clampedRowH,px+m+iw,cy+clampedRowH);
+    cy+=clampedRowH;
+  }
+  pD(doc,80,30,20,0.4); doc.rect(px+m,cy-8*clampedRowH,iw,8*clampedRowH);
+  cy+=4;
+
+  // Conditions reference strip
+  const conditions=['Blinded','Charmed','Frightened','Grappled','Incapacitated','Paralyzed','Poisoned','Prone','Restrained','Stunned'];
+  if(cy < py+ph-12) {
+    doc.setFillColor(50,30,10); doc.rect(px+m,cy,iw,5,'F');
+    pF(doc,3,'bold','times'); pC(doc,210,175,110);
+    doc.text('CONDITIONS: '+conditions.join(' · '), px+m+1, cy+3.5);
+    cy+=5;
+    // Notes line
+    dndLines(doc,px+m,cy,iw,2);
+  }
+
+  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
+  doc.text('D&D Field Manual · Encounter Tracker', px+pw/2, py+ph-m+1, {align:'center'});
+}
+
+// ── LOOT LEDGER ───────────────────────────────────────────────────────────────
+function drawLootLedger(doc, px, py, pw, ph, info) {
+  const m=5, iw=pw-m*2;
+  doc.setFillColor(246,240,220); doc.rect(px,py,pw,ph,'F');
+  drawDndBorder(doc,px,py,pw,ph);
+
+  // Header
+  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
+  pF(doc,7,'bold','times'); pC(doc,212,180,120);
+  doc.text('Loot Ledger', px+pw/2, py+7.5, {align:'center'});
+  if(info.name){pF(doc,3.8,'italic','times');pC(doc,154,123,42);doc.text(info.name,px+pw-m,py+9.5,{align:'right'});}
+
+  let cy=py+15;
+
+  // Currency tracker
+  dndSectionHeader(doc,'Currency',px+m,cy,iw,4.8); cy+=4;
+  const coins=[['PP\nPlatinum',''],['GP\nGold',''],['EP\nElectrum',''],['SP\nSilver',''],['CP\nCopper','']];
+  const cboxW=(iw-4)/5;
+  coins.forEach(([l],i)=>{
+    const cx2=px+m+i*(cboxW+1);
+    pD(doc,80,30,20,0.4); doc.rect(cx2,cy,cboxW,16);
+    // Gold coin colour for GP
+    if(i===1){doc.setFillColor(220,185,80,0.12);doc.rect(cx2,cy,cboxW,16,'F');}
+    pF(doc,3,'bold','times'); pC(doc,100,25,25);
+    const [abbr,name]=l.split('\n');
+    doc.text(abbr, cx2+cboxW/2, cy+4, {align:'center'});
+    pF(doc,2.5,'normal','times'); pC(doc,140,110,60);
+    doc.text(name, cx2+cboxW/2, cy+7, {align:'center'});
+    pD(doc,180,155,110,0.2); doc.line(cx2+1,cy+9,cx2+cboxW-1,cy+9);
+  });
+  cy+=20;
+
+  // Item table
+  dndSectionHeader(doc,'Items & Treasure',px+m,cy,iw,4.8); cy+=4;
+  const icols=[{l:'Item Name',w:0.38},{l:'Type',w:0.15},{l:'Value',w:0.14},{l:'Att.',w:0.08},{l:'Notes',w:0.25}];
+  // Header row
+  doc.setFillColor(40,25,10); doc.rect(px+m,cy,iw,5,'F');
+  let hx2=px+m;
+  icols.forEach(col=>{
+    pF(doc,3.2,'bold','times'); pC(doc,210,175,110);
+    doc.text(col.l,hx2+1,cy+3.6);
+    hx2+=col.w*iw;
+  });
+  cy+=5;
+
+  const rowH2=(ph-(cy-py)-m-24)/12;
+  const rH=Math.min(rowH2,8);
+  for(let r=0;r<12;r++){
+    if(r%2===0){doc.setFillColor(250,245,230);doc.rect(px+m,cy,iw,rH,'F');}
+    let rx=px+m;
+    icols.forEach((col,ci)=>{
+      if(ci>0){pD(doc,200,175,130,0.12);doc.line(rx,cy,rx,cy+rH);}
+      // Attunement checkbox
+      if(ci===3){pD(doc,100,25,25,0.3);doc.circle(rx+col.w*iw/2,cy+rH/2,1.5);}
+      rx+=col.w*iw;
+    });
+    pD(doc,200,175,130,0.15);doc.line(px+m,cy+rH,px+m+iw,cy+rH);
+    cy+=rH;
+  }
+  pD(doc,80,30,20,0.4);doc.rect(px+m,cy-12*rH,iw,12*rH);
+  cy+=4;
+
+  // Attunement slots
+  if(cy<py+ph-16){
+    dndSectionHeader(doc,'Attunement Slots',px+m,cy,iw,4.5); cy+=4;
+    const slotW=(iw-4)/3;
+    for(let s=0;s<3;s++){
+      const sx=px+m+s*(slotW+2);
+      pD(doc,139,26,26,0.4); doc.rect(sx,cy,slotW,10);
+      pF(doc,3.5,'italic','times'); pC(doc,100,80,45);
+      doc.text(`Slot ${s+1}`,sx+2,cy+4);
+      pD(doc,180,155,110,0.18);doc.line(sx+1,cy+7,sx+slotW-1,cy+7);
+    }
+  }
+
+  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
+  doc.text('D&D Field Manual · Loot Ledger', px+pw/2, py+ph-m+1, {align:'center'});
+}
+
+// ── LAYOUT ────────────────────────────────────────────────────────────────────
+function drawRegularLayout(doc, drawFn, panelData) {
+  // 2-up layout: 2 full-height panels side by side (left + right)
+  // Each panel = 110mm wide × 210mm tall
+  // Split is vertical down the middle — fold at 110mm, cut at 220mm
+  const W=297, H=210, colW=110;
+  [0,1].forEach(col => {
+    const d = panelData[col];
+    if(d) drawFn(doc, col*colW, 0, colW, H, d);
+  });
+  // Fold line at 110mm
+  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
+  // Cut line at 220mm
+  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
+  doc.setLineDashPattern([],0);
+  // Labels in waste strip
+  doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,110,60);
+  doc.text('--- fold', 2*colW+2, H/2-4);
+  doc.text('... cut',  2*colW+2, H/2);
+  // Waste strip shade
+  doc.setFillColor(220,210,185); doc.setGState(new doc.GState({opacity:0.25}));
+  doc.rect(2*colW,0,W-2*colW,H,'F');
+  doc.setGState(new doc.GState({opacity:1}));
+}
+
+function buildDoc() {
+  const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const info = getChar();
+  let first = true;
+
+  // Cover page first
+  drawCoverPage(doc, info);
+  first = false;
+
+  // Page 2: character sheet left + character notes right
+  doc.addPage();
+  drawCharSheet(doc, 0, 0, 110, 210, info);
+  drawCharBack(doc, 110, 0, 110, 210, info);
+  // Fold/cut lines only
+  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+  doc.setLineDashPattern([2,1.5],0); doc.line(110,0,110,210);
+  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(220,0,220,210);
+  doc.setLineDashPattern([],0);
+  doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,110,60);
+  doc.text('--- fold', 222, 101); doc.text('... cut', 222, 106);
+
+  // Other insert types: 2-up per sheet
+  const others = [
+    {fn: drawSessionNotes,    count: qty.session},
+    {fn: drawEncounterTracker,count: qty.encounter},
+    {fn: drawLootLedger,      count: qty.loot},
+  ];
+
+  for(const {fn, count} of others){
+    if(!count) continue;
+    const sheetsNeeded = Math.ceil(count/2);
+    for(let s=0; s<sheetsNeeded; s++){
+      doc.addPage();
+      const panelData = [
+        s*2   < count ? info : null,
+        s*2+1 < count ? info : null,
+      ];
+      drawRegularLayout(doc, fn, panelData);
+    }
+  }
+  return doc;
+}
+
+// ── GENERATE ──────────────────────────────────────────────────────────────────
+document.getElementById('generateBtn').addEventListener('click', async()=>{
+  const total=Object.values(qty).reduce((a,b)=>a+b,0);
+  if(!total){alert('Add at least one insert type.');return;}
+  const btn=document.getElementById('generateBtn');
+  btn.disabled=true;
+  document.getElementById('progress').classList.add('visible');
+  setProgress(30,'Forging character sheet...');
+  await new Promise(r=>setTimeout(r,80));
+  setProgress(70,'Drawing encounter tables...');
+  await new Promise(r=>setTimeout(r,80));
+  setProgress(95,'Binding the manual...');
+  await new Promise(r=>setTimeout(r,80));
+  const doc=buildDoc();
+  const name=(getChar().name||'adventurer').replace(/[^a-z0-9]/gi,'-').toLowerCase();
+  setProgress(100,'Ready!');
+  await new Promise(r=>setTimeout(r,300));
+
+  if(duplexSupported){
+    doc.save(`${name}-dnd-inserts.pdf`);
+  } else {
+    generatedDoc={doc,name};
+    showModal();
+  }
+  btn.disabled=false;
+  document.getElementById('progress').classList.remove('visible');
+  document.getElementById('progressFill').style.width='0%';
+});
+
+function showModal(){
+  document.getElementById('modalSteps').innerHTML=`
+    <div class="step"><div class="step-num">1</div><div class="step-text">Click <strong>Download</strong> and print on A4 <strong>landscape</strong>.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Flip the stack face-down</strong> and reinsert without rotating.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Fold at 110mm, cut at 220mm. Slip into your TN.</div></div>`;
+  const btn=document.getElementById('modalBtn1');
+  btn.textContent='Download PDF'; btn.disabled=false;
+  btn.onclick=()=>{
+    generatedDoc.doc.save(`${generatedDoc.name}-dnd-inserts.pdf`);
+    document.querySelectorAll('#modalSteps .step-num').forEach(el=>{el.classList.add('done');el.textContent='✓';});
+    btn.textContent='✓ Done!'; btn.disabled=true;
+  };
+  document.getElementById('modalOverlay').classList.add('visible');
+}
+
+// ── PREVIEW ───────────────────────────────────────────────────────────────────
+function updatePreview(){
+  updateStats();
+  const canvas=document.getElementById('previewCanvas');
+  const rect=canvas.parentElement.getBoundingClientRect();
+  const W=rect.width,H=rect.height;
+  if(!W||!H){setTimeout(updatePreview,150);return;}
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  canvas.width=Math.round(W*devicePixelRatio);
+  canvas.height=Math.round(H*devicePixelRatio);
+  const ctx=canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  ctx.fillStyle='#f6f0dc';ctx.fillRect(0,0,W,H);
+
+  const sc=W/297;
+  const colW=110*sc;
+
+  // 2-up layout: 2 full-height panels
+  drawPreviewPanel(ctx, 0,   0, colW, H, sc, currentTab);
+  drawPreviewPanel(ctx, colW, 0, colW, H, sc, currentTab);
+
+  // Fold/cut lines
+  ctx.strokeStyle='rgba(100,100,100,0.4)';ctx.lineWidth=0.8;
+  ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(colW,0);ctx.lineTo(colW,H);ctx.stroke();
+  ctx.setLineDash([2,4]);ctx.strokeStyle='rgba(80,80,80,0.4)';
+  ctx.beginPath();ctx.moveTo(2*colW,0);ctx.lineTo(2*colW,H);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(200,185,150,0.3)';ctx.fillRect(2*colW,0,W-2*colW,H);
+}
+
+function drawPreviewPanel(ctx,px,py,pw,ph,sc,type){
+  const m=4*sc;
+  // Panel bg
+  ctx.fillStyle='#f6f0dc';ctx.fillRect(px,py,pw,ph);
+  // Border
+  ctx.strokeStyle='rgba(80,30,20,0.6)';ctx.lineWidth=0.7;ctx.strokeRect(px,py,pw,ph);
+  ctx.strokeStyle='rgba(80,30,20,0.2)';ctx.lineWidth=0.2;ctx.strokeRect(px+1.5*sc,py+1.5*sc,pw-3*sc,ph-3*sc);
+
+  // Dark header
+  const headers={char:{bg:'#1a1209',text:'Character Sheet'},session:{bg:'#1a1209',text:'Session Notes'},encounter:{bg:'#1a1209',text:'Encounter Tracker'},loot:{bg:'#1a1209',text:'Loot Ledger'}};
+  const h=headers[type];
+  ctx.fillStyle=h.bg;ctx.fillRect(px,py,pw,9*sc);
+  ctx.font=`bold ${5.5*sc}px serif`;ctx.fillStyle='#d4b478';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(h.text,px+pw/2,py+4.8*sc);
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+
+  // Content sketch per type
+  const ix=px+m,iy=py+11*sc,iw=pw-m*2;
+  if(type==='char') previewChar(ctx,ix,iy,iw,ph-13*sc,sc);
+  else if(type==='session') previewSession(ctx,ix,iy,iw,ph-13*sc,sc);
+  else if(type==='encounter') previewEncounter(ctx,ix,iy,iw,ph-13*sc,sc);
+  else if(type==='loot') previewLoot(ctx,ix,iy,iw,ph-13*sc,sc);
+}
+
+function previewLines(ctx,x,y,w,n,gap,col='rgba(180,155,110,0.4)'){
+  ctx.strokeStyle=col;ctx.lineWidth=0.2;
+  for(let i=0;i<n;i++){ctx.beginPath();ctx.moveTo(x,y+i*gap);ctx.lineTo(x+w,y+i*gap);ctx.stroke();}
+}
+function previewLabel(ctx,text,x,y,sc,col='rgba(100,60,20,0.7)'){
+  ctx.font=`italic ${3.5*sc}px serif`;ctx.fillStyle=col;ctx.fillText(text,x,y);
+}
+function previewSectionHeader(ctx,text,x,y,sc){
+  ctx.font=`bold ${3.8*sc}px serif`;ctx.fillStyle='rgba(139,26,26,0.8)';ctx.fillText(text,x,y);
+  ctx.strokeStyle='rgba(154,123,42,0.4)';ctx.lineWidth=0.25;
+  ctx.beginPath();ctx.moveTo(x+ctx.measureText(text).width+2,y-0.5);ctx.lineTo(x+70*sc,y-0.5);ctx.stroke();
+}
+
+function previewChar(ctx,x,y,w,h,sc){
+  const g=4*sc;
+  // Meta row
+  ['Class','Race','Level','Campaign'].forEach((l,i)=>{
+    previewLabel(ctx,l,x+i*w/4,y+g*0.5,sc);
+    ctx.strokeStyle='rgba(180,155,110,0.3)';ctx.lineWidth=0.2;
+    ctx.beginPath();ctx.moveTo(x+i*w/4,y+g*0.8);ctx.lineTo(x+(i+1)*w/4-1*sc,y+g*0.8);ctx.stroke();
+  });
+  let cy=y+g*1.8;
+  previewSectionHeader(ctx,'Ability Scores',x,cy,sc); cy+=g*0.8;
+  // 6 ability boxes
+  const abW=w/3-sc,abH=g*3.5;
+  ['STR','DEX','CON','INT','WIS','CHA'].forEach((ab,i)=>{
+    const col=i%3,row=Math.floor(i/3);
+    const bx=x+col*(abW+sc),by=cy+row*(abH+sc);
+    ctx.strokeStyle='rgba(80,30,20,0.4)';ctx.lineWidth=0.3;ctx.strokeRect(bx,by,abW,abH);
+    ctx.font=`bold ${3*sc}px serif`;ctx.fillStyle='rgba(100,25,25,0.8)';
+    ctx.textAlign='center';ctx.fillText(ab,bx+abW/2,by+g*0.8);
+    ctx.font=`bold ${7*sc}px serif`;ctx.fillStyle='rgba(20,10,5,0.8)';
+    ctx.fillText('10',bx+abW/2,by+abH*0.65);
+    ctx.textAlign='left';
+  });
+  cy+=2*(abH+sc)+g*0.5;
+  previewSectionHeader(ctx,'Combat',x,cy,sc); cy+=g*0.8;
+  const cw=w/5-sc;
+  ['AC','HP','Init','Spd','Prof'].forEach((l,i)=>{
+    ctx.strokeStyle='rgba(80,30,20,0.3)';ctx.lineWidth=0.25;
+    ctx.strokeRect(x+i*(cw+sc),cy,cw,g*2);
+    ctx.font=`bold ${2.5*sc}px serif`;ctx.fillStyle='rgba(100,25,25,0.7)';
+    ctx.textAlign='center';ctx.fillText(l,x+i*(cw+sc)+cw/2,cy+g*0.8);ctx.textAlign='left';
+  });
+  cy+=g*2.5;
+  previewSectionHeader(ctx,'Skills',x,cy,sc); cy+=g*0.8;
+  for(let i=0;i<8;i++){
+    ctx.strokeStyle='rgba(80,30,20,0.3)';ctx.lineWidth=0.2;ctx.strokeRect(x,cy+i*g*0.9,g*0.6,g*0.6);
+    ctx.font=`${3*sc}px monospace`;ctx.fillStyle='rgba(30,20,10,0.5)';
+    ctx.fillText(['Acrobatics','Athletics','Deception','History','Insight','Perception','Stealth','Survival'][i],x+g*0.8,cy+i*g*0.9+g*0.65);
+  }
+}
+
+function previewSession(ctx,x,y,w,h,sc){
+  const g=4*sc;
+  previewLabel(ctx,'Session #   Date:   Location:',x,y+g*0.6,sc); 
+  ctx.strokeStyle='rgba(180,155,110,0.3)';ctx.lineWidth=0.2;
+  ctx.beginPath();ctx.moveTo(x,y+g*0.9);ctx.lineTo(x+w,y+g*0.9);ctx.stroke();
+  let cy=y+g*1.5;
+  [['What Happened',6],['NPCs Encountered',3],['Key Decisions',3],['Cliffhanger',2]].forEach(([title,n])=>{
+    previewSectionHeader(ctx,title,x,cy,sc); cy+=g*0.8;
+    previewLines(ctx,x,cy,w,n,g*0.9); cy+=n*g*0.9+g*0.6;
+  });
+}
+
+function previewEncounter(ctx,x,y,w,h,sc){
+  const g=4*sc;
+  previewLabel(ctx,'Round: □□□□□□□□□□',x,y+g*0.6,sc);
+  let cy=y+g*1.5;
+  previewSectionHeader(ctx,'Initiative Order',x,cy,sc); cy+=g*0.8;
+  // Table header
+  ctx.fillStyle='rgba(40,25,10,0.85)';ctx.fillRect(x,cy,w,g*0.9);
+  ['Init','Name','HP','AC','Conditions'].forEach((l,i)=>{
+    ctx.font=`bold ${2.8*sc}px serif`;ctx.fillStyle='rgba(210,175,110,0.9)';
+    ctx.fillText(l,x+[0,0.08,0.38,0.55,0.65][i]*w+sc,cy+g*0.65);
+  });
+  cy+=g*0.9;
+  for(let r=0;r<8;r++){
+    if(r%2===0){ctx.fillStyle='rgba(250,245,230,0.5)';ctx.fillRect(x,cy,w,g*1.1);}
+    ctx.strokeStyle='rgba(200,175,130,0.3)';ctx.lineWidth=0.15;
+    ctx.beginPath();ctx.moveTo(x,cy+g*1.1);ctx.lineTo(x+w,cy+g*1.1);ctx.stroke();
+    cy+=g*1.1;
+  }
+  ctx.strokeStyle='rgba(80,30,20,0.4)';ctx.lineWidth=0.35;
+  ctx.strokeRect(x,y+g*2.3,w,8*g*1.1);
+  // Conditions strip
+  ctx.fillStyle='rgba(40,25,10,0.85)';ctx.fillRect(x,cy+g*0.3,w,g*0.9);
+  ctx.font=`${2.5*sc}px serif`;ctx.fillStyle='rgba(210,175,110,0.8)';
+  ctx.fillText('Blinded · Charmed · Frightened · Grappled · Paralyzed · Prone · Stunned',x+sc,cy+g*0.3+g*0.65);
+}
+
+function previewLoot(ctx,x,y,w,h,sc){
+  const g=4*sc;
+  previewSectionHeader(ctx,'Currency',x,y+g*0.5,sc);
+  const cw=w/5-sc;
+  ['PP','GP','EP','SP','CP'].forEach((coin,i)=>{
+    const bx=x+i*(cw+sc);
+    if(i===1){ctx.fillStyle='rgba(220,185,80,0.1)';ctx.fillRect(bx,y+g*1,cw,g*3);}
+    ctx.strokeStyle='rgba(80,30,20,0.4)';ctx.lineWidth=0.3;ctx.strokeRect(bx,y+g*1,cw,g*3);
+    ctx.font=`bold ${3.5*sc}px serif`;ctx.fillStyle='rgba(139,26,26,0.8)';
+    ctx.textAlign='center';ctx.fillText(coin,bx+cw/2,y+g*2.2);ctx.textAlign='left';
+  });
+  let cy=y+g*4.5;
+  previewSectionHeader(ctx,'Items & Treasure',x,cy,sc); cy+=g*0.8;
+  ctx.fillStyle='rgba(40,25,10,0.85)';ctx.fillRect(x,cy,w,g*0.9);
+  ['Item Name','Type','Value','Att.','Notes'].forEach((l,i)=>{
+    ctx.font=`bold ${2.8*sc}px serif`;ctx.fillStyle='rgba(210,175,110,0.9)';
+    ctx.fillText(l,x+[0,0.38,0.53,0.67,0.75][i]*w+sc,cy+g*0.65);
+  });
+  cy+=g*0.9;
+  for(let r=0;r<10;r++){
+    if(r%2===0){ctx.fillStyle='rgba(250,245,230,0.5)';ctx.fillRect(x,cy,w,g*1.05);}
+    ctx.strokeStyle='rgba(200,175,130,0.25)';ctx.lineWidth=0.12;
+    ctx.beginPath();ctx.moveTo(x,cy+g*1.05);ctx.lineTo(x+w,cy+g*1.05);ctx.stroke();
+    cy+=g*1.05;
+  }
+  ctx.strokeStyle='rgba(80,30,20,0.4)';ctx.lineWidth=0.35;
+  ctx.strokeRect(x,y+g*5.3,w,10*g*1.05);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+setTimeout(updatePreview,100); setTimeout(updatePreview,500);
+window.addEventListener('resize',updatePreview);
+updateStats();
+</script>
+</body>
+</html>

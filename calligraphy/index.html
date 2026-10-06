@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calligraphy Practice Inserts — The Insert Studio</title>
+<script src="../assets/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/studio.css">
+<script src="../assets/studio.js" defer></script>
+<style>
+/* calligraphy-specific styles; shared styles live in ../assets/studio.css */
+:root { --ink-soft: #2a2620; --blue: #1a3a5c; --sage: #3a5c3a; }
+/* ── Back nav ── */
+/* ── Header ── */
+/* ── Layout ── */
+/* ── Settings ── */
+/* Preset cards */
+.preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.preset-card { border: 1.5px solid var(--rule); padding: 12px; cursor: pointer; transition: all 0.12s; background: var(--warm); position: relative; }
+.preset-card:hover { border-color: var(--accent); }
+.preset-card.active { border-color: var(--accent); background: #fdf4f0; }
+.preset-card.active::after { content: '✓'; position: absolute; top: 8px; right: 10px; font-size: 0.6rem; color: var(--accent); }
+.preset-name { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
+.preset-sub { font-size: 0.58rem; color: var(--muted); line-height: 1.4; }
+.preset-angle { font-size: 0.55rem; letter-spacing: 0.08em; color: var(--accent); margin-top: 4px; }
+/* Toggle grid */
+.toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.toggle-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1.5px solid var(--rule); background: var(--warm); cursor: pointer; }
+.toggle-item:hover { border-color: var(--accent); }
+.toggle-dot { width: 28px; height: 16px; background: var(--rule); border-radius: 8px; position: relative; transition: background 0.15s; flex-shrink: 0; }
+.toggle-dot.on { background: var(--accent); }
+.toggle-dot::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: white; border-radius: 50%; transition: transform 0.15s; }
+.toggle-dot.on::after { transform: translateX(12px); }
+/* Slider */
+.slider-row { display: flex; align-items: center; gap: 10px; }
+.slider { flex: 1; -webkit-appearance: none; height: 3px; background: var(--rule); outline: none; border-radius: 2px; }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; cursor: pointer; }
+.slider-val { font-family: 'Cormorant Garamond', serif; font-size: 1rem; min-width: 32px; text-align: right; color: var(--accent); }
+/* Mode selector */
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mode-btn { padding: 10px 8px; border: 1.5px solid var(--rule); background: var(--warm); cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.62rem; text-align: center; transition: all 0.12s; color: var(--ink-soft); }
+.mode-btn:hover { border-color: var(--accent); }
+.mode-btn.active { border-color: var(--accent); background: #fdf4f0; color: var(--accent); }
+.mode-icon { display: block; font-size: 1.2rem; margin-bottom: 4px; }
+/* Text input */
+/* Count row */
+.count-val { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; width: 48px; text-align: center; border: 1.5px solid var(--rule); background: var(--warm); padding: 2px; outline: none; color: var(--accent); -moz-appearance: textfield; }
+.count-val::-webkit-inner-spin-button { -webkit-appearance: none; }
+/* Duplex */
+.duplex-banner.ok { background: #f0f7f0; border-color: #3a6a3a; color: #2a4a2a; }
+/* Generate */
+/* ── Preview ── */
+.preview-tabs { display: flex; gap: 2px; }
+.preview-tab { font-size: 0.54rem; letter-spacing: 0.08em; padding: 4px 10px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; background: transparent; color: rgba(255,255,255,0.3); transition: all 0.12s; font-family: 'DM Mono', monospace; }
+.preview-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+.preview-sheet { width: 100%; max-width: 700px; position: relative; z-index: 1; background: white; box-shadow: var(--shadow-lg); overflow: hidden; aspect-ratio: 297 / 210; }
+/* Modal */
+/* Word list hidden/shown */
+.word-row { display: none; }
+.word-row.visible { display: block; }
+</style>
+</head>
+<body>
+
+<nav class="topbar" data-tool="calligraphy"><a href="../">← The Insert Studio</a></nav>
+
+<header>
+  <div class="logo">Calligraphy <em>Practice</em></div>
+  <div class="header-tag">TN Practice Inserts</div>
+</header>
+
+<main>
+<aside class="settings-panel">
+<div class="settings-inner">
+
+  <!-- Style preset -->
+  <div class="section">
+    <div class="section-title">Style Preset</div>
+    <div class="preset-grid">
+      <div class="preset-card active" id="preset-copperplate" onclick="setPreset('copperplate')">
+        <div class="preset-name">Copperplate</div>
+        <div class="preset-sub">Fine pointed nib, steep italic slant</div>
+        <div class="preset-angle">52° slant · narrow x-height</div>
+      </div>
+      <div class="preset-card" id="preset-modern" onclick="setPreset('modern')">
+        <div class="preset-name">Modern</div>
+        <div class="preset-sub">Brush pen, loose relaxed angle</div>
+        <div class="preset-angle">35° slant · tall x-height</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Line options -->
+  <div class="section">
+    <div class="section-title">Line Options</div>
+    <div class="toggle-grid">
+      <div class="toggle-item" onclick="tog('slant')">
+        <span class="toggle-label">Slant Lines</span>
+        <div class="toggle-dot on" id="tog-slant"></div>
+      </div>
+      <div class="toggle-item" onclick="tog('ascender')">
+        <span class="toggle-label">Ascender Zone</span>
+        <div class="toggle-dot on" id="tog-ascender"></div>
+      </div>
+      <div class="toggle-item" onclick="tog('descender')">
+        <span class="toggle-label">Descender Zone</span>
+        <div class="toggle-dot on" id="tog-descender"></div>
+      </div>
+      <div class="toggle-item" onclick="tog('tint')">
+        <span class="toggle-label">X-Height Tint</span>
+        <div class="toggle-dot on" id="tog-tint"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Line spacing -->
+  <div class="section">
+    <div class="section-title">Line Spacing</div>
+    <div class="slider-row">
+      <span style="font-size:0.58rem;color:var(--muted)">Compact</span>
+      <input type="range" class="slider" id="spacingSlider" min="6" max="14" value="9" step="1" oninput="updateSpacingLabel();updatePreview()">
+      <span style="font-size:0.58rem;color:var(--muted)">Spacious</span>
+      <span class="slider-val" id="spacingVal">9mm</span>
+    </div>
+  </div>
+
+  <!-- Slant angle -->
+  <div class="section" id="slantSection">
+    <div class="section-title">Slant Angle</div>
+    <div class="slider-row">
+      <span style="font-size:0.58rem;color:var(--muted)">Upright</span>
+      <input type="range" class="slider" id="slantSlider" min="15" max="70" value="52" step="1" oninput="updateSlantLabel();updatePreview()">
+      <span style="font-size:0.58rem;color:var(--muted)">Steep</span>
+      <span class="slider-val" id="slantVal">52°</span>
+    </div>
+  </div>
+
+  <!-- Right panel mode -->
+  <div class="section">
+    <div class="section-title">Right Panel</div>
+    <div class="mode-grid">
+      <button class="mode-btn active" id="mode-practice" onclick="setMode('practice')">
+        <span class="mode-icon">✏️</span>Practice Lines
+      </button>
+      <button class="mode-btn" id="mode-alphabet" onclick="setMode('alphabet')">
+        <span class="mode-icon">🔤</span>A–Z Guide
+      </button>
+      <button class="mode-btn" id="mode-warmup" onclick="setMode('warmup')">
+        <span class="mode-icon">〰️</span>Warm-up
+      </button>
+      <button class="mode-btn" id="mode-inklog" onclick="setMode('inklog')">
+        <span class="mode-icon">🖋️</span>Ink Log
+      </button>
+    </div>
+  </div>
+
+  <!-- Word / phrase (shown when mode = practice) -->
+  <div class="section word-row visible" id="wordRow">
+    <div class="section-title">Practice Word / Phrase</div>
+    <input type="text" class="text-input" id="practiceWord" placeholder="e.g. flourish" maxlength="24" oninput="updatePreview()">
+    <div style="font-size:0.58rem;color:var(--muted);margin-top:5px;">Leave blank for plain lines</div>
+  </div>
+
+  <!-- Insert title -->
+  <div class="section">
+    <div class="section-title">Insert Title</div>
+    <input type="text" class="text-input" id="insertTitle" placeholder="e.g. My Calligraphy Practice" maxlength="32" oninput="updatePreview()">
+  </div>
+
+  <!-- Size -->
+  <div class="section">
+    <div class="section-title">Notebook Size</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <label style="cursor:pointer;"><input type="radio" name="size" value="regular" checked style="display:none" onchange="updatePreview()">
+        <div class="mode-btn active" id="size-regular" onclick="setSizeBtn('regular')"><span class="mode-icon">📓</span>Regular</div>
+      </label>
+      <label style="cursor:pointer;"><input type="radio" name="size" value="passport" style="display:none" onchange="updatePreview()">
+        <div class="mode-btn" id="size-passport" onclick="setSizeBtn('passport')"><span class="mode-icon">📔</span>Passport</div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Copies -->
+  <div class="section">
+    <div class="section-title">Copies</div>
+    <div class="count-row">
+      <button class="count-btn" onclick="changeCount(-1)">−</button>
+      <input type="number" class="count-val" id="countVal" value="4" min="1" max="99">
+      <button class="count-btn" onclick="changeCount(1)">+</button>
+      <span style="font-size:0.58rem;color:var(--muted)">sheets</span>
+    </div>
+  </div>
+
+  <!-- Printer -->
+  <div class="section">
+    <div class="section-title">Printer</div>
+    <div id="duplexBanner" class="duplex-banner manual">
+      <span>⚠</span>
+      <span>Two PDFs — Side 1 then Side 2. <a href="#" id="duplexOverride" style="color:var(--accent)">My printer supports duplex →</a></span>
+    </div>
+  </div>
+
+</div><!-- /settings-inner -->
+<div class="settings-footer">
+  <button class="generate-btn" id="generateBtn">Generate Practice Inserts</button>
+  <div class="progress" id="progress">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText">Ruling your pages...</div>
+  </div>
+</div>
+</aside>
+
+<!-- Preview -->
+<section class="preview-panel">
+  <div class="preview-header">
+    <span class="preview-label">Live Preview</span>
+    <div class="preview-tabs">
+      <button class="preview-tab active" onclick="setPreviewTab('left')">Left Panel</button>
+      <button class="preview-tab" onclick="setPreviewTab('right')">Right Panel</button>
+      <button class="preview-tab" onclick="setPreviewTab('both')">Full Sheet</button>
+    </div>
+  </div>
+  <div class="preview-sheet"><canvas id="previewCanvas"></canvas></div>
+  <div class="preview-info">
+    <div class="preview-stat"><span class="preview-stat-val" id="statLines">—</span><span class="preview-stat-label">Lines/Panel</span></div>
+    <div class="preview-stat"><span class="preview-stat-val" id="statAngle">—</span><span class="preview-stat-label">Slant</span></div>
+    <div class="preview-stat"><span class="preview-stat-val" id="statSheets">4</span><span class="preview-stat-label">Sheets</span></div>
+  </div>
+</section>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Two-step printing</div>
+    <div class="modal-sub">Manual duplex</div>
+    <div id="modalSteps"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalBtn">Download PDF</button>
+      <button class="modal-btn ghost" onclick="document.getElementById('modalOverlay').classList.remove('visible')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const state = {
+  preset: 'copperplate',
+  slant: 52,
+  spacing: 9,
+  mode: 'practice',
+  previewTab: 'both',
+  toggles: { slant: true, ascender: true, descender: true, tint: true },
+};
+
+let duplexSupported = false;
+let generatedDoc = null;
+
+// Preset configs
+const PRESETS = {
+  copperplate: { slant: 52, spacing: 9,  ascRatio: 0.5, descRatio: 0.5, xRatio: 1.0, colour: [30,50,100] },
+  modern:      { slant: 35, spacing: 11, ascRatio: 0.6, descRatio: 0.4, xRatio: 1.2, colour: [30,70,40]  },
+};
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function setPreset(p) {
+  state.preset = p;
+  const cfg = PRESETS[p];
+  state.slant = cfg.slant;
+  document.getElementById('slantSlider').value = cfg.slant;
+  document.getElementById('slantVal').textContent = cfg.slant + '°';
+  state.spacing = cfg.spacing;
+  document.getElementById('spacingSlider').value = cfg.spacing;
+  document.getElementById('spacingVal').textContent = cfg.spacing + 'mm';
+  document.querySelectorAll('.preset-card').forEach(el => el.classList.remove('active'));
+  document.getElementById('preset-' + p).classList.add('active');
+  updatePreview();
+}
+
+function tog(key) {
+  state.toggles[key] = !state.toggles[key];
+  document.getElementById('tog-' + key).classList.toggle('on', state.toggles[key]);
+  if (key === 'slant') document.getElementById('slantSection').style.opacity = state.toggles.slant ? '1' : '0.4';
+  updatePreview();
+}
+
+function setMode(m) {
+  state.mode = m;
+  document.querySelectorAll('.mode-btn[id^="mode-"]').forEach(el => el.classList.remove('active'));
+  document.getElementById('mode-' + m).classList.add('active');
+  document.getElementById('wordRow').classList.toggle('visible', m === 'practice');
+  updatePreview();
+}
+
+function setPreviewTab(t) {
+  state.previewTab = t;
+  document.querySelectorAll('.preview-tab').forEach((el,i) => el.classList.toggle('active', ['left','right','both'][i] === t));
+  updatePreview();
+}
+
+function setSizeBtn(s) {
+  document.getElementById('size-regular').classList.toggle('active', s === 'regular');
+  document.getElementById('size-passport').classList.toggle('active', s === 'passport');
+  document.querySelector(`input[value="${s}"]`).checked = true;
+  updatePreview();
+}
+
+function changeCount(d) {
+  const el = document.getElementById('countVal');
+  el.value = Math.max(1, parseInt(el.value) + d);
+  updateStats(); updatePreview();
+}
+
+function updateSpacingLabel() {
+  state.spacing = parseInt(document.getElementById('spacingSlider').value);
+  document.getElementById('spacingVal').textContent = state.spacing + 'mm';
+}
+function updateSlantLabel() {
+  state.slant = parseInt(document.getElementById('slantSlider').value);
+  document.getElementById('slantVal').textContent = state.slant + '°';
+}
+
+function getSize()  { return document.querySelector('input[name="size"]:checked')?.value || 'regular'; }
+function getCount() { return parseInt(document.getElementById('countVal').value) || 4; }
+function getWord()  { return document.getElementById('practiceWord')?.value.trim() || ''; }
+function getTitle() { return document.getElementById('insertTitle')?.value.trim() || ''; }
+
+function updateStats() {
+  const spacing = parseInt(document.getElementById('spacingSlider').value);
+  const ph = getSize() === 'regular' ? 210 : 98;
+  const cfg = PRESETS[state.preset];
+  const totalH = spacing * (1 + cfg.ascRatio + cfg.descRatio);
+  const lines = Math.floor((ph - 16) / (totalH));
+  document.getElementById('statLines').textContent = lines;
+  document.getElementById('statAngle').textContent = state.slant + '°';
+  document.getElementById('statSheets').textContent = getCount();
+}
+
+document.getElementById('duplexBanner').addEventListener('click', e => {
+  if (e.target.id === 'duplexOverride') {
+    e.preventDefault();
+    duplexSupported = true;
+    const b = document.getElementById('duplexBanner');
+    b.className = 'duplex-banner ok';
+    b.innerHTML = '<span>✓</span><span>Duplex enabled — one combined PDF.</span>';
+  }
+});
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('visible');
+});
+
+function setProgress(pct, text) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = text;
+}
+
+// ── PDF DRAWING ───────────────────────────────────────────────────────────────
+function getLineConfig(spacingMM) {
+  const cfg = PRESETS[state.preset];
+  const x = spacingMM * cfg.xRatio;
+  const a = spacingMM * cfg.ascRatio;
+  const d = spacingMM * cfg.descRatio;
+  return { x, a, d, total: x + a + d };
+}
+
+function drawPracticeGrid(doc, px, py, pw, ph, opts = {}) {
+  const { spacing, slantAngle, showSlant, showAsc, showDesc, showTint, title, word } = opts;
+  const cfg = PRESETS[state.preset];
+  const lc = getLineConfig(spacing);
+  const m = 5;
+  const iw = pw - m * 2;
+
+  // Background
+  doc.setFillColor(255, 255, 255);
+  doc.rect(px, py, pw, ph, 'F');
+
+  // Title strip
+  if (title) {
+    doc.setFillColor(14, 12, 10);
+    doc.rect(px, py, pw, 9, 'F');
+    doc.setFont('times', 'italic');
+    doc.setFontSize(6);
+    doc.setTextColor(245, 240, 228);
+    doc.text(title, px + pw / 2, py + 6, { align: 'center' });
+  }
+
+  const startY = py + (title ? 12 : m);
+  const availH = ph - (title ? 12 : m) - m;
+  const numLines = Math.floor(availH / lc.total);
+
+  for (let i = 0; i < numLines; i++) {
+    const by = startY + i * lc.total; // baseline Y
+
+    // Ascender zone tint
+    if (showTint && showAsc) {
+      doc.setFillColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+      doc.setGState(new doc.GState({ opacity: 0.04 }));
+      doc.rect(px + m, by - lc.a, iw, lc.a, 'F');
+      doc.setGState(new doc.GState({ opacity: 1 }));
+    }
+    // X-height tint
+    if (showTint) {
+      doc.setFillColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+      doc.setGState(new doc.GState({ opacity: 0.07 }));
+      doc.rect(px + m, by - lc.x, iw, lc.x, 'F');
+      doc.setGState(new doc.GState({ opacity: 1 }));
+    }
+
+    // Descender line
+    if (showDesc) {
+      doc.setDrawColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+      doc.setLineWidth(0.15);
+      const dy = by + lc.d;
+      doc.line(px + m, dy, px + pw - m, dy);
+    }
+    // X-height top line
+    doc.setDrawColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+    doc.setLineWidth(showAsc ? 0.2 : 0.3);
+    doc.line(px + m, by - lc.x, px + pw - m, by - lc.x);
+
+    // Ascender top line
+    if (showAsc) {
+      doc.setLineWidth(0.15);
+      doc.line(px + m, by - lc.x - lc.a, px + pw - m, by - lc.x - lc.a);
+    }
+
+    // Baseline — bold
+    doc.setDrawColor(20, 18, 14);
+    doc.setLineWidth(0.4);
+    doc.line(px + m, by, px + pw - m, by);
+
+    // Slant lines
+    if (showSlant) {
+      const angleRad = (90 - slantAngle) * Math.PI / 180;
+      const tanA = Math.tan(angleRad);
+      const totalH = lc.total;
+      const slantSpacing = totalH / tanA;
+      const lineH = lc.a + lc.x + lc.d;
+      const lineTop = by - lc.x - lc.a;
+      const lineBot = by + lc.d;
+
+      // Start from left margin, step across
+      let sx = px + m - (Math.floor((px + m) / slantSpacing) + 1) * slantSpacing % slantSpacing;
+      while (sx < px + pw - m) {
+        const tx = sx + lineH * tanA;
+        // Clip to panel: compute visible intersection
+        const x1 = Math.max(px + m, Math.min(sx, tx));
+        const x2 = Math.min(px + pw - m, Math.max(sx, tx));
+        if (x2 > x1) {
+          const t1 = (x1 - sx) / (lineH * tanA);
+          const t2 = (x2 - sx) / (lineH * tanA);
+          const y1 = lineTop + t1 * lineH;
+          const y2 = lineTop + t2 * lineH;
+          doc.setDrawColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+          doc.setLineWidth(0.1);
+          doc.line(x1, y1, x2, y2);
+        }
+        sx += slantSpacing;
+      }
+    }
+
+    // Practice word ghost text
+    if (word) {
+      doc.setFont('times', 'italic');
+      doc.setFontSize(lc.x * 2.1);
+      doc.setTextColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+      doc.setGState(new doc.GState({ opacity: 0.07 }));
+      let repeat = word + '  ';
+      while (doc.getTextWidth(repeat) < iw) repeat += word + '  ';
+      doc.text(repeat, px + m, by - 0.5, { maxWidth: iw });
+      doc.setGState(new doc.GState({ opacity: 1 }));
+    }
+  }
+
+  // Outer border
+  doc.setDrawColor(30, 25, 18);
+  doc.setLineWidth(0.5);
+  doc.rect(px, py, pw, ph);
+}
+
+function drawAlphabetPanel(doc, px, py, pw, ph, opts = {}) {
+  const { title } = opts;
+  const m = 5, iw = pw - m * 2;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(px, py, pw, ph, 'F');
+
+  if (title) {
+    doc.setFillColor(14, 12, 10);
+    doc.rect(px, py, pw, 9, 'F');
+    doc.setFont('times', 'italic');
+    doc.setFontSize(6);
+    doc.setTextColor(245, 240, 228);
+    doc.text('A–Z Guide', px + pw / 2, py + 6, { align: 'center' });
+  }
+
+  const startY = py + (title ? 13 : m + 2);
+  const cols = 4, rows = 7;
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const cw = iw / cols;
+  const ch = (ph - startY + py - m) / rows;
+
+  letters.forEach((lt, i) => {
+    if (i >= 26) return;
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = px + m + col * cw;
+    const cy = startY + row * ch;
+
+    // Cell border
+    doc.setDrawColor(200, 190, 170);
+    doc.setLineWidth(0.15);
+    doc.rect(cx, cy, cw, ch);
+
+    // Letter label
+    doc.setFont('times', 'bold');
+    doc.setFontSize(5);
+    doc.setTextColor(160, 145, 120);
+    doc.text(lt, cx + 1.5, cy + 4.5);
+
+    // Guide baseline in cell
+    const cfg = PRESETS[state.preset];
+    doc.setDrawColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+    doc.setLineWidth(0.2);
+    const bly = cy + ch * 0.72;
+    doc.line(cx + 1, bly, cx + cw - 1, bly);
+    doc.setLineWidth(0.1);
+    doc.line(cx + 1, bly - ch * 0.28, cx + cw - 1, bly - ch * 0.28);
+
+    // Ghost letter
+    doc.setFont('times', 'italic');
+    doc.setFontSize(ch * 1.0);
+    doc.setTextColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+    doc.setGState(new doc.GState({ opacity: 0.09 }));
+    doc.text(lt.toLowerCase(), cx + cw / 2, bly, { align: 'center' });
+    doc.setGState(new doc.GState({ opacity: 1 }));
+  });
+
+  // Lowercase second pass below
+  doc.setFont('times', 'italic');
+  doc.setFontSize(5);
+  doc.setTextColor(180, 160, 130);
+  const notesY = startY + rows * ch + 3;
+  if (notesY < py + ph - 6) {
+    doc.text('Practice writing each letter between the guide lines in each cell.', px + pw / 2, notesY, { align: 'center', maxWidth: iw });
+  }
+
+  doc.setDrawColor(30, 25, 18);
+  doc.setLineWidth(0.5);
+  doc.rect(px, py, pw, ph);
+}
+
+function drawWarmupPanel(doc, px, py, pw, ph, opts = {}) {
+  const m = 5, iw = pw - m * 2;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(px, py, pw, ph, 'F');
+
+  doc.setFillColor(14, 12, 10);
+  doc.rect(px, py, pw, 9, 'F');
+  doc.setFont('times', 'italic');
+  doc.setFontSize(6);
+  doc.setTextColor(245, 240, 228);
+  doc.text('Warm-up Strokes', px + pw / 2, py + 6, { align: 'center' });
+
+  const cfg = PRESETS[state.preset];
+  const strokes = [
+    { name: 'Upstrokes',    hint: 'thin, hairline up' },
+    { name: 'Downstrokes',  hint: 'thick, shaded down' },
+    { name: 'Ovals',        hint: 'counter-clockwise' },
+    { name: 'Compound curve', hint: 'thin up, thick down' },
+    { name: 'Loops',        hint: 'ascender loops' },
+    { name: 'Underturn',    hint: 'u-shape' },
+  ];
+
+  const sectionH = (ph - 12) / strokes.length;
+
+  strokes.forEach((s, i) => {
+    const sy = py + 12 + i * sectionH;
+
+    // Label
+    doc.setFont('times', 'italic');
+    doc.setFontSize(4.5);
+    doc.setTextColor(120, 100, 70);
+    doc.text(`${s.name}  ·  ${s.hint}`, px + m, sy + 4);
+
+    // Baseline
+    doc.setDrawColor(20, 18, 14);
+    doc.setLineWidth(0.35);
+    const bly = sy + sectionH * 0.78;
+    doc.line(px + m, bly, px + pw - m, bly);
+    // X-height
+    doc.setDrawColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+    doc.setLineWidth(0.15);
+    doc.line(px + m, bly - sectionH * 0.3, px + pw - m, bly - sectionH * 0.3);
+
+    // Tint
+    doc.setFillColor(cfg.colour[0], cfg.colour[1], cfg.colour[2]);
+    doc.setGState(new doc.GState({ opacity: 0.05 }));
+    doc.rect(px + m, bly - sectionH * 0.3, iw, sectionH * 0.3, 'F');
+    doc.setGState(new doc.GState({ opacity: 1 }));
+
+    // Divider
+    if (i > 0) {
+      doc.setDrawColor(210, 200, 180);
+      doc.setLineWidth(0.1);
+      doc.line(px + m, sy, px + pw - m, sy);
+    }
+  });
+
+  doc.setDrawColor(30, 25, 18);
+  doc.setLineWidth(0.5);
+  doc.rect(px, py, pw, ph);
+}
+
+function drawInkLogPanel(doc, px, py, pw, ph) {
+  const m = 5, iw = pw - m * 2;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(px, py, pw, ph, 'F');
+
+  doc.setFillColor(14, 12, 10);
+  doc.rect(px, py, pw, 9, 'F');
+  doc.setFont('times', 'italic');
+  doc.setFontSize(6);
+  doc.setTextColor(245, 240, 228);
+  doc.text('Ink & Tools Log', px + pw / 2, py + 6, { align: 'center' });
+
+  const entries = 5;
+  const entryH = (ph - 16) / entries;
+  const cfg = PRESETS[state.preset];
+
+  for (let i = 0; i < entries; i++) {
+    const ey = py + 14 + i * entryH;
+
+    doc.setDrawColor(190, 175, 150);
+    doc.setLineWidth(0.2);
+    doc.rect(px + m, ey, iw, entryH - 1);
+
+    // Swatch box
+    const swatchW = 14, swatchH = entryH * 0.5;
+    doc.setDrawColor(160, 145, 120);
+    doc.setLineWidth(0.2);
+    doc.rect(px + m + 1, ey + entryH * 0.25, swatchW, swatchH);
+
+    // Fields
+    const fx = px + m + swatchW + 4;
+    const fw = iw - swatchW - 5;
+    const fields = [['Ink', fw * 0.5], ['Nib', fw * 0.25], ['Date', fw * 0.25]];
+    let fx2 = fx;
+    fields.forEach(([label, w]) => {
+      doc.setFont('times', 'italic');
+      doc.setFontSize(3.8);
+      doc.setTextColor(140, 120, 90);
+      doc.text(label, fx2, ey + 5);
+      doc.setDrawColor(180, 165, 140);
+      doc.setLineWidth(0.15);
+      doc.setLineDashPattern([0.5, 0.8], 0);
+      doc.line(fx2, ey + 7.5, fx2 + w - 2, ey + 7.5);
+      doc.setLineDashPattern([], 0);
+      fx2 += w;
+    });
+
+    // Notes line
+    doc.setFont('times', 'italic');
+    doc.setFontSize(3.5);
+    doc.setTextColor(160, 140, 110);
+    doc.text('Notes:', px + m + swatchW + 4, ey + entryH * 0.72);
+    doc.setDrawColor(190, 175, 150);
+    doc.setLineWidth(0.15);
+    doc.line(px + m + swatchW + 16, ey + entryH * 0.73, px + pw - m - 1, ey + entryH * 0.73);
+  }
+
+  doc.setDrawColor(30, 25, 18);
+  doc.setLineWidth(0.5);
+  doc.rect(px, py, pw, ph);
+}
+
+// ── Build right panel ─────────────────────────────────────────────────────────
+function drawRightPanel(doc, px, py, pw, ph, opts) {
+  if (state.mode === 'practice') {
+    drawPracticeGrid(doc, px, py, pw, ph, opts);
+  } else if (state.mode === 'alphabet') {
+    drawAlphabetPanel(doc, px, py, pw, ph, opts);
+  } else if (state.mode === 'warmup') {
+    drawWarmupPanel(doc, px, py, pw, ph, opts);
+  } else if (state.mode === 'inklog') {
+    drawInkLogPanel(doc, px, py, pw, ph);
+  }
+}
+
+// ── Build doc ─────────────────────────────────────────────────────────────────
+function buildDoc() {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const W = 297, H = 210;
+  const size = getSize();
+  const colW = size === 'regular' ? 110 : 134;
+  const ph = size === 'regular' ? 210 : 98;
+  const count = getCount();
+  const title = getTitle();
+  const word  = getWord();
+
+  const opts = {
+    spacing: state.spacing,
+    slantAngle: state.slant,
+    showSlant: state.toggles.slant,
+    showAsc: state.toggles.ascender,
+    showDesc: state.toggles.descender,
+    showTint: state.toggles.tint,
+    title,
+    word,
+  };
+
+  for (let i = 0; i < count; i++) {
+    if (i > 0) doc.addPage();
+
+    if (size === 'regular') {
+      // Left: practice grid, Right: selected panel
+      drawPracticeGrid(doc, 0, 0, colW, H, opts);
+      drawRightPanel(doc, colW, 0, colW, H, opts);
+    } else {
+      // Passport: 4 panels on A4
+      const sx = (W - colW * 2) / 2, sy = (H - ph * 2) / 2;
+      drawPracticeGrid(doc, sx, sy, colW, ph, opts);
+      drawRightPanel(doc, sx + colW, sy, colW, ph, opts);
+      drawPracticeGrid(doc, sx, sy + ph, colW, ph, opts);
+      drawRightPanel(doc, sx + colW, sy + ph, colW, ph, opts);
+    }
+
+    // Fold/cut lines
+    doc.setDrawColor(100, 100, 100); doc.setLineWidth(0.25);
+    doc.setLineDashPattern([2, 1.5], 0); doc.line(colW, 0, colW, H);
+    doc.setLineDashPattern([0.8, 2], 0); doc.setDrawColor(80, 80, 80);
+    doc.line(2 * colW, 0, 2 * colW, H);
+    doc.setLineDashPattern([], 0);
+    doc.setFont('times', 'italic'); doc.setFontSize(3.8); doc.setTextColor(140, 130, 110);
+    doc.text('--- fold', 2 * colW + 2, H / 2 - 4);
+    doc.text('... cut', 2 * colW + 2, H / 2);
+  }
+  return doc;
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  document.getElementById('progress').classList.add('visible');
+  setProgress(30, 'Ruling your pages...');
+  await new Promise(r => setTimeout(r, 80));
+  setProgress(75, 'Drawing guide lines...');
+  await new Promise(r => setTimeout(r, 80));
+  const doc = buildDoc();
+  const slug = state.preset + '-calligraphy';
+  setProgress(100, 'Done!');
+  await new Promise(r => setTimeout(r, 300));
+
+  if (duplexSupported) {
+    doc.save(`${slug}.pdf`);
+  } else {
+    generatedDoc = { doc, slug };
+    document.getElementById('modalSteps').innerHTML = `
+      <div class="step"><div class="step-num">1</div><div class="step-text">Click <strong>Download</strong> and print on A4 <strong>landscape</strong>.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Flip the stack face-down, reinsert without rotating.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Fold at 110mm, cut at 220mm. Trim and insert into your TN.</div></div>`;
+    const mb = document.getElementById('modalBtn');
+    mb.textContent = 'Download PDF'; mb.disabled = false;
+    mb.onclick = () => {
+      generatedDoc.doc.save(generatedDoc.slug + '.pdf');
+      document.querySelectorAll('#modalSteps .step-num').forEach(el => { el.classList.add('done'); el.textContent = '✓'; });
+      mb.textContent = '✓ Done!'; mb.disabled = true;
+    };
+    document.getElementById('modalOverlay').classList.add('visible');
+  }
+
+  btn.disabled = false;
+  document.getElementById('progress').classList.remove('visible');
+  document.getElementById('progressFill').style.width = '0%';
+});
+
+// ── CANVAS PREVIEW ────────────────────────────────────────────────────────────
+function updatePreview() {
+  updateStats();
+  const canvas = document.getElementById('previewCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  if (!W || !H) { setTimeout(updatePreview, 150); return; }
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.width = Math.round(W * devicePixelRatio);
+  canvas.height = Math.round(H * devicePixelRatio);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.fillStyle = '#f0ead8'; ctx.fillRect(0, 0, W, H);
+
+  const sc = W / 297;
+  const colW = 110 * sc;
+  const tab = state.previewTab;
+
+  if (tab === 'both' || tab === 'left') {
+    drawCanvasGrid(ctx, 0, 0, colW, H, sc);
+  }
+  if (tab === 'both' || tab === 'right') {
+    if (state.mode === 'practice') drawCanvasGrid(ctx, colW, 0, colW, H, sc);
+    else if (state.mode === 'alphabet') drawCanvasAlphabet(ctx, colW, 0, colW, H, sc);
+    else if (state.mode === 'warmup')   drawCanvasWarmup(ctx, colW, 0, colW, H, sc);
+    else if (state.mode === 'inklog')   drawCanvasInklog(ctx, colW, 0, colW, H, sc);
+  }
+
+  if (tab === 'both') {
+    // Fold line
+    ctx.strokeStyle = 'rgba(100,100,100,0.4)'; ctx.lineWidth = 0.8;
+    ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(colW, 0); ctx.lineTo(colW, H); ctx.stroke();
+    // Cut line
+    ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(80,80,80,0.4)';
+    ctx.beginPath(); ctx.moveTo(2 * colW, 0); ctx.lineTo(2 * colW, H); ctx.stroke();
+    ctx.setLineDash([]);
+    // Waste strip
+    ctx.fillStyle = 'rgba(200,190,165,0.35)'; ctx.fillRect(2 * colW, 0, W - 2 * colW, H);
+  }
+}
+
+function getCanvasCfg() {
+  return PRESETS[state.preset];
+}
+
+function drawCanvasGrid(ctx, px, py, pw, ph, sc) {
+  const cfg = getCanvasCfg();
+  const m = 5 * sc;
+  const spacing = state.spacing * sc;
+  const lc = {
+    x: spacing * cfg.xRatio,
+    a: spacing * cfg.ascRatio,
+    d: spacing * cfg.descRatio,
+  };
+  lc.total = lc.x + lc.a + lc.d;
+
+  ctx.fillStyle = '#fff'; ctx.fillRect(px, py, pw, ph);
+
+  const title = getTitle();
+  let startY = py + m;
+  if (title) {
+    ctx.fillStyle = '#0e0c0a'; ctx.fillRect(px, py, pw, 9 * sc);
+    ctx.font = `italic ${5 * sc}px serif`; ctx.fillStyle = '#f5f0e4';
+    ctx.textAlign = 'center'; ctx.fillText(title, px + pw / 2, py + 6.5 * sc); ctx.textAlign = 'left';
+    startY = py + 12 * sc;
+  }
+
+  const availH = ph - (startY - py) - m;
+  const numLines = Math.floor(availH / lc.total);
+  const [cr, cg, cb] = cfg.colour;
+
+  for (let i = 0; i < numLines; i++) {
+    const by = startY + i * lc.total;
+
+    // Ascender tint
+    if (state.toggles.tint && state.toggles.ascender) {
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},0.04)`;
+      ctx.fillRect(px + m, by - lc.a - lc.x, pw - m * 2, lc.a);
+    }
+    // X-height tint
+    if (state.toggles.tint) {
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},0.07)`;
+      ctx.fillRect(px + m, by - lc.x, pw - m * 2, lc.x);
+    }
+
+    // Ascender line
+    if (state.toggles.ascender) {
+      ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.35)`;
+      ctx.lineWidth = 0.2; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(px + m, by - lc.x - lc.a); ctx.lineTo(px + pw - m, by - lc.x - lc.a); ctx.stroke();
+    }
+    // X-height line
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.5)`;
+    ctx.lineWidth = 0.25;
+    ctx.beginPath(); ctx.moveTo(px + m, by - lc.x); ctx.lineTo(px + pw - m, by - lc.x); ctx.stroke();
+
+    // Baseline
+    ctx.strokeStyle = 'rgba(20,18,14,0.8)'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(px + m, by); ctx.lineTo(px + pw - m, by); ctx.stroke();
+
+    // Descender line
+    if (state.toggles.descender) {
+      ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.3)`;
+      ctx.lineWidth = 0.18;
+      ctx.beginPath(); ctx.moveTo(px + m, by + lc.d); ctx.lineTo(px + pw - m, by + lc.d); ctx.stroke();
+    }
+
+    // Slant lines
+    if (state.toggles.slant) {
+      const angleRad = (90 - state.slant) * Math.PI / 180;
+      const tanA = Math.tan(angleRad);
+      const lineH = lc.a + lc.x + lc.d;
+      const slantSpacing = lineH / tanA;
+      const lineTop = by - lc.x - lc.a;
+      const lineBot = by + lc.d;
+
+      ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.2)`;
+      ctx.lineWidth = 0.15;
+      let sx = px + m - (slantSpacing * 3);
+      while (sx < px + pw) {
+        const bx = sx + lineH * tanA;
+        ctx.beginPath();
+        ctx.moveTo(Math.max(px + m, sx), sx >= px + m ? lineTop : lineTop + (px + m - sx) / tanA);
+        ctx.lineTo(Math.min(px + pw - m, bx), bx <= px + pw - m ? lineBot : lineTop + (px + pw - m - sx) / tanA);
+        ctx.stroke();
+        sx += slantSpacing;
+      }
+    }
+  }
+
+  // Panel border
+  ctx.strokeStyle = 'rgba(20,18,14,0.7)'; ctx.lineWidth = 0.6;
+  ctx.strokeRect(px, py, pw, ph);
+}
+
+function drawCanvasAlphabet(ctx, px, py, pw, ph, sc) {
+  const cfg = getCanvasCfg();
+  const m = 5 * sc;
+  ctx.fillStyle = '#fff'; ctx.fillRect(px, py, pw, ph);
+  ctx.fillStyle = '#0e0c0a'; ctx.fillRect(px, py, pw, 9 * sc);
+  ctx.font = `italic ${5 * sc}px serif`; ctx.fillStyle = '#f5f0e4';
+  ctx.textAlign = 'center'; ctx.fillText('A–Z Guide', px + pw / 2, py + 6.5 * sc); ctx.textAlign = 'left';
+
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const cols = 4, rows = 7;
+  const startY = py + 12 * sc;
+  const cw = (pw - m * 2) / cols;
+  const ch = (ph - 12 * sc - m) / rows;
+  const [cr, cg, cb] = cfg.colour;
+
+  letters.slice(0, 26).forEach((lt, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = px + m + col * cw, cy = startY + row * ch;
+    ctx.strokeStyle = 'rgba(200,190,170,0.6)'; ctx.lineWidth = 0.2;
+    ctx.strokeRect(cx, cy, cw, ch);
+    ctx.font = `bold ${4 * sc}px serif`; ctx.fillStyle = 'rgba(160,145,120,0.8)';
+    ctx.fillText(lt, cx + 1.5 * sc, cy + 4.5 * sc);
+    const bly = cy + ch * 0.72;
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.5)`; ctx.lineWidth = 0.2;
+    ctx.beginPath(); ctx.moveTo(cx + sc, bly); ctx.lineTo(cx + cw - sc, bly); ctx.stroke();
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.25)`; ctx.lineWidth = 0.12;
+    ctx.beginPath(); ctx.moveTo(cx + sc, bly - ch * 0.28); ctx.lineTo(cx + cw - sc, bly - ch * 0.28); ctx.stroke();
+    ctx.font = `italic ${ch * 0.9}px serif`;
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},0.09)`;
+    ctx.textAlign = 'center'; ctx.fillText(lt.toLowerCase(), cx + cw / 2, bly); ctx.textAlign = 'left';
+  });
+  ctx.strokeStyle = 'rgba(20,18,14,0.7)'; ctx.lineWidth = 0.6; ctx.strokeRect(px, py, pw, ph);
+}
+
+function drawCanvasWarmup(ctx, px, py, pw, ph, sc) {
+  const cfg = getCanvasCfg();
+  const m = 5 * sc;
+  ctx.fillStyle = '#fff'; ctx.fillRect(px, py, pw, ph);
+  ctx.fillStyle = '#0e0c0a'; ctx.fillRect(px, py, pw, 9 * sc);
+  ctx.font = `italic ${5 * sc}px serif`; ctx.fillStyle = '#f5f0e4';
+  ctx.textAlign = 'center'; ctx.fillText('Warm-up Strokes', px + pw / 2, py + 6.5 * sc); ctx.textAlign = 'left';
+
+  const strokes = ['Upstrokes','Downstrokes','Ovals','Compound Curve','Loops','Underturn'];
+  const sectionH = (ph - 12 * sc) / strokes.length;
+  const [cr, cg, cb] = cfg.colour;
+
+  strokes.forEach((s, i) => {
+    const sy = py + 12 * sc + i * sectionH;
+    ctx.font = `italic ${3.8 * sc}px serif`; ctx.fillStyle = 'rgba(120,100,70,0.7)';
+    ctx.fillText(s, px + m, sy + 4 * sc);
+    if (i > 0) {
+      ctx.strokeStyle = 'rgba(210,200,180,0.5)'; ctx.lineWidth = 0.12;
+      ctx.beginPath(); ctx.moveTo(px + m, sy); ctx.lineTo(px + pw - m, sy); ctx.stroke();
+    }
+    const bly = sy + sectionH * 0.78;
+    ctx.strokeStyle = 'rgba(20,18,14,0.75)'; ctx.lineWidth = 0.45;
+    ctx.beginPath(); ctx.moveTo(px + m, bly); ctx.lineTo(px + pw - m, bly); ctx.stroke();
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.4)`; ctx.lineWidth = 0.18;
+    ctx.beginPath(); ctx.moveTo(px + m, bly - sectionH * 0.3); ctx.lineTo(px + pw - m, bly - sectionH * 0.3); ctx.stroke();
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},0.05)`;
+    ctx.fillRect(px + m, bly - sectionH * 0.3, pw - m * 2, sectionH * 0.3);
+  });
+  ctx.strokeStyle = 'rgba(20,18,14,0.7)'; ctx.lineWidth = 0.6; ctx.strokeRect(px, py, pw, ph);
+}
+
+function drawCanvasInklog(ctx, px, py, pw, ph, sc) {
+  const m = 5 * sc;
+  ctx.fillStyle = '#fff'; ctx.fillRect(px, py, pw, ph);
+  ctx.fillStyle = '#0e0c0a'; ctx.fillRect(px, py, pw, 9 * sc);
+  ctx.font = `italic ${5 * sc}px serif`; ctx.fillStyle = '#f5f0e4';
+  ctx.textAlign = 'center'; ctx.fillText('Ink & Tools Log', px + pw / 2, py + 6.5 * sc); ctx.textAlign = 'left';
+
+  const entries = 5;
+  const entryH = (ph - 14 * sc) / entries;
+  for (let i = 0; i < entries; i++) {
+    const ey = py + 14 * sc + i * entryH;
+    ctx.strokeStyle = 'rgba(190,175,150,0.6)'; ctx.lineWidth = 0.2; ctx.strokeRect(px + m, ey, pw - m * 2, entryH - sc);
+    const swW = 14 * sc;
+    ctx.strokeStyle = 'rgba(160,145,120,0.5)'; ctx.lineWidth = 0.18;
+    ctx.strokeRect(px + m + sc, ey + entryH * 0.25, swW, entryH * 0.5);
+    ctx.font = `italic ${3.5 * sc}px serif`; ctx.fillStyle = 'rgba(140,120,90,0.7)';
+    ctx.fillText('Ink', px + m + swW + 4 * sc, ey + 5 * sc);
+    ctx.fillText('Nib', px + m + swW + 4 * sc + pw * 0.25, ey + 5 * sc);
+    ctx.strokeStyle = 'rgba(180,165,140,0.4)'; ctx.lineWidth = 0.15; ctx.setLineDash([1, 1.5]);
+    ctx.beginPath(); ctx.moveTo(px + m + swW + 14 * sc, ey + 7 * sc); ctx.lineTo(px + pw - m, ey + 7 * sc); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.strokeStyle = 'rgba(20,18,14,0.7)'; ctx.lineWidth = 0.6; ctx.strokeRect(px, py, pw, ph);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+setTimeout(updatePreview, 100);
+setTimeout(updatePreview, 500);
+window.addEventListener('resize', updatePreview);
+updateStats();
+</script>
+</body>
+</html>

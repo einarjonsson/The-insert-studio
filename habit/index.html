@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TN Habit Tracker</title>
+<script src="../assets/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/studio.css">
+<script src="../assets/studio.js" defer></script>
+<style>
+/* habit-specific styles; shared styles live in ../assets/studio.css */
+.month-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+/* Habit inputs */
+.habit-inputs { display: flex; flex-direction: column; gap: 6px; }
+.habit-input-row { display: flex; align-items: center; gap: 8px; }
+.habit-num { font-size: 0.62rem; color: var(--muted); min-width: 18px; text-align: right; }
+.habit-input { flex: 1; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--ink); border: 1.5px solid var(--rule); border-radius: 3px; background: var(--cream); padding: 8px 10px; outline: none; transition: border-color 0.12s; }
+.habit-input:focus { border-color: var(--accent); }
+.habit-input::placeholder { color: var(--muted); }
+.habit-input:disabled { opacity: 0.35; cursor: not-allowed; }
+/* Count */
+/* Toggle row */
+/* Duplex banner */
+/* Generate */
+/* Preview */
+/* Modal */
+</style>
+</head>
+<body>
+
+ <nav class="topbar" data-tool="habit"><a href="../">← The Insert Studio</a></nav>
+
+<header>
+  <div class="logo">Habit <em>Tracker</em></div>
+  <div class="header-tag">A4 Printable Inserts</div>
+</header>
+
+<main>
+  <aside class="settings-panel">
+    <div class="settings-inner">
+
+      <!-- Notebook size -->
+      <div class="section">
+        <div class="section-title">Notebook Size</div>
+        <div class="radio-group cols-2">
+          <label class="radio-option"><input type="radio" name="size" value="regular" checked><span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm · fold + cut</span></span></label>
+          <label class="radio-option"><input type="radio" name="size" value="passport"><span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm · cut only</span></span></label>
+        </div>
+      </div>
+
+      <!-- Month & Year -->
+      <div class="section">
+        <div class="section-title">Month & Year</div>
+        <div class="month-row">
+          <select id="monthSelect" class="text-input">
+            <option value="January">January</option><option value="February">February</option>
+            <option value="March">March</option><option value="April">April</option>
+            <option value="May">May</option><option value="June">June</option>
+            <option value="July">July</option><option value="August">August</option>
+            <option value="September">September</option><option value="October">October</option>
+            <option value="November">November</option><option value="December">December</option>
+          </select>
+          <input type="number" id="yearInput" class="text-input" value="2026" min="2020" max="2099" placeholder="Year">
+        </div>
+      </div>
+
+      <!-- Number of habits -->
+      <div class="section">
+        <div class="section-title">Number of Habits</div>
+        <div class="count-row">
+          <button class="count-btn" id="decHabits">−</button>
+          <input type="number" id="habitCount" class="count-input" value="6" min="1" max="8">
+          <button class="count-btn" id="incHabits">+</button>
+          <span class="count-hint">max 8</span>
+        </div>
+      </div>
+
+      <!-- Habit names -->
+      <div class="section">
+        <div class="section-title">Habit Names</div>
+        <div class="habit-inputs" id="habitInputs"></div>
+      </div>
+
+      <!-- Extras -->
+      <div class="section">
+        <div class="section-title">Extras</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="toggle-row" id="toggleMood" onclick="toggle('mood')">
+            <div><div class="toggle-label">Mood Row</div><div class="toggle-sub">☀️ 🌤 ☁️ 🌧 ⛈ at the bottom of grid</div></div>
+            <div class="toggle on" id="toggle-mood"></div>
+          </div>
+          <div class="toggle-row" id="toggleNotes" onclick="toggle('notes')">
+            <div><div class="toggle-label">Notes Panel</div><div class="toggle-sub">Right panel with reflection prompts</div></div>
+            <div class="toggle on" id="toggle-notes"></div>
+          </div>
+          <div class="toggle-row" id="toggleStreak" onclick="toggle('streak')">
+            <div><div class="toggle-label">Streak Counter</div><div class="toggle-sub">Best streak column on the right</div></div>
+            <div class="toggle on" id="toggle-streak"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pages -->
+      <div class="section">
+        <div class="section-title">Number of Copies</div>
+        <div class="count-row">
+          <button class="count-btn" id="decPages">−</button>
+          <input type="number" id="pageCount" class="count-input" value="1" min="1" max="99">
+          <button class="count-btn" id="incPages">+</button>
+          <span class="count-hint" id="pageHint">= 1 month</span>
+        </div>
+      </div>
+
+      <!-- Font -->
+      <div class="section">
+        <div class="section-title">Font Style</div>
+        <div class="radio-group cols-3">
+          <label class="radio-option"><input type="radio" name="font" value="helvetica" checked><span class="radio-btn"><span class="rb-title" style="font-family:sans-serif">Classic</span><span class="rb-sub">clean</span></span></label>
+          <label class="radio-option"><input type="radio" name="font" value="times"><span class="radio-btn"><span class="rb-title" style="font-family:serif">Serif</span><span class="rb-sub">elegant</span></span></label>
+          <label class="radio-option"><input type="radio" name="font" value="courier"><span class="radio-btn"><span class="rb-title" style="font-family:monospace">Mono</span><span class="rb-sub">typewriter</span></span></label>
+        </div>
+      </div>
+
+      <!-- Printer -->
+      <div class="section">
+        <div class="section-title">Printer</div>
+        <div id="duplexBanner" class="duplex-banner manual">
+          <span>⚠</span>
+          <span>Two PDFs will be generated — Side 1 first, then Side 2 after reinserting. <a href="#" id="duplexOverride" style="color:var(--accent)">My printer supports duplex →</a></span>
+        </div>
+      </div>
+
+    </div>
+    <div class="settings-footer">
+      <button class="generate-btn" id="generateBtn">Generate & Download PDF</button>
+      <div class="progress" id="progress">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText">Building your tracker...</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Preview -->
+  <section class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-label">Live Preview</span>
+      <span class="preview-badge" id="previewBadge">January 2026 · 6 Habits</span>
+    </div>
+    <div class="preview-sheet"><canvas id="previewCanvas"></canvas></div>
+    <div class="preview-info">
+      <div class="preview-stat"><span class="preview-stat-val" id="statHabits">6</span><span class="preview-stat-label">Habits</span></div>
+      <div class="preview-stat"><span class="preview-stat-val" id="statDays">31</span><span class="preview-stat-label">Days</span></div>
+      <div class="preview-stat"><span class="preview-stat-val" id="statCells">186</span><span class="preview-stat-label">Check-boxes</span></div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Two-step printing</div>
+    <div class="modal-sub">Manual duplex</div>
+    <div id="modalSteps"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalBtn1">Download Side 1</button>
+      <button class="modal-btn ghost" id="modalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let duplexSupported = false;
+let generatedDoc = null;
+const toggleState = { mood: true, notes: true, streak: true };
+
+const generateBtn  = document.getElementById('generateBtn');
+const progress     = document.getElementById('progress');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const duplexBanner = document.getElementById('duplexBanner');
+const modalOverlay = document.getElementById('modalOverlay');
+const modalBtn1    = document.getElementById('modalBtn1');
+const modalClose   = document.getElementById('modalClose');
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+const getSize    = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
+const getFont    = () => document.querySelector('input[name="font"]:checked')?.value || 'helvetica';
+const getMonth   = () => document.getElementById('monthSelect').value;
+const getYear    = () => parseInt(document.getElementById('yearInput').value) || 2026;
+const getHabitCount = () => Math.min(8, Math.max(1, parseInt(document.getElementById('habitCount').value) || 6));
+const getPageCount  = () => Math.max(1, parseInt(document.getElementById('pageCount').value) || 1);
+
+function getDaysInMonth(month, year) {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return new Date(year, months.indexOf(month) + 1, 0).getDate();
+}
+
+function getHabitNames() {
+  const names = [];
+  for (let i = 1; i <= 8; i++) {
+    const el = document.getElementById(`habit-${i}`);
+    names.push(el ? el.value.trim() : '');
+  }
+  return names;
+}
+
+// ── Toggle ─────────────────────────────────────────────────────────────────────
+function toggle(key) {
+  toggleState[key] = !toggleState[key];
+  const el = document.getElementById(`toggle-${key}`);
+  el.classList.toggle('on', toggleState[key]);
+  updatePreview();
+}
+
+// ── Habit input rows ───────────────────────────────────────────────────────────
+const HABIT_PLACEHOLDERS = [
+  'e.g. Exercise','e.g. Read 20 mins','e.g. Meditate',
+  'e.g. No sugar','e.g. Drink water','e.g. Journal',
+  'e.g. Sleep 8hrs','e.g. Walk outside'
+];
+
+function renderHabitInputs() {
+  const count = getHabitCount();
+  const container = document.getElementById('habitInputs');
+  const existing = {};
+  for (let i = 1; i <= 8; i++) {
+    const el = document.getElementById(`habit-${i}`);
+    if (el) existing[i] = el.value;
+  }
+  container.innerHTML = '';
+  for (let i = 1; i <= 8; i++) {
+    const row = document.createElement('div');
+    row.className = 'habit-input-row';
+    row.innerHTML = `
+      <span class="habit-num">${i}</span>
+      <input type="text" id="habit-${i}" class="habit-input"
+        placeholder="${HABIT_PLACEHOLDERS[i-1]}"
+        maxlength="22"
+        ${i > count ? 'disabled' : ''}
+        value="${existing[i] || ''}">`;
+    container.appendChild(row);
+    document.getElementById(`habit-${i}`).addEventListener('input', updatePreview);
+  }
+}
+
+// ── UI wiring ──────────────────────────────────────────────────────────────────
+document.getElementById('decHabits').addEventListener('click', () => {
+  const el = document.getElementById('habitCount');
+  el.value = Math.max(1, parseInt(el.value) - 1);
+  renderHabitInputs(); updatePreview();
+});
+document.getElementById('incHabits').addEventListener('click', () => {
+  const el = document.getElementById('habitCount');
+  el.value = Math.min(8, parseInt(el.value) + 1);
+  renderHabitInputs(); updatePreview();
+});
+document.getElementById('decPages').addEventListener('click', () => {
+  const el = document.getElementById('pageCount');
+  el.value = Math.max(1, parseInt(el.value) - 1);
+  updatePageHint(); updatePreview();
+});
+document.getElementById('incPages').addEventListener('click', () => {
+  const el = document.getElementById('pageCount');
+  el.value = parseInt(el.value) + 1;
+  updatePageHint(); updatePreview();
+});
+document.getElementById('pageCount').addEventListener('input', () => { updatePageHint(); updatePreview(); });
+document.getElementById('habitCount').addEventListener('input', () => { renderHabitInputs(); updatePreview(); });
+document.getElementById('monthSelect').addEventListener('change', updatePreview);
+document.getElementById('yearInput').addEventListener('input', updatePreview);
+document.querySelectorAll('input[type=radio]').forEach(el => el.addEventListener('change', updatePreview));
+
+function updatePageHint() {
+  const p = getPageCount();
+  document.getElementById('pageHint').textContent = `= ${p} month${p > 1 ? 's' : ''}`;
+}
+
+duplexBanner.addEventListener('click', e => {
+  if (e.target.id === 'duplexOverride') {
+    e.preventDefault();
+    duplexSupported = true;
+    duplexBanner.className = 'duplex-banner supported';
+    duplexBanner.innerHTML = '<span>✓</span><span>Duplex enabled — one combined PDF.</span>';
+  }
+});
+
+modalClose.addEventListener('click', () => modalOverlay.classList.remove('visible'));
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) modalOverlay.classList.remove('visible'); });
+
+function setProgress(pct, text) { progressFill.style.width = pct + '%'; progressText.textContent = text; }
+
+// ── PDF DRAWING ────────────────────────────────────────────────────────────────
+function drawHabitPage(doc, px, py, pw, ph, config) {
+  const { month, year, habits, font, showMood, showNotes, showStreak } = config;
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const days = getDaysInMonth(month, year);
+  const habitCount = habits.length;
+  const m = 4;
+
+  // Layout: ROTATED — days as ROWS (top to bottom), habits as COLUMNS (left to right)
+  // Month title runs vertically on the left edge
+  const titleW = 9;  // vertical title strip width
+  const labelH = 8;  // habit name row height at top
+  const streakH = showMood ? 7 : 0;
+  const availW = pw - m*2 - titleW;
+  const availH = ph - m*2 - labelH - streakH;
+  const cellW = availW / habitCount;   // one column per habit
+  const cellH = Math.min(availH / days, 6); // one row per day
+  const actualGridH = cellH * days;
+
+  const gx = px + m + titleW;          // grid left
+  const gy = py + m + labelH;           // grid top
+
+  // Background
+  doc.setFillColor(253, 250, 245);
+  doc.rect(px, py, pw, ph, 'F');
+
+  // ── Vertical month title strip ──
+  const stripX = px + m;
+  const stripY = py + m;
+  const stripH = ph - m*2;
+  doc.setFillColor(28, 21, 16);
+  doc.rect(stripX, stripY, titleW - 1, stripH, 'F');
+
+  // Month text rotated inside strip — clipped to strip width
+  doc.setFont(font, 'bold');
+  doc.setFontSize(5);
+  doc.setTextColor(245, 240, 228);
+  doc.text(`${month} ${year}`, stripX + (titleW-1)/2, stripY + stripH/2, { angle: 90, align: 'center' });
+
+  // ── Habit name columns (header row) ──
+  for (let i = 0; i < habitCount; i++) {
+    const cx = gx + i * cellW;
+    if (i % 2 === 0) {
+      doc.setFillColor(245, 240, 230);
+      doc.rect(cx, py + m, cellW, labelH, 'F');
+    }
+    doc.setFont(font, 'normal');
+    doc.setFontSize(Math.min(3.8, cellW * 0.38));
+    doc.setTextColor(30, 22, 14);
+    let label = habits[i] || `H${i+1}`;
+    while (doc.getTextWidth(label) > cellW - 1.5 && label.length > 2) label = label.slice(0,-1);
+    if (label !== (habits[i] || `H${i+1}`)) label += '…';
+    // Center in column, rotated
+    doc.text(label, cx + cellW/2, py + m + labelH - 1.5, { angle: 45, align: 'center' });
+  }
+
+  // Rule under header
+  doc.setDrawColor(120, 100, 70);
+  doc.setLineWidth(0.4);
+  doc.line(gx, gy, gx + habitCount * cellW, gy);
+
+  // ── Day rows ──
+  for (let d = 0; d < days; d++) {
+    const ry = gy + d * cellH;
+    const dayNum = d + 1;
+    const dow = new Date(year, MONTHS.indexOf(month), dayNum).getDay();
+    const isWeekend = dow === 0 || dow === 6;
+
+    // Row background
+    if (isWeekend) {
+      doc.setFillColor(242, 234, 218);
+      doc.rect(gx, ry, habitCount * cellW, cellH, 'F');
+    } else if (d % 2 === 0) {
+      doc.setFillColor(250, 247, 240);
+      doc.rect(gx, ry, habitCount * cellW, cellH, 'F');
+    }
+
+    // Day number — centered inside the dark strip
+    const daynFS = Math.min(3.8, cellH * 0.65);
+    doc.setFont(font, isWeekend ? 'bold' : 'normal');
+    doc.setFontSize(daynFS);
+    doc.setTextColor(isWeekend ? 210 : 170, isWeekend ? 180 : 150, isWeekend ? 140 : 115);
+    doc.text(String(dayNum), px + m + (titleW-1)/2, ry + cellH * 0.70, { align: 'center' });
+
+    // Checkbox per habit
+    const bp = Math.min(cellW * 0.1, cellH * 0.1, 0.8);
+    for (let h = 0; h < habitCount; h++) {
+      doc.setDrawColor(180, 165, 140);
+      doc.setLineWidth(0.15);
+      doc.rect(gx + h*cellW + bp, ry + bp, cellW - bp*2, cellH - bp*2);
+    }
+  }
+
+  // ── Grid lines ──
+  doc.setDrawColor(210, 195, 170); doc.setLineWidth(0.1);
+  for (let h = 0; h <= habitCount; h++) {
+    doc.line(gx + h*cellW, gy, gx + h*cellW, gy + actualGridH);
+  }
+  for (let d = 0; d <= days; d++) {
+    doc.setLineWidth(d % 7 === 0 ? 0.25 : 0.1);
+    doc.line(gx, gy + d*cellH, gx + habitCount*cellW, gy + d*cellH);
+  }
+
+  // Outer border
+  doc.setDrawColor(80, 60, 35); doc.setLineWidth(0.45);
+  doc.rect(gx, gy, habitCount * cellW, actualGridH);
+
+  // ── Mood / streak row at bottom ──
+  if (showMood && streakH > 0) {
+    const sy = gy + actualGridH;
+    doc.setFillColor(240, 232, 215);
+    doc.rect(gx, sy, habitCount * cellW, streakH, 'F');
+    doc.setFont(font, 'italic'); doc.setFontSize(3.5); doc.setTextColor(120, 100, 70);
+    doc.text('mood', px + m + 0.5, sy + streakH * 0.72);
+    for (let h = 0; h < habitCount; h++) {
+      doc.setDrawColor(180, 165, 140); doc.setLineWidth(0.15);
+      doc.rect(gx + h*cellW + 0.4, sy + 0.4, cellW - 0.8, streakH - 0.8);
+    }
+    doc.setDrawColor(100, 80, 55); doc.setLineWidth(0.3);
+    doc.rect(gx, sy, habitCount*cellW, streakH);
+  }
+}
+
+function drawNotesPanel(doc, px, py, pw, ph, config) {
+  const { month, year, font } = config;
+  const m = 5;
+  const iw = pw - m*2;
+
+  doc.setFillColor(253, 250, 245);
+  doc.rect(px, py, pw, ph, 'F');
+
+  // Header
+  doc.setFont(font, 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(20, 15, 10);
+  doc.text(`${month} ${year}`, px + m, py + m + 6);
+  doc.setFont(font, 'italic');
+  doc.setFontSize(5.5);
+  doc.setTextColor(120, 100, 70);
+  doc.text('Monthly Reflection', px + pw - m, py + m + 6, { align: 'right' });
+
+  doc.setDrawColor(180, 165, 140);
+  doc.setLineWidth(0.3);
+  doc.line(px + m, py + m + 8, px + pw - m, py + m + 8);
+
+  let cy = py + m + 14;
+
+  // Reflection prompts with lined space
+  const prompts = [
+    { q: 'What went well this month?', lines: 4 },
+    { q: 'What was challenging?', lines: 3 },
+    { q: 'Habit I\'m most proud of:', lines: 2 },
+    { q: 'Focus for next month:', lines: 3 },
+  ];
+
+  const lineGap = 4.8;
+
+  for (const { q, lines } of prompts) {
+    if (cy + lines * lineGap + 12 > py + ph - m) break;
+
+    doc.setFont(font, 'italic');
+    doc.setFontSize(4.8);
+    doc.setTextColor(80, 65, 45);
+    doc.text(q, px + m, cy);
+    cy += 5;
+
+    doc.setDrawColor(200, 185, 160);
+    doc.setLineWidth(0.2);
+    for (let l = 0; l < lines; l++) {
+      doc.line(px + m, cy + l * lineGap, px + pw - m, cy + l * lineGap);
+    }
+    cy += lines * lineGap + 8;
+  }
+
+  // Monthly stats boxes at bottom
+  const statsY = py + ph - m - 20;
+  if (cy < statsY - 4) {
+    doc.setFont(font, 'italic');
+    doc.setFontSize(4.5);
+    doc.setTextColor(120, 100, 70);
+    doc.text('— Month at a glance —', px + pw/2, statsY - 6, { align: 'center' });
+
+    const boxes = [
+      { label: 'Best day' }, { label: 'Perfect days' }, { label: 'Overall' }
+    ];
+    const bw = (iw - 8) / 3;
+    boxes.forEach((b, i) => {
+      const bx = px + m + i * (bw + 4);
+      doc.setDrawColor(180, 165, 140); doc.setLineWidth(0.25);
+      doc.rect(bx, statsY, bw, 16);
+      doc.setFont(font, 'normal'); doc.setFontSize(3.8);
+      doc.setTextColor(120, 100, 70);
+      doc.text(b.label, bx + bw/2, statsY + 13, { align: 'center' });
+    });
+  }
+}
+
+// ── Layout engine ──────────────────────────────────────────────────────────────
+function buildDoc(config) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const { size, pages, showNotes } = config;
+
+  for (let p = 0; p < pages; p++) {
+    if (p > 0) doc.addPage();
+
+    if (size === 'regular') {
+      const W = 297, H = 210, colW = 110, halfH = H / 2;
+      // 4 panels: TL, BL, TR, BR
+      // TL + TR = grid panels (top/bottom halves of col 0 and 1)
+      // For habit tracker: one full 110x210 panel = the grid, other = notes
+      // We use left col for grid, right col for notes
+      drawHabitPage(doc, 0, 0, colW, H, config);
+      if (showNotes) {
+        drawNotesPanel(doc, colW, 0, colW, H, config);
+      } else {
+        drawHabitPage(doc, colW, 0, colW, H, config);
+      }
+      // Fold/cut lines
+      doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+      doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
+      doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
+      doc.setLineDashPattern([],0);
+      doc.setFillColor(230,222,208,0.3);
+      doc.setDrawColor(180,180,180); doc.setLineWidth(0.12); doc.setLineDashPattern([1,2],0);
+      doc.line(0,H/2,2*colW,H/2); doc.setLineDashPattern([],0);
+      doc.setFont(config.font,'normal'); doc.setFontSize(4); doc.setTextColor(140,130,110);
+      doc.text('--- fold', 2*colW+2, H/2-4);
+      doc.text('... cut', 2*colW+2, H/2);
+    } else {
+      // Passport: 4 panels 134x98
+      const W=297, H=210, pw=134, ph=98;
+      const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
+      const panels = [[sx,sy],[sx+pw,sy],[sx,sy+ph],[sx+pw,sy+ph]];
+      panels.forEach(([ox,oy], i) => {
+        if (i === 0 || i === 1) drawHabitPage(doc, ox, oy, pw, ph, config);
+        else drawNotesPanel(doc, ox, oy, pw, ph, config);
+      });
+      doc.setDrawColor(100,100,100); doc.setLineWidth(0.25); doc.setLineDashPattern([0.8,2],0);
+      doc.line(sx+pw,sy-4,sx+pw,sy+ph*2+4);
+      doc.line(sx-4,sy+ph,sx+pw*2+4,sy+ph);
+      doc.setLineDashPattern([],0);
+    }
+  }
+  return doc;
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────────
+generateBtn.addEventListener('click', async () => {
+  generateBtn.disabled = true;
+  progress.classList.add('visible');
+  setProgress(30, 'Building tracker...');
+  await new Promise(r => setTimeout(r, 80));
+
+  const config = {
+    month: getMonth(), year: getYear(),
+    habits: getHabitNames().slice(0, getHabitCount()),
+    font: getFont(), size: getSize(),
+    pages: getPageCount(),
+    showMood: toggleState.mood,
+    showNotes: toggleState.notes,
+    showStreak: toggleState.streak,
+  };
+
+  setProgress(70, 'Drawing pages...');
+  await new Promise(r => setTimeout(r, 80));
+  const doc = buildDoc(config);
+
+  const slug = `${config.month.toLowerCase()}-${config.year}`;
+
+  setProgress(100, 'Done!');
+  await new Promise(r => setTimeout(r, 300));
+
+  if (duplexSupported) {
+    doc.save(`habit-tracker-${slug}.pdf`);
+  } else {
+    generatedDoc = { doc, slug };
+    showManualModal();
+  }
+
+  generateBtn.disabled = false;
+  progress.classList.remove('visible');
+  progressFill.style.width = '0%';
+});
+
+function showManualModal() {
+  document.getElementById('modalSteps').innerHTML = `
+    <div class="step"><div class="step-num">1</div><div class="step-text">Click <strong>Download</strong> — the habit tracker is a single-sided insert, no duplex needed!</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Print in <strong>landscape</strong> orientation on A4.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Fold at 110mm, cut at 220mm</strong> for Regular TN. Cut at centre lines for Passport.</div></div>`;
+  modalBtn1.textContent = 'Download PDF';
+  modalBtn1.onclick = () => {
+    generatedDoc.doc.save(`habit-tracker-${generatedDoc.slug}.pdf`);
+    document.querySelectorAll('#modalSteps .step-num').forEach(el => { el.classList.add('done'); el.textContent = '✓'; });
+    modalBtn1.textContent = '✓ Done!'; modalBtn1.disabled = true;
+  };
+  modalOverlay.classList.add('visible');
+}
+
+// ── PREVIEW ────────────────────────────────────────────────────────────────────
+function updatePreview() {
+  const month = getMonth(), year = getYear();
+  const habitCount = getHabitCount();
+  const days = getDaysInMonth(month, year);
+
+  document.getElementById('previewBadge').textContent = `${month} ${year} · ${habitCount} Habits`;
+  document.getElementById('statHabits').textContent = habitCount;
+  document.getElementById('statDays').textContent = days;
+  document.getElementById('statCells').textContent = habitCount * days;
+
+  const canvas = document.getElementById('previewCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  if (!W || !H) { setTimeout(updatePreview, 150); return; }
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.width = Math.round(W * devicePixelRatio);
+  canvas.height = Math.round(H * devicePixelRatio);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.fillStyle = '#fdfaf5'; ctx.fillRect(0, 0, W, H);
+
+  const scale = W / 297;
+  drawHabitPreview(ctx, W, H, scale, month, year, habitCount, days);
+}
+
+function drawHabitPreview(ctx, W, H, scale, month, year, habitCount, days) {
+  const colW = 110 * scale;
+
+  // Left panel — grid
+  drawGridPanel(ctx, 0, 0, colW, H, scale, month, year, habitCount, days);
+
+  // Right panel — notes or second grid
+  if (toggleState.notes) {
+    drawNotesPreview(ctx, colW, 0, colW, H, scale, month, year);
+  } else {
+    drawGridPanel(ctx, colW, 0, colW, H, scale, month, year, habitCount, days);
+  }
+
+  // Fold/cut lines
+  ctx.strokeStyle = 'rgba(100,100,100,0.45)'; ctx.lineWidth = 0.8;
+  ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(colW,0); ctx.lineTo(colW,H); ctx.stroke();
+  ctx.setLineDash([2,4]); ctx.strokeStyle = 'rgba(80,80,80,0.45)';
+  ctx.beginPath(); ctx.moveTo(2*colW,0); ctx.lineTo(2*colW,H); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(218,210,195,0.35)'; ctx.fillRect(2*colW, 0, W-2*colW, H);
+  ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(180,180,180,0.4)'; ctx.lineWidth=0.4;
+  ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(2*colW,H/2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawGridPanel(ctx, px, py, pw, ph, scale, month, year, habitCount, days) {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const m = 4*scale;
+  ctx.fillStyle = '#fdfaf5'; ctx.fillRect(px, py, pw, ph);
+
+  const titleW = 9*scale;
+  const labelH = 8*scale;
+  const moodRowH = toggleState.mood ? 7*scale : 0;
+  const availW = pw - m*2 - titleW;
+  const availH = ph - m*2 - labelH - moodRowH;
+  const cellW = availW / habitCount;
+  const cellH = Math.min(availH / days, 6*scale);
+  const actualGridH = cellH * days;
+  const gx = px + m + titleW;
+  const gy = py + m + labelH;
+
+  // Dark title strip
+  ctx.fillStyle = '#1c1510';
+  ctx.fillRect(px+m, py+m, titleW-scale, ph-m*2);
+
+  // Month label rotated — contained within dark strip width
+  ctx.save();
+  ctx.rect(px+m, py+m, titleW-scale, ph-m*2); // clip to strip
+  ctx.clip();
+  ctx.translate(px+m+(titleW-scale)/2, py+ph/2);
+  ctx.rotate(-Math.PI/2);
+  // Scale font so text fits within strip width (= ph - m*2 rotated)
+  const maxTextW = ph - m*2 - 4*scale;
+  ctx.font = `bold ${4.8*scale}px serif`;
+  ctx.fillStyle = '#f5f0e4';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // Shrink if needed
+  let mText = `${month} ${year}`;
+  while (ctx.measureText(mText).width > maxTextW && mText.length > 4) mText = mText.slice(0,-1);
+  ctx.fillText(mText, 0, 0);
+  ctx.restore();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+  // Habit name headers (angled)
+  const habitNames = getHabitNames().slice(0, habitCount);
+  for (let i = 0; i < habitCount; i++) {
+    const cx = gx + i*cellW;
+    if (i%2===0) { ctx.fillStyle='rgba(245,240,230,0.7)'; ctx.fillRect(cx,py+m,cellW,labelH); }
+    ctx.save();
+    ctx.translate(cx + cellW/2, py+m+labelH-2*scale);
+    ctx.rotate(-Math.PI/4);
+    ctx.font = `${Math.min(3.5,cellW*0.38)*scale}px monospace`;
+    ctx.fillStyle = '#1c160f';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    const lbl = (habitNames[i] || `H${i+1}`).slice(0,8);
+    ctx.fillText(lbl, 0, 0);
+    ctx.restore();
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+  // Header rule
+  ctx.strokeStyle = 'rgba(80,60,35,0.6)'; ctx.lineWidth = 0.5*scale;
+  ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx+habitCount*cellW,gy); ctx.stroke();
+
+  // Day rows
+  for (let d = 0; d < days; d++) {
+    const ry = gy + d*cellH;
+    const dow = new Date(year, MONTHS.indexOf(month), d+1).getDay();
+    const isWeekend = dow===0||dow===6;
+
+    if (isWeekend) { ctx.fillStyle='rgba(242,234,218,0.7)'; ctx.fillRect(gx,ry,habitCount*cellW,cellH); }
+    else if (d%2===0) { ctx.fillStyle='rgba(250,247,240,0.5)'; ctx.fillRect(gx,ry,habitCount*cellW,cellH); }
+
+    // Day number — centered inside strip, never touching grid
+    const dayFS = Math.min(3.5, cellH*0.6)*scale;
+    ctx.font = `${isWeekend ? 'bold ' : ''}${dayFS}px monospace`;
+    ctx.fillStyle = isWeekend ? 'rgba(210,180,135,0.95)' : 'rgba(165,145,115,0.85)';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(d+1), px+m+(titleW-scale)*0.5, ry+cellH*0.72);
+    ctx.textAlign = 'left';
+
+    // Checkboxes
+    const bp = Math.min(cellW*0.1, cellH*0.1);
+    for (let h=0; h<habitCount; h++) {
+      ctx.strokeStyle='rgba(180,165,140,0.5)'; ctx.lineWidth=0.2;
+      ctx.strokeRect(gx+h*cellW+bp, ry+bp, cellW-bp*2, cellH-bp*2);
+    }
+  }
+
+  // Grid lines
+  ctx.strokeStyle='rgba(210,195,170,0.4)'; ctx.lineWidth=0.15;
+  for (let h=0;h<=habitCount;h++) { ctx.beginPath();ctx.moveTo(gx+h*cellW,gy);ctx.lineTo(gx+h*cellW,gy+actualGridH+moodRowH);ctx.stroke(); }
+  for (let d=0;d<=days;d++) {
+    ctx.lineWidth = d%7===0 ? 0.3 : 0.12;
+    ctx.beginPath();ctx.moveTo(gx,gy+d*cellH);ctx.lineTo(gx+habitCount*cellW,gy+d*cellH);ctx.stroke();
+  }
+
+  // Outer border
+  ctx.strokeStyle='rgba(80,60,35,0.75)'; ctx.lineWidth=0.6;
+  ctx.strokeRect(gx, gy, habitCount*cellW, actualGridH);
+
+  // Mood row
+  if (toggleState.mood) {
+    const sy = gy+actualGridH;
+    ctx.fillStyle='rgba(240,232,215,0.6)'; ctx.fillRect(gx,sy,habitCount*cellW,moodRowH);
+    ctx.font=`italic ${3*scale}px serif`; ctx.fillStyle='rgba(120,100,70,0.7)';
+    ctx.fillText('mood', px+m+scale, sy+moodRowH*0.72);
+    for (let h=0;h<habitCount;h++) {
+      ctx.strokeStyle='rgba(180,165,140,0.4)'; ctx.lineWidth=0.15;
+      ctx.strokeRect(gx+h*cellW+0.4,sy+0.4,cellW-0.8,moodRowH-0.8);
+    }
+    ctx.strokeStyle='rgba(100,80,55,0.5)'; ctx.lineWidth=0.3;
+    ctx.strokeRect(gx,sy,habitCount*cellW,moodRowH);
+  }
+}
+
+function drawNotesPreview(ctx, px, py, pw, ph, scale, month, year) {
+  const m = 4*scale;
+  ctx.fillStyle = '#fdfaf5'; ctx.fillRect(px, py, pw, ph);
+  ctx.font=`bold ${6*scale}px serif`; ctx.fillStyle='#140f0a';
+  ctx.fillText(`${month} ${year}`, px+m, py+m+6*scale);
+  ctx.font=`italic ${4*scale}px serif`; ctx.fillStyle='rgba(120,100,70,0.7)';
+  ctx.fillText('Monthly Reflection', px+pw-m-40*scale, py+m+6*scale);
+  ctx.strokeStyle='rgba(180,165,140,0.5)'; ctx.lineWidth=0.3;
+  ctx.beginPath(); ctx.moveTo(px+m,py+m+8*scale); ctx.lineTo(px+pw-m,py+m+8*scale); ctx.stroke();
+
+  // Prompt stubs + lines
+  const prompts = ['What went well?','What was challenging?','Proudest habit:','Focus next month:'];
+  let cy = py+m+16*scale;
+  prompts.forEach(p => {
+    ctx.font=`italic ${3.8*scale}px serif`; ctx.fillStyle='rgba(80,65,45,0.7)';
+    ctx.fillText(p, px+m, cy); cy+=5*scale;
+    for (let l=0;l<3;l++) {
+      ctx.strokeStyle='rgba(200,185,160,0.45)'; ctx.lineWidth=0.2;
+      ctx.beginPath(); ctx.moveTo(px+m,cy+l*4.5*scale); ctx.lineTo(px+pw-m,cy+l*4.5*scale); ctx.stroke();
+    }
+    cy+=3*4.5*scale+7*scale;
+  });
+}
+
+// Init
+renderHabitInputs();
+setTimeout(updatePreview, 100); setTimeout(updatePreview, 500);
+window.addEventListener('resize', updatePreview);
+
+// Pre-select current month
+const now = new Date();
+document.getElementById('monthSelect').value = ['January','February','March','April','May','June','July','August','September','October','November','December'][now.getMonth()];
+document.getElementById('yearInput').value = now.getFullYear();
+updatePreview();
+</script>
+</body>
+</html>

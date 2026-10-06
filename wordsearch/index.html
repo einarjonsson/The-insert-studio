@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TN Word Search Generator</title>
+<script src="../assets/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/studio.css">
+<script src="../assets/studio.js" defer></script>
+<style>
+/* wordsearch-specific styles; shared styles live in ../assets/studio.css */
+/* Settings panel */
+/* Radio */
+.radio-option input:checked + .radio-btn .rb-sub { color: var(--accent-light); opacity: 0.7; }
+/* Category grid */
+.cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cat-option input { display: none; }
+.cat-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border: 1.5px solid var(--rule);
+  border-radius: 3px; background: var(--cream); cursor: pointer;
+  transition: all 0.12s; font-family: 'DM Mono', monospace; font-size: 0.72rem;
+}
+.cat-btn .cat-icon { font-size: 1rem; }
+.cat-btn .cat-name { font-size: 0.75rem; font-weight: 500; }
+.cat-option input:checked + .cat-btn { border-color: var(--accent); background: var(--accent-pale); color: var(--accent); }
+.cat-btn:hover { border-color: var(--accent-light); }
+/* Count */
+/* Text input */
+/* Duplex banner */
+/* Generate */
+/* Preview */
+/* Modal */
+@media (max-width: 860px) {
+  main { grid-template-columns: 1fr; }
+  header { padding: 20px 24px; }
+}
+</style>
+</head>
+<body>
+<nav class="topbar" data-tool="wordsearch"><a href="../">← The Insert Studio</a></nav>
+
+<header>
+  <div class="logo">Traveler's <em>Word Search</em></div>
+  <div class="header-tag">A4 Printable Inserts</div>
+</header>
+
+<main>
+  <aside class="settings-panel">
+    <div class="settings-inner">
+
+      <!-- Notebook size -->
+      <div class="section">
+        <div class="section-title">Notebook Size</div>
+        <div class="radio-group cols-2">
+          <label class="radio-option">
+            <input type="radio" name="size" value="regular" checked>
+            <span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm · fold + cut</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="size" value="passport">
+            <span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm · cut only</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Category -->
+      <div class="section">
+        <div class="section-title">Word Category</div>
+        <div class="cat-grid">
+          <label class="cat-option">
+            <input type="radio" name="category" value="animals" checked>
+            <span class="cat-btn"><span class="cat-icon">🦊</span><span class="cat-name">Animals</span></span>
+          </label>
+          <label class="cat-option">
+            <input type="radio" name="category" value="nature">
+            <span class="cat-btn"><span class="cat-icon">🌿</span><span class="cat-name">Nature</span></span>
+          </label>
+          <label class="cat-option">
+            <input type="radio" name="category" value="travel">
+            <span class="cat-btn"><span class="cat-icon">✈️</span><span class="cat-name">Travel</span></span>
+          </label>
+          <label class="cat-option">
+            <input type="radio" name="category" value="food">
+            <span class="cat-btn"><span class="cat-icon">🍜</span><span class="cat-name">Food & Drink</span></span>
+          </label>
+          <label class="cat-option">
+            <input type="radio" name="category" value="geography">
+            <span class="cat-btn"><span class="cat-icon">🗺️</span><span class="cat-name">Geography</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Difficulty -->
+      <div class="section">
+        <div class="section-title">Difficulty</div>
+        <div class="radio-group cols-3">
+          <label class="radio-option">
+            <input type="radio" name="difficulty" value="easy">
+            <span class="radio-btn"><span class="rb-title">Easy</span><span class="rb-sub">↔ only</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="difficulty" value="medium" checked>
+            <span class="radio-btn"><span class="rb-title">Medium</span><span class="rb-sub">↔↕↗</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="difficulty" value="hard">
+            <span class="radio-btn"><span class="rb-title">Hard</span><span class="rb-sub">+ backwards</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Font -->
+      <div class="section">
+        <div class="section-title">Font Style</div>
+        <div class="radio-group cols-3">
+          <label class="radio-option">
+            <input type="radio" name="font" value="helvetica" checked>
+            <span class="radio-btn"><span class="rb-title" style="font-family:sans-serif">Classic</span><span class="rb-sub">clean</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="font" value="times">
+            <span class="radio-btn"><span class="rb-title" style="font-family:serif">Serif</span><span class="rb-sub">traditional</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="font" value="courier">
+            <span class="radio-btn"><span class="rb-title" style="font-family:monospace">Mono</span><span class="rb-sub">typewriter</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Personalisation -->
+      <div class="section">
+        <div class="section-title">Personalisation</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <input type="text" id="customTitle" class="text-input" placeholder="Custom title (optional)">
+          <div class="radio-group cols-2">
+            <label class="radio-option">
+              <input type="radio" name="cover" value="none" checked>
+              <span class="radio-btn"><span class="rb-title">No Cover</span><span class="rb-sub">puzzles only</span></span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="cover" value="cover">
+              <span class="radio-btn"><span class="rb-title">Cover Page</span><span class="rb-sub">framed + title</span></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pages -->
+      <div class="section">
+        <div class="section-title">Number of Pages</div>
+        <div class="count-row">
+          <button class="count-btn" id="decBtn">−</button>
+          <input type="number" id="countDisplay" class="count-input" value="1" min="1" max="999">
+          <button class="count-btn" id="incBtn">+</button>
+          <span class="count-hint" id="countHint">= 4 puzzles</span>
+        </div>
+      </div>
+
+      <!-- Printer -->
+      <div class="section">
+        <div class="section-title">Printer</div>
+        <div id="duplexBanner" class="duplex-banner manual">
+          <span>⚠</span>
+          <span>Two PDFs will be generated — Side 1 first, then Side 2 after reinserting the paper. <a href="#" id="duplexOverride" style="color:var(--accent);font-size:0.65rem;">My printer supports duplex →</a></span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="settings-footer">
+      <button class="generate-btn" id="generateBtn">Generate &amp; Download PDF</button>
+      <div class="progress" id="progress">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText">Building puzzles...</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Preview -->
+  <section class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-label">Live Preview</span>
+      <span class="preview-badge" id="previewBadge">Animals · Medium</span>
+    </div>
+    <div class="preview-sheet"><canvas id="previewCanvas"></canvas></div>
+    <div class="preview-info">
+      <div class="preview-stat">
+        <span class="preview-stat-val" id="statPuzzles">4</span>
+        <span class="preview-stat-label">Puzzles</span>
+      </div>
+      <div class="preview-stat">
+        <span class="preview-stat-val" id="statWords">15</span>
+        <span class="preview-stat-label">Words each</span>
+      </div>
+      <div class="preview-stat">
+        <span class="preview-stat-val" id="statSheets">2</span>
+        <span class="preview-stat-label">PDF Pages</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Two-step printing</div>
+    <div class="modal-sub">No automatic duplex detected</div>
+    <div id="modalSteps"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalBtn1">Download Side 1</button>
+      <button class="modal-btn ghost" id="modalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ── Word lists ─────────────────────────────────────────────────────────────────
+const WORDS = {
+  animals: ['ELEPHANT','GIRAFFE','PENGUIN','DOLPHIN','CHEETAH','GORILLA','FLAMINGO','LEOPARD','OCTOPUS','CROCODILE','HEDGEHOG','SQUIRREL','MONGOOSE','ANTELOPE','PLATYPUS','PORCUPINE','ARMADILLO','CHAMELEON','WOLVERINE','ALBATROSS'],
+  nature:  ['MOUNTAIN','VOLCANO','GLACIER','WATERFALL','CANYON','MEADOW','TUNDRA','SAVANNA','RAINFOREST','PENINSULA','ESTUARY','LAGOON','PLATEAU','BLIZZARD','THUNDERSTORM','AVALANCHE','STALACTITE','MANGROVE','ARCHIPELAGO','PERMAFROST'],
+  travel:  ['PASSPORT','LUGGAGE','TERMINAL','BOARDING','ITINERARY','DEPARTURE','CUSTOMS','LAYOVER','HOSTEL','BACKPACK','EXCURSION','LANDMARK','SOUVENIR','TIMEZONE','CURRENCY','MONUMENT','EXPEDITION','NAVIGATOR','ADVENTURE','TRANSPORT'],
+  food:    ['SAFFRON','ESPRESSO','CROISSANT','DUMPLING','PAELLA','TIRAMISU','CINNAMON','AVOCADO','PROSCIUTTO','CARDAMOM','MOZZARELLA','TAMARIND','ARTICHOKE','EDAMAME','COUSCOUS','KOMBUCHA','AUBERGINE','TURMERIC','FALAFEL','GAZPACHO'],
+  geography: ['AMAZON','SAHARA','HIMALAYA','PACIFIC','MEDITERRANEAN','ANTARCTICA','SCANDINAVIA','CARIBBEAN','BALKANS','PENINSULA','ARCHIPELAGO','EQUATOR','MERIDIAN','CONTINENT','TECTONIC','LONGITUDE','LATITUDE','TRIBUTARY','WATERSHED','ESTUARY'],
+};
+
+const CATEGORY_LABELS = {
+  animals: 'Animals', nature: 'Nature', travel: 'Travel',
+  food: 'Food & Drink', geography: 'Geography'
+};
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let pageCount = 1;
+let duplexSupported = false;
+let generatedDocs = null;
+
+const countInput  = document.getElementById('countDisplay');
+const countHint   = document.getElementById('countHint');
+const decBtn      = document.getElementById('decBtn');
+const incBtn      = document.getElementById('incBtn');
+const generateBtn = document.getElementById('generateBtn');
+const progress    = document.getElementById('progress');
+const progressFill= document.getElementById('progressFill');
+const progressText= document.getElementById('progressText');
+const duplexBanner= document.getElementById('duplexBanner');
+const modalOverlay= document.getElementById('modalOverlay');
+const modalBtn1   = document.getElementById('modalBtn1');
+const modalClose  = document.getElementById('modalClose');
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+const getSize       = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
+const getCategory   = () => document.querySelector('input[name="category"]:checked')?.value || 'animals';
+const getDifficulty = () => document.querySelector('input[name="difficulty"]:checked')?.value || 'medium';
+const getFont       = () => document.querySelector('input[name="font"]:checked')?.value || 'helvetica';
+const getCover      = () => document.querySelector('input[name="cover"]:checked')?.value || 'none';
+const getTitle      = () => document.getElementById('customTitle')?.value.trim() || '';
+
+// ── UI ─────────────────────────────────────────────────────────────────────────
+function updateHint() {
+  pageCount = parseInt(countInput.value) || 1;
+  const puzzlesPerPage = getSize() === 'passport' ? 4 : 4;
+  countHint.textContent = `= ${pageCount * puzzlesPerPage} puzzles`;
+  document.getElementById('statPuzzles').textContent = pageCount * puzzlesPerPage;
+  document.getElementById('statSheets').textContent = (pageCount + (getCover() === 'cover' ? 1 : 0)) * 2;
+}
+
+decBtn.addEventListener('click', () => { if (pageCount > 1) { pageCount--; countInput.value = pageCount; updateHint(); updatePreview(); } });
+incBtn.addEventListener('click', () => { pageCount++; countInput.value = pageCount; updateHint(); updatePreview(); });
+countInput.addEventListener('input', () => { updateHint(); updatePreview(); });
+document.querySelectorAll('input[type=radio]').forEach(el => el.addEventListener('change', () => { updateHint(); updatePreview(); }));
+document.getElementById('customTitle').addEventListener('input', updatePreview);
+
+// Duplex
+duplexBanner.addEventListener('click', e => {
+  if (e.target.id === 'duplexOverride') {
+    e.preventDefault();
+    duplexSupported = true;
+    duplexBanner.className = 'duplex-banner supported';
+    duplexBanner.innerHTML = '<span>✓</span><span>Duplex enabled — one combined PDF will be generated.</span>';
+  }
+});
+
+modalClose.addEventListener('click', () => modalOverlay.classList.remove('visible'));
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) modalOverlay.classList.remove('visible'); });
+
+function setProgress(pct, text) {
+  progressFill.style.width = pct + '%';
+  progressText.textContent = text;
+}
+
+// ── Word Search Logic ──────────────────────────────────────────────────────────
+function getDirections(difficulty) {
+  const dirs = [[0,1],[1,0]]; // easy: right, down
+  if (difficulty !== 'easy') { dirs.push([1,1],[-1,1]); } // medium: + diagonals
+  if (difficulty === 'hard') { dirs.push([0,-1],[-1,0],[-1,-1],[1,-1]); } // hard: + backwards
+  return dirs;
+}
+
+function generateWordSearch(words, gridSize, difficulty) {
+  const grid = Array.from({length: gridSize}, () => Array(gridSize).fill(''));
+  const placed = [];
+  const dirs = getDirections(difficulty);
+
+  // Shuffle words and try to place them
+  const shuffled = [...words].sort(() => Math.random() - 0.5);
+  const toPlace = shuffled.slice(0, 15);
+
+  for (const word of toPlace) {
+    let success = false;
+    const attempts = 200;
+    for (let a = 0; a < attempts && !success; a++) {
+      const dir = dirs[Math.floor(Math.random() * dirs.length)];
+      const [dr, dc] = dir;
+      const maxR = gridSize - (dr > 0 ? word.length : 0) - (dr < 0 ? word.length - 1 : 0);
+      const maxC = gridSize - (dc > 0 ? word.length : 0) - (dc < 0 ? word.length - 1 : 0);
+      const startR = Math.floor(Math.random() * (dr < 0 ? gridSize : maxR + 1));
+      const startC = Math.floor(Math.random() * (dc < 0 ? gridSize : maxC + 1));
+      const adjStartR = dr < 0 ? startR + word.length - 1 : startR;
+      const adjStartC = dc < 0 ? startC + word.length - 1 : startC;
+
+      // Check fit
+      let canPlace = true;
+      for (let i = 0; i < word.length; i++) {
+        const r = adjStartR + i * dr, c = adjStartC + i * dc;
+        if (r < 0 || r >= gridSize || c < 0 || c >= gridSize) { canPlace = false; break; }
+        if (grid[r][c] !== '' && grid[r][c] !== word[i]) { canPlace = false; break; }
+      }
+      if (!canPlace) continue;
+
+      // Place it
+      for (let i = 0; i < word.length; i++) {
+        grid[adjStartR + i*dr][adjStartC + i*dc] = word[i];
+      }
+      placed.push(word);
+      success = true;
+    }
+  }
+
+  // Fill remaining with random letters
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  for (let r = 0; r < gridSize; r++)
+    for (let c = 0; c < gridSize; c++)
+      if (grid[r][c] === '') grid[r][c] = letters[Math.floor(Math.random() * 26)];
+
+  return { grid, words: placed };
+}
+
+// ── PDF Drawing ────────────────────────────────────────────────────────────────
+function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph, font) {
+  const { grid, words } = puzzle;
+  const gridSize = grid.length;
+  const margin = 5;
+  const isPassport = ph < 110; // passport panels are 98mm tall
+  const wordListH = isPassport ? 18 : 22;
+  const titleH = 8;
+  const availW = pw - margin * 2;
+  const availH = ph - margin * 2 - titleH - wordListH;
+  const cellSize = Math.min(availW / gridSize, availH / gridSize);
+  const gridW = cellSize * gridSize;
+  const gridH = cellSize * gridSize;
+  const gx = ox + margin + (availW - gridW) / 2;
+  const gy = oy + margin + titleH;
+
+  // Title
+  doc.setFont(font, 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(30, 30, 30);
+  const label = `Word Search ${number}`;
+  doc.setFillColor(255,255,255);
+  doc.rect(ox + margin - 1, oy + margin - 2, doc.getTextWidth(label) + 4, 6, 'F');
+  doc.text(label, ox + margin, oy + margin + 3.5);
+
+  // Grid background
+  doc.setFillColor(252, 250, 247);
+  doc.rect(gx, gy, gridW, gridH, 'F');
+
+  // Grid letters
+  doc.setFont(font, 'normal');
+  const fs = cellSize * (isPassport ? 0.62 : 0.52);
+  doc.setFontSize(fs);
+  doc.setTextColor(20, 20, 20);
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      const lx = gx + c * cellSize + cellSize / 2;
+      const ly = gy + r * cellSize + cellSize * 0.68;
+      const ch = grid[r][c];
+      const tw = doc.getTextWidth(ch);
+      doc.text(ch, lx - tw / 2, ly);
+    }
+  }
+
+  // Grid lines
+  doc.setDrawColor(200, 195, 185);
+  doc.setLineWidth(0.1);
+  for (let i = 0; i <= gridSize; i++) {
+    doc.line(gx + i*cellSize, gy, gx + i*cellSize, gy + gridH);
+    doc.line(gx, gy + i*cellSize, gx + gridW, gy + i*cellSize);
+  }
+  // Outer border
+  doc.setDrawColor(80, 80, 80);
+  doc.setLineWidth(0.4);
+  doc.rect(gx, gy, gridW, gridH);
+
+  // Word list below grid
+  const wly = gy + gridH + 4;
+  doc.setFont(font, 'bold');
+  doc.setFontSize(isPassport ? 4 : 4.5);
+  doc.setTextColor(100, 100, 100);
+  doc.text('FIND:', ox + margin, wly);
+
+  doc.setFont(font, 'normal');
+  doc.setFontSize(isPassport ? 3.8 : 4.2);
+  doc.setTextColor(40, 40, 40);
+
+  const cols = isPassport ? 4 : 3;
+  const colW = availW / cols;
+  words.forEach((w, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const wx = ox + margin + col * colW;
+    const wy = wly + 4 + row * (isPassport ? 4 : 4.5);
+    doc.text('• ' + w, wx, wy);
+  });
+}
+
+function drawRegularSide(doc, puzzles, startIdx, sideLabel, font, title) {
+  const W = 297, H = 210, colW = 110, halfH = H / 2;
+  const panels = [[0, 0, startIdx],[0, 1, startIdx+1],[1, 0, startIdx+2],[1, 1, startIdx+3]];
+  for (const [col, row, idx] of panels) {
+    if (idx - 1 < puzzles.length) {
+      drawWordSearchPage(doc, puzzles[idx-1], idx, col*colW, row*halfH, colW, halfH, font);
+    }
+  }
+  // Fold + cut lines
+  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
+  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
+  doc.setLineDashPattern([],0);
+  doc.setDrawColor(180,180,180); doc.setLineWidth(0.12); doc.setLineDashPattern([1,2],0);
+  doc.line(0,H/2,2*colW,H/2); doc.setLineDashPattern([],0);
+  doc.setFontSize(4); doc.setFont(font,'normal'); doc.setTextColor(120,120,120);
+  doc.text('--- fold at 110mm', 2*colW+2, H/2-4);
+  doc.text('... cut at 220mm', 2*colW+2, H/2);
+  doc.text(sideLabel, 2*colW+2, H/2+4);
+  if (title) { doc.setFontSize(5); doc.text(title, W/2, H-3, {align:'center'}); }
+}
+
+function drawPassportSide(doc, puzzles, startIdx, sideLabel, font, title) {
+  const W = 297, H = 210, pw = 134, ph = 98;
+  const totalW = pw*2, totalH = ph*2;
+  const startX = (W-totalW)/2, startY = (H-totalH)/2;
+  const panels = [[0,0,startIdx],[1,0,startIdx+1],[0,1,startIdx+2],[1,1,startIdx+3]];
+  for (const [col,row,idx] of panels) {
+    if (idx-1 < puzzles.length) {
+      drawWordSearchPage(doc, puzzles[idx-1], idx, startX+col*pw, startY+row*ph, pw, ph, font);
+    }
+  }
+  doc.setDrawColor(160,160,160); doc.setLineWidth(0.15); doc.setLineDashPattern([],0);
+  for (let c=0;c<2;c++) for (let r=0;r<2;r++) doc.rect(startX+c*pw,startY+r*ph,pw,ph);
+  doc.setDrawColor(80,80,80); doc.setLineWidth(0.25); doc.setLineDashPattern([0.8,2],0);
+  doc.line(startX+pw,startY-4,startX+pw,startY+totalH+4);
+  doc.line(startX-4,startY+ph,startX+totalW+4,startY+ph);
+  doc.setLineDashPattern([],0);
+  doc.setFontSize(4); doc.setFont(font,'normal'); doc.setTextColor(120,120,120);
+  doc.text('... cut at centre | '+sideLabel, W/2, startY-4, {align:'center'});
+  if (title) { doc.setFontSize(5); doc.text(title, W/2, H-3, {align:'center'}); }
+}
+
+function drawCoverPage(doc, title, font) {
+  const W=297, H=210, colW=110, margin=8;
+  const fx=colW+margin, fy=margin, fw=colW-margin*2, fh=H-margin*2;
+  doc.setDrawColor(80,80,80); doc.setLineWidth(0.8); doc.rect(fx,fy,fw,fh);
+  doc.setLineWidth(0.25); doc.rect(fx+3,fy+3,fw-6,fh-6);
+  const cs=5;
+  for (const [ox,oy,sx,sy] of [[fx+3,fy+3,1,1],[fx+fw-3,fy+3,-1,1],[fx+3,fy+fh-3,1,-1],[fx+fw-3,fy+fh-3,-1,-1]]) {
+    doc.setLineWidth(0.5);
+    doc.line(ox,oy,ox+sx*cs,oy); doc.line(ox,oy,ox,oy+sy*cs);
+  }
+  const cx=fx+fw/2, cy=fy+fh/2;
+  if (title) {
+    doc.setFont(font,'bold'); doc.setTextColor(30,30,30); doc.setFontSize(11);
+    doc.text(title, cx, cy-4, {align:'center', maxWidth:fw-16});
+    const lw=Math.min(doc.getTextWidth(title)+8,fw-20);
+    doc.setLineWidth(0.3); doc.setDrawColor(120,120,120);
+    doc.line(cx-lw/2,cy+1,cx+lw/2,cy+1);
+    doc.setFont(font,'normal'); doc.setFontSize(6); doc.setTextColor(100,100,100);
+    doc.text('WORD SEARCH PUZZLES', cx, cy+7, {align:'center'});
+  } else {
+    doc.setFont(font,'normal'); doc.setFontSize(5); doc.setTextColor(160,160,160);
+    doc.text('MY WORD SEARCH BOOK', cx, cy-14, {align:'center'});
+    doc.setDrawColor(180,180,180); doc.setLineWidth(0.2);
+    for (let i=-1;i<=1;i++) doc.line(fx+12,cy+i*8,fx+fw-12,cy+i*8);
+  }
+}
+
+function buildDoc(puzzles, size, pages, sideFilter) {
+  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+  const font = getFont(), title = getTitle();
+  let first = true;
+
+  if (getCover() === 'cover' && sideFilter !== 'side2') {
+    drawCoverPage(doc, title, font);
+    first = false;
+  }
+
+  const pageOrder = sideFilter === 'side2'
+    ? Array.from({length:pages}, (_,i) => pages-1-i)
+    : Array.from({length:pages}, (_,i) => i);
+
+  for (const p of pageOrder) {
+    const base = p * 8;
+    if (sideFilter === 'all' || sideFilter === 'side1') {
+      if (!first) doc.addPage(); first = false;
+      const label = `Page ${p+1} of ${pages} - Side 1`;
+      size === 'regular'
+        ? drawRegularSide(doc, puzzles, base+1, label, font, title)
+        : drawPassportSide(doc, puzzles, base+1, label, font, title);
+    }
+    if (sideFilter === 'all' || sideFilter === 'side2') {
+      if (!first) doc.addPage(); first = false;
+      const label = `Page ${p+1} of ${pages} - Side 2`;
+      size === 'regular'
+        ? drawRegularSide(doc, puzzles, base+5, label, font, title)
+        : drawPassportSide(doc, puzzles, base+5, label, font, title);
+    }
+  }
+  return doc;
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────────
+generateBtn.addEventListener('click', async () => {
+  const size = getSize(), category = getCategory();
+  const difficulty = getDifficulty(), font = getFont();
+  const pages = parseInt(countInput.value) || 1;
+  const total = pages * 8;
+  const gridSize = size === 'passport' ? 10 : 14;
+  const wordList = WORDS[category];
+
+  generateBtn.disabled = true;
+  progress.classList.add('visible');
+
+  await new Promise(r => setTimeout(r, 50));
+
+  const puzzles = [];
+  for (let i = 0; i < total; i++) {
+    setProgress(i/total*80, `Building puzzle ${i+1} of ${total}...`);
+    await new Promise(r => setTimeout(r, 0));
+    puzzles.push(generateWordSearch(wordList, gridSize, difficulty));
+  }
+
+  setProgress(90, 'Building PDF...');
+  await new Promise(r => setTimeout(r, 50));
+
+  const titleSlug = getTitle().replace(/[^a-z0-9]/gi,'-').toLowerCase().replace(/-+/g,'-').replace(/^-|-$/g,'');
+  const base = titleSlug || `tn-wordsearch-${category}-${difficulty}`;
+
+  if (duplexSupported) {
+    buildDoc(puzzles, size, pages, 'all').save(`${base}-${pages}pages.pdf`);
+    setProgress(100, 'Done!');
+  } else {
+    generatedDocs = { puzzles, size, pages, base };
+    setProgress(100, 'Ready!');
+    await new Promise(r => setTimeout(r, 300));
+    showManualModal();
+  }
+
+  await new Promise(r => setTimeout(r, 300));
+  generateBtn.disabled = false;
+  progress.classList.remove('visible');
+  progressFill.style.width = '0%';
+});
+
+function showManualModal() {
+  document.getElementById('modalSteps').innerHTML = `
+    <div class="step"><div class="step-num">1</div><div class="step-text">Click <strong>Download Side 1</strong> and print in <strong>landscape</strong>.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Flip the stack face-down</strong> and reinsert into the paper tray.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Click <strong>Download Side 2</strong> — pages are in reverse order so everything lines up.</div></div>`;
+
+  modalBtn1.textContent = 'Download Side 1';
+  modalBtn1.disabled = false;
+  modalBtn1.onclick = () => {
+    const { puzzles, size, pages, base } = generatedDocs;
+    buildDoc(puzzles, size, pages, 'side1').save(`${base}-side1.pdf`);
+    document.querySelectorAll('#modalSteps .step-num')[0].classList.add('done');
+    document.querySelectorAll('#modalSteps .step-num')[0].textContent = '✓';
+    modalBtn1.textContent = 'Download Side 2';
+    modalBtn1.onclick = () => {
+      buildDoc(puzzles, size, pages, 'side2').save(`${base}-side2.pdf`);
+      document.querySelectorAll('#modalSteps .step-num').forEach(el => { el.classList.add('done'); el.textContent = '✓'; });
+      modalBtn1.textContent = '✓ All done!';
+      modalBtn1.disabled = true;
+    };
+  };
+  modalOverlay.classList.add('visible');
+}
+
+// ── Preview ────────────────────────────────────────────────────────────────────
+function updatePreview() {
+  const size = getSize(), cat = getCategory(), diff = getDifficulty();
+  const pages = parseInt(countInput.value) || 1;
+
+  document.getElementById('previewBadge').textContent =
+    `${CATEGORY_LABELS[cat]} · ${diff.charAt(0).toUpperCase()+diff.slice(1)}`;
+  document.getElementById('statPuzzles').textContent = pages * 4;
+  document.getElementById('statWords').textContent = 15;
+  document.getElementById('statSheets').textContent = (pages + (getCover() === 'cover' ? 1 : 0)) * 2;
+
+  const canvas = document.getElementById('previewCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  if (!W || !H) { setTimeout(updatePreview, 150); return; }
+
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = Math.round(W * window.devicePixelRatio);
+  canvas.height = Math.round(H * window.devicePixelRatio);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  if (size === 'regular') drawRegularWSPreview(ctx, W, H, W/297);
+  else drawPassportWSPreview(ctx, W, H, W/297);
+}
+
+function drawWSGrid(ctx, ox, oy, pw, ph, scale) {
+  const margin = 5*scale, titleH = 8*scale, wordListH = 22*scale;
+  const gridSize = pw < 100*scale ? 10 : 14;
+  const availW = pw - margin*2, availH = ph - margin*2 - titleH - wordListH;
+  const cell = Math.min(availW/gridSize, availH/gridSize);
+  const gw = cell*gridSize, gh = cell*gridSize;
+  const gx = ox + margin + (availW-gw)/2, gy = oy + margin + titleH;
+
+  // Grid bg
+  ctx.fillStyle = '#fcfaf7';
+  ctx.fillRect(gx, gy, gw, gh);
+
+  // Sample letters
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  ctx.font = `${cell*0.5}px DM Mono, monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1c1510';
+  for (let r=0; r<gridSize; r++)
+    for (let c=0; c<gridSize; c++)
+      ctx.fillText(letters[Math.floor(Math.random()*26)], gx+c*cell+cell/2, gy+r*cell+cell/2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(180,175,165,0.5)'; ctx.lineWidth = 0.3;
+  for (let i=0; i<=gridSize; i++) {
+    ctx.beginPath(); ctx.moveTo(gx+i*cell,gy); ctx.lineTo(gx+i*cell,gy+gh); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx,gy+i*cell); ctx.lineTo(gx+gw,gy+i*cell); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(80,80,80,0.6)'; ctx.lineWidth = 0.7;
+  ctx.strokeRect(gx, gy, gw, gh);
+
+  // Word list placeholder lines
+  const wly = gy+gh+3*scale;
+  ctx.strokeStyle = 'rgba(180,175,165,0.4)'; ctx.lineWidth = 0.3;
+  for (let i=0;i<3;i++) {
+    const ly = wly+4*scale+i*4*scale;
+    ctx.beginPath(); ctx.moveTo(ox+margin,ly); ctx.lineTo(ox+margin+availW,ly); ctx.stroke();
+  }
+}
+
+function drawRegularWSPreview(ctx, W, H, scale) {
+  const colW=110*scale, halfH=H/2;
+  for (const [col,row] of [[0,0],[0,1],[1,0],[1,1]])
+    drawWSGrid(ctx, col*colW, row*halfH, colW, halfH, scale);
+  ctx.strokeStyle='rgba(100,100,100,0.4)'; ctx.lineWidth=0.8;
+  ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(colW,0); ctx.lineTo(colW,H); ctx.stroke();
+  ctx.setLineDash([2,4]); ctx.strokeStyle='rgba(80,80,80,0.4)';
+  ctx.beginPath(); ctx.moveTo(2*colW,0); ctx.lineTo(2*colW,H); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(220,215,208,0.35)'; ctx.fillRect(2*colW,0,W-2*colW,H);
+  ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(180,180,180,0.5)'; ctx.lineWidth=0.4;
+  ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(2*colW,H/2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawPassportWSPreview(ctx, W, H, scale) {
+  const pw=134*scale, ph=98*scale;
+  const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
+  for (const [col,row] of [[0,0],[1,0],[0,1],[1,1]]) {
+    ctx.fillStyle='#ffffff'; ctx.fillRect(sx+col*pw,sy+row*ph,pw,ph);
+    ctx.strokeStyle='rgba(160,160,160,0.3)'; ctx.lineWidth=0.4;
+    ctx.strokeRect(sx+col*pw,sy+row*ph,pw,ph);
+    drawWSGrid(ctx,sx+col*pw,sy+row*ph,pw,ph,scale);
+  }
+  ctx.strokeStyle='rgba(80,80,80,0.4)'; ctx.lineWidth=0.8;
+  ctx.setLineDash([2,4]);
+  ctx.beginPath(); ctx.moveTo(sx+pw,sy-4*scale); ctx.lineTo(sx+pw,sy+ph*2+4*scale); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx-4*scale,sy+ph); ctx.lineTo(sx+pw*2+4*scale,sy+ph); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(220,215,208,0.25)';
+  ctx.fillRect(0,0,sx,H); ctx.fillRect(sx+pw*2,0,W-sx-pw*2,H);
+  ctx.fillRect(sx,0,pw*2,sy); ctx.fillRect(sx,sy+ph*2,pw*2,H-sy-ph*2);
+}
+
+// Init
+setTimeout(updatePreview, 100);
+setTimeout(updatePreview, 500);
+window.addEventListener('resize', updatePreview);
+updateHint();
+</script>
+</body>
+</html>

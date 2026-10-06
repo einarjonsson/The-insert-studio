@@ -9,7 +9,7 @@
   });
   var TOOLS = [
     ['sudoku', 'Sudoku'], ['wordsearch', 'Word Search'], ['wandering-library', 'Wandering Library'],
-    ['habit', 'Habit'], ['dnd', 'D&D'], ['calligraphy', 'Calligraphy'], ['nonogram', 'Nonogram']
+    ['habit', 'Habit'], ['dnd', 'D&D'], ['calligraphy', 'Calligraphy'], ['nonogram', 'Nonogram'], ['numberfill', 'Number Fill-In']
   ];
   var nav = document.querySelector('nav.topbar');
   if (!nav) return;
@@ -18,7 +18,7 @@
     return '<a href="../' + t[0] + '/"' + (t[0] === cur ? ' aria-current="page"' : '') + '>' + t[1].replace('&', '&amp;') + '</a>';
   }).join('');
   var idx = TOOLS.findIndex(function (x) { return x[0] === cur; });
-  var ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'], WORDS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
+  var ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'], WORDS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
   var spine = document.createElement('div');
   spine.className = 'spine';
   spine.innerHTML = '<div class="spine-title">The Insert Studio</div><div class="spine-rule"></div><div class="spine-num">' + (idx >= 0 ? ROMAN[idx] : '') + '</div>';

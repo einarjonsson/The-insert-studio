@@ -11,6 +11,7 @@ Printable Traveler's Notebook insert generators, all in one static site (no buil
 | D&D Inserts | `dnd/` |
 | Calligraphy Practice | `calligraphy/` |
 | Nonogram | `nonogram/` |
+| Number Fill-In | `numberfill/` |
 
 ## Structure
 

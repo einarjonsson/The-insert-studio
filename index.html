@@ -75,12 +75,8 @@ section { padding: 88px 0; }
 .open { font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 8px; margin-top: 4px; transition: gap .15s; }
 .card:hover .open { gap: 14px; }
 
-@media (min-width: 901px) {
-  .grid { grid-template-columns: repeat(3, 1fr); }
-  .card:last-child { grid-column: 1 / -1; flex-direction: row; }
-  .card:last-child .thumb { width: 36%; height: auto; border-bottom: none; border-right: 1px dashed var(--rule); }
-  .card:last-child .card-body { justify-content: center; }
-}
+@media (min-width: 1101px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 701px) and (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
 
 /* ── How it works ── */
 .how { background: var(--cream); border-block: 1px solid var(--rule); }
@@ -146,7 +142,7 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
         <a class="btn btn-ghost" href="#how">How to print</a>
       </div>
       <div class="stats">
-        <div><b>7</b><small>Tools</small></div>
+        <div><b>8</b><small>Tools</small></div>
         <div><b>2</b><small>TN sizes</small></div>
         <div><b>Free</b><small>Always</small></div>
       </div>
@@ -166,7 +162,7 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
     <div class="sec-head reveal">
       <div>
         <div class="eyebrow">Table of contents</div>
-        <h2>Seven tools, <em>one notebook</em></h2>
+        <h2>Eight tools, <em>one notebook</em></h2>
       </div>
       <p>Each generator runs entirely in your browser. No account, no install, nothing sent anywhere.</p>
     </div>
@@ -257,6 +253,18 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
         </div>
       </a>
 
+      <a class="card reveal" href="numberfill/">
+        <div class="thumb"><span class="num">VIII.</span>
+          <svg viewBox="0 0 90 120" fill="none"><rect width="90" height="120" rx="3" fill="#fbf7ea"/><g fill="#241e18"><rect x="30" y="24" width="10" height="10"/><rect x="60" y="34" width="10" height="10"/><rect x="20" y="54" width="10" height="10"/><rect x="50" y="64" width="10" height="10"/><rect x="40" y="84" width="10" height="10"/></g><path d="M20 24h50v70H20zM30 24v70M40 24v70M50 24v70M60 24v70M20 34h50M20 44h50M20 54h50M20 64h50M20 74h50M20 84h50" stroke="#d2c39d"/><g font-family="DM Mono,monospace" font-size="7" font-weight="700" fill="#1d160d" text-anchor="middle"><text x="25" y="31">4</text><text x="35" y="41">7</text><text x="45" y="41">2</text><text x="55" y="51">9</text><text x="25" y="71">1</text><text x="35" y="71">5</text><text x="45" y="91">8</text></g><path d="M20 104h50M20 112h34" stroke="#d2c39d"/></svg>
+        </div>
+        <div class="card-body">
+          <h3>Number Fill-In</h3>
+          <p>Like a crossword with numbers: fit every number from the list into the grid. Each puzzle has exactly one solution.</p>
+          <div class="tags"><span>Easy → Hard</span><span>One solution</span><span>Starter number</span></div>
+          <div class="open">Open generator <span>→</span></div>
+        </div>
+      </a>
+
     </div>
   </div>
 </section>
@@ -294,6 +302,7 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
       <a href="dnd/">D&amp;D Insert Pack</a>
       <a href="calligraphy/">Calligraphy Practice</a>
       <a href="nonogram/">Nonogram Puzzles</a>
+      <a href="numberfill/">Number Fill-In</a>
       <a href="https://github.com/einarjonsson">GitHub — einarjonsson</a>
       <a href="https://www.buymeacoffee.com/einarjonssi">Buy me a coffee</a>
     </div>

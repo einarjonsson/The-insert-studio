@@ -19,6 +19,7 @@ Printable Traveler's Notebook insert generators, all in one static site (no buil
 - `assets/tokens.css` — shared palette, reset and paper grain (used by the hub and every tool)
 - `assets/studio.css` — tool-page layout and components: spine, header, scrolling settings/preview columns, forms, preview sheet, modal
 - `assets/studio.js` — renders the shared top bar with links between tools
+- `assets/pdf-kit.js` — shared PDF styling: embedded brand fonts (`assets/fonts/`), panel header/footer, fold & cut marks, covers
 - `assets/jspdf.umd.min.js` — jsPDF 2.5.1, vendored so PDF export works without a CDN
 - `<tool>/index.html` — only the tool-specific CSS and logic
 

@@ -34,5 +34,37 @@
     eb.textContent = 'Chapter ' + WORDS[idx];
     box.insertBefore(eb, box.firstChild);
   }
-  nav.innerHTML = '<a href="../">← The Insert Studio</a><div class="topbar-tools">' + links + '</div>';
+  var current = TOOLS.filter(function (x) { return x[0] === cur; })[0];
+  nav.innerHTML = '<a href="../">← The Insert Studio</a><div class="topbar-tools">' + links + '</div>' +
+    '<button class="topbar-menu" type="button" aria-expanded="false" aria-controls="toolDrawer">' + (current ? current[1].replace('&', '&amp;') : 'Tools') + '</button>';
+  var drawer = document.createElement('div');
+  drawer.className = 'topbar-drawer'; drawer.id = 'toolDrawer';
+  drawer.innerHTML = '<a href="../">← All tools</a>' + links;
+  document.body.appendChild(drawer);
+  var btn = nav.querySelector('.topbar-menu');
+  btn.addEventListener('click', function () {
+    var open = drawer.classList.toggle('open'); btn.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { drawer.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); } });
+
+  // Tap the preview on a phone to open it large, scrollable and pinch-zoomable.
+  var sheet = document.querySelector('.preview-sheet');
+  if (sheet) sheet.addEventListener('click', function () {
+    if (window.innerWidth > 900) return;
+    var canvas = sheet.querySelector('canvas'); if (!canvas) return;
+    var box = document.createElement('div'); box.className = 'lightbox';
+    box.innerHTML = '<div class="lightbox-bar"><span>Preview · scroll or pinch</span><button type="button">Close</button></div><div class="lightbox-scroll"><img alt="Large preview"></div>';
+    // re-render the preview at 4x so the zoomed image stays sharp, then put the normal one back
+    var dpr = window.devicePixelRatio, big = false;
+    if (typeof window.updatePreview === 'function') {
+      try { Object.defineProperty(window, 'devicePixelRatio', { value: 4, configurable: true }); window.updatePreview(); big = true; } catch (e) {}
+    }
+    box.querySelector('img').src = sheet.querySelector('canvas').toDataURL('image/png');
+    if (big) { Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true }); window.updatePreview(); }
+    function close() { box.remove(); document.removeEventListener('keydown', onKey); }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    box.querySelector('button').addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(box);
+  });
 })();

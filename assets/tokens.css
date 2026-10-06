@@ -1,0 +1,30 @@
+/* The Insert Studio — design tokens shared by the hub and every tool. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  /* palette */
+  --ink: #1d160d; --paper: #f6efdc; --cream: #eee5cb;
+  --warm-white: #fbf7ea; --accent: #7a2e0e; --accent-light: #9a4a22;
+  --accent-pale: #f3e6dc; --rule: #d2c39d; --rule-light: #e4d9b9;
+  --muted: #7a7060; --green: #4d6a3f; --green-pale: #eaf0df; --kraft: #c9a56a;
+  --gold: #b8860b; --gold-lt: #d4a843; --spine: #1a120a;
+  --shadow-sm: 0 1px 3px rgba(28,21,16,0.08);
+  --shadow-md: 0 4px 16px rgba(28,21,16,0.1);
+  --shadow-lg: 0 8px 32px rgba(28,21,16,0.12);
+  --shadow: 0 2px 12px rgba(28,21,16,0.08);
+  /* layout */
+  --topbar-h: 44px;
+  --header-h: 84px;
+  --spine-w: 48px;
+  --panel-w: 420px;
+  /* aliases so per-tool CSS written against older names keeps working */
+  --warm: var(--warm-white); --accent-lt: var(--accent-light); --rule-lt: var(--rule-light);
+  --crimson: var(--accent); --crimson-light: var(--accent-light); --crimson-pale: var(--accent-pale);
+  --gold-light: var(--gold-lt); --parchment: var(--paper); --parchment-dark: var(--cream);
+}
+html { font-size: 16px; }
+/* paper grain, as on the hub */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px;
+}

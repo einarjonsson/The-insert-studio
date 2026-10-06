@@ -1,5 +1,12 @@
 // Renders the shared top bar. Usage: <nav class="topbar" data-tool="sudoku"></nav>
 (function () {
+  // collapsible settings sections
+  document.querySelectorAll('.settings-panel .section > .section-title').forEach(function (h) {
+    h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0'); h.setAttribute('aria-expanded', 'true');
+    function flip() { var c = h.parentNode.classList.toggle('collapsed'); h.setAttribute('aria-expanded', String(!c)); }
+    h.addEventListener('click', flip);
+    h.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+  });
   var TOOLS = [
     ['sudoku', 'Sudoku'], ['wordsearch', 'Word Search'], ['wandering-library', 'Wandering Library'],
     ['habit', 'Habit'], ['dnd', 'D&D'], ['calligraphy', 'Calligraphy'], ['nonogram', 'Nonogram']

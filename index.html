@@ -111,7 +111,11 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
   section { padding: 64px 0; }
 }
 @media (max-width: 600px) {
-  .nav-links { display: none; }
+  .nav-links a:not(:first-child) { display: none; }
+  .nav-links a, .brand { display: inline-flex; align-items: center; min-height: 44px; }
+  .btn { min-height: 48px; }
+  .note { display: block; }
+  .f-links a { display: flex; align-items: center; min-height: 44px; }
   .stats { gap: 24px; }
   .grid { grid-template-columns: 1fr; }
   .steps { grid-template-columns: 1fr; } .step { border-right: none; border-bottom: 1px dashed var(--rule); } .step:last-child { border-bottom: none; }

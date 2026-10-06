@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wandering Library — Insert Generator</title>
+<script src="../assets/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="stylesheet" href="../assets/studio.css">
+<script src="../assets/studio.js" defer></script>
+<style>
+/* wandering-library-specific styles; shared styles live in ../assets/studio.css */
+/* Settings */
+.section-title::before { content: '❧'; color: var(--accent); font-size: 0.9rem; }
+/* Insert type cards */
+.insert-grid { display: flex; flex-direction: column; gap: 8px; }
+.insert-card { border: 1.5px solid var(--rule); border-radius: 3px; background: var(--cream); overflow: hidden; }
+.insert-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; cursor: pointer; transition: background 0.12s;
+}
+.insert-card-header:hover { background: var(--accent-pale); }
+.insert-card-title { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; font-weight: 500; }
+.insert-icon { font-size: 1.1rem; }
+.insert-desc { font-size: 0.62rem; color: var(--muted); margin-top: 1px; font-weight: 400; }
+.insert-controls { display: flex; align-items: center; gap: 8px; }
+.qty-btn {
+  width: 26px; height: 26px; border: 1.5px solid var(--rule); background: var(--warm-white);
+  border-radius: 2px; font-size: 1rem; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-family: 'DM Mono', monospace; transition: all 0.1s; color: var(--ink);
+}
+.qty-btn:hover { border-color: var(--accent); background: var(--accent); color: white; }
+.qty-val { font-family: 'Playfair Display', serif; font-size: 1.1rem; min-width: 24px; text-align: center; color: var(--accent); }
+.qty-label { font-size: 0.58rem; color: var(--muted); }
+/* Radio / options */
+/* Duplex */
+/* Generate */
+/* Preview */
+.preview-tabs { display: flex; gap: 4px; }
+.preview-tab {
+  font-size: 0.58rem; letter-spacing: 0.08em; padding: 4px 10px;
+  border: 1px solid var(--rule); border-radius: 2px; cursor: pointer;
+  background: rgba(253,250,245,0.7); color: var(--muted); transition: all 0.12s;
+  font-family: 'DM Mono', monospace;
+}
+.preview-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+/* Modal */
+</style>
+</head>
+<body>
+<nav class="topbar" data-tool="wandering-library"><a href="../">← The Insert Studio</a></nav>
+
+<header>
+  <div>
+    <div class="logo">The <em>Wandering Library</em></div>
+    <div class="logo-sub">Solo Journaling RPG · TN Insert Generator</div>
+  </div>
+  <div class="header-tag">A4 Printable Inserts</div>
+</header>
+
+<main>
+  <aside class="settings-panel">
+    <div class="settings-inner">
+
+      <!-- Insert types -->
+      <div class="section">
+        <div class="section-title">Insert Types</div>
+        <div class="insert-grid">
+
+          <div class="insert-card" id="card-session">
+            <div class="insert-card-header" onclick="toggleCard('session')">
+              <div class="insert-card-title">
+                <span class="insert-icon">📖</span>
+                <div>
+                  <div>Session Log</div>
+                  <div class="insert-desc">Travel · encounter · journal · outcome</div>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('session',-1)">−</button>
+                <div>
+                  <div class="qty-val" id="qty-session">4</div>
+                  <div class="qty-label">pages</div>
+                </div>
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('session',1)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="insert-card" id="card-location">
+            <div class="insert-card-header" onclick="toggleCard('location')">
+              <div class="insert-card-title">
+                <span class="insert-icon">🏘️</span>
+                <div>
+                  <div>Location Card</div>
+                  <div class="insert-desc">Record a town or place you visit</div>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('location',-1)">−</button>
+                <div>
+                  <div class="qty-val" id="qty-location">4</div>
+                  <div class="qty-label">pages</div>
+                </div>
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('location',1)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="insert-card" id="card-patron">
+            <div class="insert-card-header" onclick="toggleCard('patron')">
+              <div class="insert-card-title">
+                <span class="insert-icon">🧑‍🤝‍🧑</span>
+                <div>
+                  <div>Patron Card</div>
+                  <div class="insert-desc">Record people you meet on the road</div>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('patron',-1)">−</button>
+                <div>
+                  <div class="qty-val" id="qty-patron">4</div>
+                  <div class="qty-label">pages</div>
+                </div>
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('patron',1)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="insert-card" id="card-ledger">
+            <div class="insert-card-header" onclick="toggleCard('ledger')">
+              <div class="insert-card-title">
+                <span class="insert-icon">📚</span>
+                <div>
+                  <div>Book Ledger</div>
+                  <div class="insert-desc">Track your library inventory</div>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('ledger',-1)">−</button>
+                <div>
+                  <div class="qty-val" id="qty-ledger">2</div>
+                  <div class="qty-label">pages</div>
+                </div>
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('ledger',1)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="insert-card" id="card-map">
+            <div class="insert-card-header" onclick="toggleCard('map')">
+              <div class="insert-card-title">
+                <span class="insert-icon">🗺️</span>
+                <div>
+                  <div>World Map</div>
+                  <div class="insert-desc">Dot-grid route tracker with compass</div>
+                </div>
+              </div>
+              <div class="insert-controls">
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('map',-1)">−</button>
+                <div>
+                  <div class="qty-val" id="qty-map">2</div>
+                  <div class="qty-label">pages</div>
+                </div>
+                <button class="qty-btn" onclick="event.stopPropagation();changeQty('map',1)">+</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Notebook size -->
+      <div class="section">
+        <div class="section-title">Notebook Size</div>
+        <div class="radio-group cols-2">
+          <label class="radio-option">
+            <input type="radio" name="size" value="regular" checked>
+            <span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm · fold + cut</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="size" value="passport">
+            <span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm · cut only</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Librarian name -->
+      <div class="section">
+        <div class="section-title">Your Librarian</div>
+        <input type="text" id="librarianName" class="text-input" placeholder="Librarian name (optional)">
+      </div>
+
+      <!-- Printer -->
+      <div class="section">
+        <div class="section-title">Printer</div>
+        <div id="duplexBanner" class="duplex-banner manual">
+          <span>⚠</span>
+          <span>Two PDFs will be generated — Side 1 first, then Side 2 after reinserting. <a href="#" id="duplexOverride" style="color:var(--accent)">My printer supports duplex →</a></span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="settings-footer">
+      <button class="generate-btn" id="generateBtn">✦ Generate Insert Pack</button>
+      <div class="progress" id="progress">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText">Preparing your library...</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Preview -->
+  <section class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-label">Live Preview</span>
+      <div class="preview-tabs">
+        <button class="preview-tab active" onclick="setPreviewType('session')">Session</button>
+        <button class="preview-tab" onclick="setPreviewType('location')">Location</button>
+        <button class="preview-tab" onclick="setPreviewType('patron')">Patron</button>
+        <button class="preview-tab" onclick="setPreviewType('ledger')">Ledger</button>
+        <button class="preview-tab" onclick="setPreviewType('map')">Map</button>
+      </div>
+    </div>
+    <div class="preview-sheet"><canvas id="previewCanvas"></canvas></div>
+    <div class="preview-info">
+      <div class="preview-stat"><span class="preview-stat-val" id="statTotal">16</span><span class="preview-stat-label">Total Pages</span></div>
+      <div class="preview-stat"><span class="preview-stat-val" id="statSessions">4</span><span class="preview-stat-label">Session Logs</span></div>
+      <div class="preview-stat"><span class="preview-stat-val" id="statSheets">8</span><span class="preview-stat-label">Sheets to Print</span></div>
+    </div>
+  </section>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Two-step printing</div>
+    <div class="modal-sub">Manual duplex</div>
+    <div id="modalSteps"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalBtn1">Download Side 1</button>
+      <button class="modal-btn ghost" id="modalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ── State ──────────────────────────────────────────────────────────────────────
+const quantities = { session: 4, location: 4, patron: 4, ledger: 2, map: 2 };
+let duplexSupported = false;
+let currentPreview = 'session';
+let generatedDocs = null;
+
+const generateBtn  = document.getElementById('generateBtn');
+const progress     = document.getElementById('progress');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const duplexBanner = document.getElementById('duplexBanner');
+const modalOverlay = document.getElementById('modalOverlay');
+const modalBtn1    = document.getElementById('modalBtn1');
+const modalClose   = document.getElementById('modalClose');
+
+const getSize = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
+const getLibrarian = () => document.getElementById('librarianName')?.value.trim() || '';
+
+// ── UI helpers ─────────────────────────────────────────────────────────────────
+function changeQty(type, delta) {
+  quantities[type] = Math.max(0, quantities[type] + delta);
+  document.getElementById('qty-' + type).textContent = quantities[type];
+  updateStats(); updatePreview();
+}
+
+function toggleCard(type) { /* just visual — no collapse needed */ }
+
+function setPreviewType(type) {
+  currentPreview = type;
+  document.querySelectorAll('.preview-tab').forEach((t,i) => {
+    t.classList.toggle('active', ['session','location','patron','ledger','map'][i] === type);
+  });
+  updatePreview();
+}
+
+function updateStats() {
+  const total = Object.values(quantities).reduce((a,b) => a+b, 0);
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statSessions').textContent = quantities.session;
+  document.getElementById('statSheets').textContent = Math.ceil(total / 2);
+}
+
+function setProgress(pct, text) {
+  progressFill.style.width = pct + '%';
+  progressText.textContent = text;
+}
+
+duplexBanner.addEventListener('click', e => {
+  if (e.target.id === 'duplexOverride') {
+    e.preventDefault();
+    duplexSupported = true;
+    duplexBanner.className = 'duplex-banner supported';
+    duplexBanner.innerHTML = '<span>✓</span><span>Duplex enabled — one combined PDF.</span>';
+  }
+});
+
+modalClose.addEventListener('click', () => modalOverlay.classList.remove('visible'));
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) modalOverlay.classList.remove('visible'); });
+
+// ── PDF Drawing helpers ────────────────────────────────────────────────────────
+const PW = 110, PH = 210; // panel dimensions in mm (Regular TN)
+const PPW = 134, PPH = 98; // passport panel
+
+function mmFont(doc, size, style='normal', face='times') {
+  doc.setFont(face, style);
+  doc.setFontSize(size);
+}
+
+// Ornate border with corner flourishes
+function drawBorder(doc, x, y, w, h, thin=false) {
+  // Outer border
+  doc.setDrawColor(60, 40, 20);
+  doc.setLineWidth(thin ? 0.5 : 0.8);
+  doc.rect(x, y, w, h);
+  // Inner border
+  doc.setLineWidth(0.2);
+  doc.rect(x+1.8, y+1.8, w-3.6, h-3.6);
+
+  // Corner flourishes — small L-shapes
+  const c = 4;
+  doc.setLineWidth(0.5);
+  for (const [cx, cy, sx, sy] of [
+    [x+1.8, y+1.8, 1, 1], [x+w-1.8, y+1.8, -1, 1],
+    [x+1.8, y+h-1.8, 1, -1], [x+w-1.8, y+h-1.8, -1, -1]
+  ]) {
+    doc.line(cx, cy, cx+sx*c, cy);
+    doc.line(cx, cy, cx, cy+sy*c);
+  }
+}
+
+// Ornate section header
+function drawSectionHeader(doc, text, x, y, w, fs=5.5) {
+  const pad = 3;
+  doc.setFontSize(fs);
+  doc.setFont('times', 'italic');
+  doc.setTextColor(60, 40, 20);
+  const tw = doc.getTextWidth(text);
+  const cx = x + w/2;
+  // Rules either side
+  doc.setDrawColor(120, 90, 50);
+  doc.setLineWidth(0.25);
+  if (cx - tw/2 - pad > x + 4) {
+    doc.line(x+4, y, cx - tw/2 - pad, y);
+    doc.line(cx + tw/2 + pad, y, x+w-4, y);
+  }
+  doc.text(text, cx, y + 0.8, { align:'center' });
+}
+
+// Ruled lines
+function drawLines(doc, x, y, w, count, gap=4.5, color=[180,170,155]) {
+  doc.setDrawColor(...color);
+  doc.setLineWidth(0.18);
+  for (let i = 0; i < count; i++) {
+    doc.line(x, y + i*gap, x+w, y + i*gap);
+  }
+}
+
+// Small label
+function label(doc, text, x, y, fs=4, color=[100,80,60]) {
+  doc.setFontSize(fs);
+  doc.setFont('times', 'italic');
+  doc.setTextColor(...color);
+  doc.text(text, x, y);
+}
+
+// Field with underline
+function field(doc, name, x, y, w, fs=4) {
+  label(doc, name, x, y, fs);
+  doc.setDrawColor(160, 140, 110);
+  doc.setLineWidth(0.18);
+  const lx = x + doc.getTextWidth(name) + 1.5;
+  doc.line(lx, y+0.5, x+w, y+0.5);
+}
+
+// d6 mini table
+function drawD6Table(doc, entries, x, y, w) {
+  const rowH = 4.2;
+  entries.forEach(([roll, text], i) => {
+    const ry = y + i*rowH;
+    doc.setFontSize(3.8);
+    doc.setFont('times', 'bold');
+    doc.setTextColor(100, 60, 20);
+    doc.text(roll, x+1, ry+3);
+    doc.setFont('times', 'normal');
+    doc.setTextColor(40, 30, 20);
+    doc.text(text, x+5, ry+3);
+    if (i < entries.length-1) {
+      doc.setDrawColor(200,185,165);
+      doc.setLineWidth(0.1);
+      doc.line(x, ry+rowH, x+w, ry+rowH);
+    }
+  });
+  doc.setDrawColor(140,110,70);
+  doc.setLineWidth(0.25);
+  doc.rect(x, y, w, entries.length*rowH);
+}
+
+// ── SESSION LOG ────────────────────────────────────────────────────────────────
+function drawSessionLog(doc, px, py, pw, ph, pageNum, librarian) {
+  const m = 5; // margin
+  const iw = pw - m*2; // inner width
+  drawBorder(doc, px, py, pw, ph);
+
+  // Header
+  doc.setFillColor(55, 35, 15);
+  doc.rect(px, py, pw, 10, 'F');
+  doc.setFont('times', 'bolditalic');
+  doc.setFontSize(7.5);
+  doc.setTextColor(240, 230, 210);
+  doc.text('✦ Session Log', px + pw/2, py + 6.8, {align:'center'});
+  if (librarian) {
+    doc.setFontSize(4); doc.setFont('times','italic');
+    doc.setTextColor(200,185,160);
+    doc.text(librarian, px+pw-m, py+9.2, {align:'right'});
+  }
+
+  let cy = py + 13;
+
+  // Session # / Date / Weather row
+  doc.setFontSize(3.8); doc.setFont('times','italic'); doc.setTextColor(100,80,55);
+  const fields3 = [['Session #', 22], ['Date', 30], ['Weather', pw-m-52]];
+  let fx = px+m;
+  fields3.forEach(([name, w]) => {
+    field(doc, name+':', fx, cy, w, 3.8);
+    fx += w + 3;
+  });
+  cy += 6;
+
+  // "The Road" section
+  drawSectionHeader(doc, '— The Road —', px+m, cy, iw, 5);
+  cy += 5;
+
+  // Travel prompt lines
+  drawLines(doc, px+m, cy, iw, 2, 4.5);
+  cy += 11;
+
+  // Journey d6 table
+  label(doc, 'Roll d6 for the journey:', px+m, cy, 3.8);
+  cy += 3;
+  drawD6Table(doc, [
+    ['1–2', 'Peaceful road, time to think'],
+    ['3', 'Met a traveler on the way'],
+    ['4', 'Took a wrong turn — discovery?'],
+    ['5', 'Bad weather slowed you down'],
+    ['6', 'Something unusual happened'],
+  ], px+m, cy, iw);
+  cy += 5*4.2 + 4;
+
+  // "The Encounter" section
+  drawSectionHeader(doc, '— Who Came to the Library? —', px+m, cy, iw, 5);
+  cy += 5;
+  drawD6Table(doc, [
+    ['1', 'A curious child with questions'],
+    ['2', 'An elderly scholar seeking lore'],
+    ['3', 'A merchant wanting distraction'],
+    ['4', 'Someone who just returned a book'],
+    ['5', 'A traveler passing through'],
+    ['6', 'Someone from your past'],
+  ], px+m, cy, iw);
+  cy += 6*4.2 + 4;
+
+  // "The Library Tonight" checklist
+  drawSectionHeader(doc, '— The Library Tonight —', px+m, cy, iw, 5);
+  cy += 5;
+  const checks = ['Books lent out', 'Books returned', 'New book found', 'Book lost or damaged'];
+  checks.forEach(c => {
+    doc.setDrawColor(100,80,55); doc.setLineWidth(0.3);
+    doc.rect(px+m, cy-3, 3, 3);
+    doc.setFont('times','normal'); doc.setFontSize(4.5); doc.setTextColor(50,35,20);
+    doc.text(c, px+m+5, cy);
+    cy += 5;
+  });
+  cy += 2;
+
+  // "What happened" — journal lines
+  drawSectionHeader(doc, '— What Happened —', px+m, cy, iw, 5);
+  cy += 5;
+  const linesLeft = Math.floor((ph - cy + py - m - 12) / 4.5);
+  drawLines(doc, px+m, cy, iw, Math.max(linesLeft, 3), 4.5);
+  cy += Math.max(linesLeft,3)*4.5 + 3;
+
+  // "Until next time"
+  if (cy < py+ph-14) {
+    drawSectionHeader(doc, '— Until Next Time —', px+m, cy, iw, 5);
+    cy += 5;
+    field(doc, 'Next destination:', px+m, cy, iw, 4);
+    cy += 6;
+    field(doc, 'One thing I\'m carrying forward:', px+m, cy, iw, 4);
+  }
+
+  // Page number
+  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
+  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+}
+
+// ── LOCATION CARD ──────────────────────────────────────────────────────────────
+function drawLocationCard(doc, px, py, pw, ph, pageNum) {
+  const m = 5, iw = pw - m*2;
+  drawBorder(doc, px, py, pw, ph);
+
+  // Header
+  doc.setFillColor(40, 60, 35);
+  doc.rect(px, py, pw, 10, 'F');
+  doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(220,240,215);
+  doc.text('✦ Location Card', px+pw/2, py+6.8, {align:'center'});
+
+  let cy = py+14;
+
+  // Name field (large)
+  label(doc, 'Place Name', px+m, cy, 3.8);
+  cy += 2;
+  doc.setDrawColor(80,100,60); doc.setLineWidth(0.4);
+  doc.line(px+m, cy+5, px+pw-m, cy+5);
+  cy += 10;
+
+  // Region / Type / First Visit
+  field(doc, 'Region:', px+m, cy, iw*0.45, 4);
+  field(doc, 'Type:', px+m+iw*0.5, cy, iw*0.5, 4);
+  cy += 7;
+  field(doc, 'First visited:', px+m, cy, iw*0.5, 4);
+  field(doc, 'Pop. feel:', px+m+iw*0.55, cy, iw*0.45, 4);
+  cy += 7;
+
+  // Notable features
+  drawSectionHeader(doc, '— Notable Features —', px+m, cy, iw, 5);
+  cy += 5; drawLines(doc, px+m, cy, iw, 3); cy += 3*4.5+4;
+
+  // What the library offered
+  drawSectionHeader(doc, '— What the Library Offered Here —', px+m, cy, iw, 5);
+  cy += 5; drawLines(doc, px+m, cy, iw, 3); cy += 3*4.5+4;
+
+  // People met here
+  drawSectionHeader(doc, '— People Met Here —', px+m, cy, iw, 5);
+  cy += 5; drawLines(doc, px+m, cy, iw, 3); cy += 3*4.5+4;
+
+  // Return visits
+  drawSectionHeader(doc, '— Return Visits —', px+m, cy, iw, 5);
+  cy += 5;
+  for (let i=0; i<2; i++) {
+    field(doc, 'Date:', px+m, cy, iw*0.4, 4);
+    field(doc, 'Note:', px+m+iw*0.45, cy, iw*0.55, 4);
+    cy += 6;
+  }
+  cy += 2;
+
+  // I will remember
+  if (cy < py+ph-20) {
+    drawSectionHeader(doc, '— I Will Remember —', px+m, cy, iw, 5);
+    cy += 5;
+    drawLines(doc, px+m, cy, iw, Math.floor((py+ph-m-cy-4)/4.5));
+  }
+
+  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
+  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+}
+
+// ── PATRON CARD ────────────────────────────────────────────────────────────────
+function drawPatronCard(doc, px, py, pw, ph, pageNum) {
+  const m = 5, iw = pw - m*2;
+  drawBorder(doc, px, py, pw, ph);
+
+  // Header
+  doc.setFillColor(60, 35, 55);
+  doc.rect(px, py, pw, 10, 'F');
+  doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(235,220,240);
+  doc.text('✦ Patron Card', px+pw/2, py+6.8, {align:'center'});
+
+  let cy = py+14;
+
+  // Name (large)
+  label(doc, 'Name', px+m, cy, 3.8);
+  cy += 2;
+  doc.setDrawColor(100,60,100); doc.setLineWidth(0.4);
+  doc.line(px+m, cy+5, px+pw-m, cy+5);
+  cy += 10;
+
+  field(doc, 'Met at:', px+m, cy, iw*0.55, 4);
+  field(doc, 'Date:', px+m+iw*0.6, cy, iw*0.4, 4);
+  cy += 7;
+
+  // Personality — d6 table
+  drawSectionHeader(doc, '— Personality (d6) —', px+m, cy, iw, 5);
+  cy += 5;
+  drawD6Table(doc, [
+    ['1','Curious — full of questions'],
+    ['2','Shy — hard to draw out'],
+    ['3','Gruff — but secretly kind'],
+    ['4','Warm — remembers your name'],
+    ['5','Mysterious — few answers'],
+    ['6','Learned — knows much'],
+  ], px+m, cy, iw);
+  cy += 6*4.2+4;
+
+  // Appearance
+  drawSectionHeader(doc, '— Appearance —', px+m, cy, iw, 5);
+  cy += 5; drawLines(doc, px+m, cy, iw, 2); cy += 2*4.5+4;
+
+  // Books
+  drawSectionHeader(doc, '— Books —', px+m, cy, iw, 5);
+  cy += 5;
+  field(doc, 'Borrowed:', px+m, cy, iw, 4); cy += 6;
+  field(doc, 'Returned:', px+m, cy, iw, 4); cy += 8;
+
+  // Will return?
+  doc.setDrawColor(100,80,55); doc.setLineWidth(0.3);
+  doc.rect(px+m, cy-3, 3, 3);
+  doc.text('Will return', px+m+5, cy, {baseline:'bottom'});
+  doc.setFontSize(4.5); doc.setFont('times','normal'); doc.setTextColor(50,35,20);
+  doc.text('Will return', px+m+5, cy);
+  cy += 7;
+
+  // Notes
+  if (cy < py+ph-20) {
+    drawSectionHeader(doc, '— Notes —', px+m, cy, iw, 5);
+    cy += 5;
+    drawLines(doc, px+m, cy, iw, Math.floor((py+ph-m-cy-4)/4.5));
+  }
+
+  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
+  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+}
+
+// ── BOOK LEDGER ────────────────────────────────────────────────────────────────
+function drawBookLedger(doc, px, py, pw, ph, pageNum, librarian) {
+  const m = 4, iw = pw - m*2;
+  drawBorder(doc, px, py, pw, ph);
+
+  // Header
+  doc.setFillColor(35, 45, 65);
+  doc.rect(px, py, pw, 10, 'F');
+  doc.setFont('times','bolditalic'); doc.setFontSize(7.5); doc.setTextColor(215,225,245);
+  doc.text('✦ Book Ledger', px+pw/2, py+6.8, {align:'center'});
+
+  let cy = py+13;
+
+  // Column headers
+  const cols = [
+    {label:'Title', w:0.38},
+    {label:'Genre', w:0.18},
+    {label:'Condition', w:0.18},
+    {label:'Lent To', w:0.16},
+    {label:'Status', w:0.10},
+  ];
+  let cx = px+m;
+  doc.setFillColor(240,235,220);
+  doc.rect(px+m, cy-3.5, iw, 5.5, 'F');
+  doc.setFont('times','bold'); doc.setFontSize(4); doc.setTextColor(60,45,25);
+  cols.forEach(col => {
+    doc.text(col.label, cx+0.5, cy+0.8);
+    cx += col.w*iw;
+  });
+  cy += 4;
+
+  // Rows
+  const rowH = (ph - (cy-py) - m - 4) / 14;
+  for (let i=0; i<14; i++) {
+    const ry = cy + i*rowH;
+    if (i % 2 === 0) {
+      doc.setFillColor(252,249,243);
+      doc.rect(px+m, ry, iw, rowH, 'F');
+    }
+    doc.setDrawColor(210,200,180); doc.setLineWidth(0.12);
+    doc.line(px+m, ry+rowH, px+m+iw, ry+rowH);
+    let lx = px+m;
+    cols.forEach((col, ci) => {
+      if (ci > 0) {
+        doc.setDrawColor(210,200,180); doc.setLineWidth(0.12);
+        doc.line(lx, ry, lx, ry+rowH);
+      }
+      lx += col.w*iw;
+    });
+  }
+  // Outer table border
+  const tableH = 14*rowH;
+  doc.setDrawColor(130,100,60); doc.setLineWidth(0.3);
+  doc.rect(px+m, cy, iw, tableH);
+
+  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
+  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+}
+
+// ── WORLD MAP ──────────────────────────────────────────────────────────────────
+function drawWorldMap(doc, px, py, pw, ph, pageNum, librarian) {
+  const m = 5, iw = pw-m*2;
+  drawBorder(doc, px, py, pw, ph);
+
+  // Header
+  doc.setFont('times','bolditalic'); doc.setFontSize(6.5); doc.setTextColor(50,35,15);
+  doc.text('✦ The Wandering Library', px+pw/2, py+8, {align:'center'});
+  doc.setFont('times','italic'); doc.setFontSize(4.5); doc.setTextColor(120,90,55);
+  doc.text('Routes & Places', px+pw/2, py+12, {align:'center'});
+  doc.setDrawColor(140,110,65); doc.setLineWidth(0.3);
+  doc.line(px+m+4, py+13.5, px+pw-m-4, py+13.5);
+
+  // Dot grid (5mm spacing)
+  const gridTop = py+16, gridBot = py+ph-18;
+  const gridLeft = px+m+2, gridRight = px+pw-m-2;
+  doc.setFillColor(130,100,60);
+  for (let gx=gridLeft; gx<=gridRight; gx+=5) {
+    for (let gy=gridTop; gy<=gridBot; gy+=5) {
+      doc.circle(gx, gy, 0.3, 'F');
+    }
+  }
+
+  // Compass rose (top right of map area)
+  const cx2 = gridRight-8, cy2 = gridTop+8;
+  doc.setFont('times','bold'); doc.setFontSize(5); doc.setTextColor(80,55,25);
+  doc.setDrawColor(80,55,25); doc.setLineWidth(0.4);
+  doc.line(cx2, cy2-6, cx2, cy2+6);
+  doc.line(cx2-6, cy2, cx2+6, cy2);
+  doc.line(cx2-4, cy2-4, cx2+4, cy2+4);
+  doc.line(cx2+4, cy2-4, cx2-4, cy2+4);
+  doc.setFontSize(4.5);
+  doc.text('N', cx2, cy2-7.5, {align:'center'});
+  doc.text('S', cx2, cy2+9.5, {align:'center'});
+  doc.text('W', cx2-9, cy2+1, {align:'right'});
+  doc.text('E', cx2+9, cy2+1);
+
+  // Legend box (bottom left)
+  const lx = px+m+2, ly = gridBot+3;
+  doc.setDrawColor(130,100,60); doc.setLineWidth(0.25);
+  doc.rect(lx, ly, iw*0.45, ph-(ly-py)-m-2);
+  doc.setFont('times','italic'); doc.setFontSize(4); doc.setTextColor(100,75,45);
+  doc.text('Legend', lx+2, ly+4);
+  doc.setLineWidth(0.2);
+  doc.line(lx+1, ly+5.5, lx+iw*0.45-1, ly+5.5);
+  // Legend entries
+  const legendItems = ['● Town / Village','★ City','◆ Landmark','~ River / Water','▲ Mountains'];
+  legendItems.forEach((item,i) => {
+    doc.setFontSize(3.5); doc.setTextColor(70,50,30);
+    doc.text(item, lx+2, ly+9+i*3.5);
+  });
+
+  // Sessions count box (bottom right)
+  const bx = px+m+iw*0.5, by = gridBot+3, bw = iw*0.5;
+  const bh = ph-(by-py)-m-2;
+  doc.setDrawColor(130,100,60); doc.setLineWidth(0.25);
+  doc.rect(bx, by, bw, bh);
+  doc.setFont('times','italic'); doc.setFontSize(4); doc.setTextColor(100,75,45);
+  doc.text('Places Visited', bx+2, by+4);
+  doc.setLineWidth(0.2); doc.line(bx+1, by+5.5, bx+bw-1, by+5.5);
+  drawLines(doc, bx+2, by+8, bw-4, Math.floor((bh-10)/4), 4, [180,165,140]);
+
+  doc.setFontSize(3.5); doc.setFont('times','italic'); doc.setTextColor(160,140,110);
+  doc.text(`${pageNum}`, px+pw-m, py+ph-m+1, {align:'right'});
+}
+
+// ── Layout helpers ─────────────────────────────────────────────────────────────
+// Regular TN: 4 panels per A4 landscape (2 cols × 2 rows, each 110×105mm)
+// We treat each folded page as ONE 110×210mm panel (2 rows stacked, we use full height)
+
+function layoutRegular(doc, drawFn, pageData, sideLabel) {
+  const W=297, H=210, colW=110, halfH=H/2;
+  const positions = [[0,0],[0,1],[1,0],[1,1]];
+  pageData.forEach((data, i) => {
+    if (i >= 4) return;
+    const [col, row] = positions[i];
+    drawFn(doc, col*colW, row*halfH, colW, halfH, data.num, data.librarian);
+  });
+  // Fold + cut lines
+  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
+  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
+  doc.setLineDashPattern([],0);
+  doc.setDrawColor(180,180,180); doc.setLineWidth(0.12); doc.setLineDashPattern([1,2],0);
+  doc.line(0,H/2,2*colW,H/2); doc.setLineDashPattern([],0);
+  doc.setFontSize(4); doc.setFont('times','italic'); doc.setTextColor(140,120,90);
+  doc.text('--- fold', 2*colW+2, H/2-4);
+  doc.text('... cut', 2*colW+2, H/2);
+  doc.text(sideLabel, 2*colW+2, H/2+4);
+}
+
+function layoutPassport(doc, drawFn, pageData, sideLabel) {
+  const W=297,H=210,pw=134,ph=98;
+  const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
+  const positions=[[0,0],[1,0],[0,1],[1,1]];
+  pageData.forEach((data,i)=>{
+    if(i>=4)return;
+    const[col,row]=positions[i];
+    drawFn(doc,sx+col*pw,sy+row*ph,pw,ph,data.num,data.librarian);
+  });
+  doc.setDrawColor(160,160,160);doc.setLineWidth(0.15);doc.setLineDashPattern([],0);
+  for(let c=0;c<2;c++)for(let r=0;r<2;r++)doc.rect(sx+c*pw,sy+r*ph,pw,ph);
+  doc.setDrawColor(80,80,80);doc.setLineWidth(0.25);doc.setLineDashPattern([0.8,2],0);
+  doc.line(sx+pw,sy-4,sx+pw,sy+ph*2+4);
+  doc.line(sx-4,sy+ph,sx+pw*2+4,sy+ph);
+  doc.setLineDashPattern([],0);
+  doc.setFontSize(4);doc.setFont('times','italic');doc.setTextColor(140,120,90);
+  doc.text('... cut at centre | '+sideLabel,W/2,sy-4,{align:'center'});
+}
+
+// ── Build the full PDF ─────────────────────────────────────────────────────────
+function buildFullDoc(sideFilter) {
+  const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const size = getSize();
+  const librarian = getLibrarian();
+  const layout = size === 'passport' ? layoutPassport : layoutRegular;
+  let first = true;
+  let pageNum = 1;
+
+  // Collect all pages in order: sessions, locations, patrons, ledgers, maps
+  // Each page type fills panels (4 per A4 sheet for regular, 4 for passport)
+  const insertOrder = ['session','location','patron','ledger','map'];
+  const drawFns = {
+    session: drawSessionLog,
+    location: drawLocationCard,
+    patron: drawPatronCard,
+    ledger: drawBookLedger,
+    map: drawWorldMap,
+  };
+
+  for (const type of insertOrder) {
+    const qty = quantities[type];
+    if (qty === 0) continue;
+
+    // Each "page" = one full 110×210mm panel = needs 1 slot in the 4-up layout
+    // We batch panels into A4 sheets (side1 = panels 1-4 of each group, side2 = panels 5-8)
+    // For simplicity: side1 gets the odd batches, side2 even batches
+    // Actually: each A4 sheet holds 4 panels. We split into side1/side2 per sheet.
+
+    const panelsPerSheet = 4;
+    const sheetsNeeded = Math.ceil(qty / panelsPerSheet);
+
+    for (let sheet = 0; sheet < sheetsNeeded; sheet++) {
+      // Side 1 pages
+      if (sideFilter === 'all' || sideFilter === 'side1') {
+        const panelData = [];
+        for (let p = 0; p < panelsPerSheet; p++) {
+          const idx = sheet * panelsPerSheet + p;
+          if (idx < qty) panelData.push({num: pageNum + idx, librarian});
+          else panelData.push(null);
+        }
+        const validData = panelData.map(d => d || {num:'', librarian:''});
+        if (!first) doc.addPage(); first = false;
+        layout(doc, drawFns[type], validData, `${type} · side 1`);
+      }
+
+      // Side 2
+      if (sideFilter === 'all' || sideFilter === 'side2') {
+        const panelData = [];
+        for (let p = 0; p < panelsPerSheet; p++) {
+          const idx = sheet * panelsPerSheet + p + panelsPerSheet;
+          if (idx < qty) panelData.push({num: pageNum + idx, librarian});
+          else panelData.push(null);
+        }
+        const validData = panelData.map(d => d || {num:'', librarian:''});
+        if (!first) doc.addPage(); first = false;
+        layout(doc, drawFns[type], validData, `${type} · side 2`);
+      }
+    }
+    pageNum += qty;
+  }
+  return doc;
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────────
+generateBtn.addEventListener('click', async () => {
+  const total = Object.values(quantities).reduce((a,b)=>a+b,0);
+  if (total === 0) { alert('Please add at least one insert type!'); return; }
+
+  generateBtn.disabled = true;
+  progress.classList.add('visible');
+  setProgress(20, 'Preparing the library...');
+  await new Promise(r => setTimeout(r, 100));
+  setProgress(60, 'Drawing inserts...');
+  await new Promise(r => setTimeout(r, 100));
+  setProgress(90, 'Binding the pack...');
+  await new Promise(r => setTimeout(r, 100));
+
+  const name = getLibrarian().replace(/[^a-z0-9]/gi,'-').toLowerCase() || 'wandering-library';
+
+  if (duplexSupported) {
+    buildFullDoc('all').save(`${name}-inserts.pdf`);
+    setProgress(100, 'Done! Your library awaits.');
+  } else {
+    generatedDocs = { name };
+    setProgress(100, 'Ready!');
+    await new Promise(r => setTimeout(r, 300));
+    showManualModal();
+  }
+
+  await new Promise(r => setTimeout(r, 400));
+  generateBtn.disabled = false;
+  progress.classList.remove('visible');
+  progressFill.style.width = '0%';
+});
+
+function showManualModal() {
+  document.getElementById('modalSteps').innerHTML = `
+    <div class="step"><div class="step-num">1</div><div class="step-text">Click <strong>Download Side 1</strong> and print in <strong>landscape</strong> orientation.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Flip the stack face-down</strong> and reinsert into the paper tray without rotating.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Click <strong>Download Side 2</strong> — pages are in reverse order so everything lines up.</div></div>`;
+  modalBtn1.textContent = 'Download Side 1'; modalBtn1.disabled = false;
+  modalBtn1.onclick = () => {
+    buildFullDoc('side1').save(`${generatedDocs.name}-side1.pdf`);
+    document.querySelectorAll('#modalSteps .step-num')[0].classList.add('done');
+    document.querySelectorAll('#modalSteps .step-num')[0].textContent = '✓';
+    modalBtn1.textContent = 'Download Side 2';
+    modalBtn1.onclick = () => {
+      buildFullDoc('side2').save(`${generatedDocs.name}-side2.pdf`);
+      document.querySelectorAll('#modalSteps .step-num').forEach(el => { el.classList.add('done'); el.textContent='✓'; });
+      modalBtn1.textContent = '✓ Your library is ready!'; modalBtn1.disabled = true;
+    };
+  };
+  modalOverlay.classList.add('visible');
+}
+
+// ── PREVIEW ────────────────────────────────────────────────────────────────────
+function updatePreview() {
+  updateStats();
+  const canvas = document.getElementById('previewCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  if (!W || !H) { setTimeout(updatePreview, 150); return; }
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  canvas.width = Math.round(W*devicePixelRatio);
+  canvas.height = Math.round(H*devicePixelRatio);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+
+  // Use jsPDF to render preview as actual PDF page into a tiny doc, then draw SVG
+  // Instead: draw a faithful canvas representation
+  const scale = W/297;
+  drawPreviewCanvas(ctx, W, H, scale, currentPreview);
+}
+
+function drawPreviewCanvas(ctx, W, H, scale, type) {
+  const colW=110*scale, halfH=H/2;
+
+  // Draw 4 panel placeholders
+  for (const [col,row] of [[0,0],[0,1],[1,0],[1,1]]) {
+    const px=col*colW, py=row*halfH, pw=colW, ph=halfH;
+    drawPanelPreview(ctx, px, py, pw, ph, scale, type);
+  }
+
+  // Fold/cut lines
+  ctx.strokeStyle='rgba(100,100,100,0.5)'; ctx.lineWidth=0.8;
+  ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(colW,0); ctx.lineTo(colW,H); ctx.stroke();
+  ctx.setLineDash([2,4]); ctx.strokeStyle='rgba(80,80,80,0.5)';
+  ctx.beginPath(); ctx.moveTo(2*colW,0); ctx.lineTo(2*colW,H); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Horizontal centre guide
+  ctx.strokeStyle='rgba(180,180,180,0.4)'; ctx.lineWidth=0.4;
+  ctx.setLineDash([3,5]);
+  ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(2*colW,H/2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Waste strip
+  ctx.fillStyle='rgba(220,210,195,0.35)'; ctx.fillRect(2*colW,0,W-2*colW,H);
+  ctx.font=`${3.5*scale}px serif`; ctx.fillStyle='rgba(140,120,90,0.6)';
+  ctx.fillText('waste', 2*colW+2*scale, H/2);
+}
+
+function drawPanelPreview(ctx, px, py, pw, ph, scale, type) {
+  const m = 4*scale;
+  // Panel bg
+  ctx.fillStyle='#fdfaf5'; ctx.fillRect(px,py,pw,ph);
+  // Border
+  ctx.strokeStyle='rgba(60,40,20,0.8)'; ctx.lineWidth=0.8;
+  ctx.strokeRect(px,py,pw,ph);
+  ctx.strokeStyle='rgba(60,40,20,0.3)'; ctx.lineWidth=0.2;
+  ctx.strokeRect(px+1.5*scale,py+1.5*scale,pw-3*scale,ph-3*scale);
+
+  // Header bar
+  const headers = {
+    session: {color:'#37230f', text:'✦ Session Log', fg:'#f0e6d2'},
+    location: {color:'#283c23', text:'✦ Location Card', fg:'#dcefd8'},
+    patron: {color:'#3c2337', text:'✦ Patron Card', fg:'#ebdcf0'},
+    ledger: {color:'#232d41', text:'✦ Book Ledger', fg:'#d7ddf5'},
+    map: {color:'#3a3015', text:'✦ World Map', fg:'#f0e8c8'},
+  };
+  const h = headers[type];
+  ctx.fillStyle = h.color; ctx.fillRect(px,py,pw,9*scale);
+  ctx.font = `italic bold ${5*scale}px 'IM Fell English', serif`;
+  ctx.fillStyle = h.fg; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(h.text, px+pw/2, py+4.8*scale);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+
+  // Content preview by type
+  const ix=px+m, iy=py+11*scale, iw=pw-m*2;
+  if (type==='session') drawSessionPreview(ctx,ix,iy,iw,ph-14*scale,scale);
+  else if (type==='location') drawLocationPreview(ctx,ix,iy,iw,ph-14*scale,scale);
+  else if (type==='patron') drawPatronPreview(ctx,ix,iy,iw,ph-14*scale,scale);
+  else if (type==='ledger') drawLedgerPreview(ctx,ix,iy,iw,ph-14*scale,scale);
+  else if (type==='map') drawMapPreview(ctx,px,py,pw,ph,scale);
+}
+
+function previewLines(ctx, x, y, w, n, gap, color='rgba(180,165,140,0.5)') {
+  ctx.strokeStyle=color; ctx.lineWidth=0.25;
+  for(let i=0;i<n;i++){ctx.beginPath();ctx.moveTo(x,y+i*gap);ctx.lineTo(x+w,y+i*gap);ctx.stroke();}
+}
+function previewLabel(ctx, text, x, y, scale, color='rgba(100,75,45,0.8)') {
+  ctx.font=`italic ${3.5*scale}px serif`; ctx.fillStyle=color; ctx.fillText(text,x,y);
+}
+
+function drawSessionPreview(ctx,x,y,w,h,sc) {
+  const g=4*sc;
+  // Weather/date fields
+  previewLabel(ctx,'Session # _____  Date: _____  Weather: _____',x,y+g*0.8,sc);
+  // Section headers and lines
+  const sections=[['— The Road —',2],['— Who Came? —',6],['— What Happened —',4]];
+  let cy=y+g*1.5;
+  sections.forEach(([title,lines])=>{
+    cy+=g*0.6;
+    ctx.font=`italic ${3*sc}px serif`; ctx.fillStyle='rgba(100,75,45,0.6)';
+    ctx.textAlign='center'; ctx.fillText(title,x+w/2,cy); ctx.textAlign='left';
+    cy+=g*0.4;
+    previewLines(ctx,x,cy,w,lines,g*0.9);
+    cy+=lines*g*0.9+g*0.3;
+  });
+}
+
+function drawLocationPreview(ctx,x,y,w,h,sc) {
+  const g=4*sc;
+  // Big name line
+  ctx.strokeStyle='rgba(80,100,60,0.5)'; ctx.lineWidth=0.4;
+  ctx.beginPath(); ctx.moveTo(x,y+g*1.5); ctx.lineTo(x+w,y+g*1.5); ctx.stroke();
+  previewLabel(ctx,'Place Name',x,y+g,sc);
+  let cy=y+g*2.2;
+  [['— Features —',3],['— Library Offered —',2],['— People Met —',3],['— I Will Remember —',2]].forEach(([t,n])=>{
+    ctx.font=`italic ${3*sc}px serif`; ctx.fillStyle='rgba(100,75,45,0.6)';
+    ctx.textAlign='center'; ctx.fillText(t,x+w/2,cy+g*0.5); ctx.textAlign='left';
+    cy+=g*1.0; previewLines(ctx,x,cy,w,n,g*0.9); cy+=n*g*0.9+g*0.3;
+  });
+}
+
+function drawPatronPreview(ctx,x,y,w,h,sc) {
+  const g=4*sc;
+  ctx.strokeStyle='rgba(100,60,100,0.4)'; ctx.lineWidth=0.4;
+  ctx.beginPath(); ctx.moveTo(x,y+g*1.5); ctx.lineTo(x+w,y+g*1.5); ctx.stroke();
+  previewLabel(ctx,'Name',x,y+g,sc);
+  let cy=y+g*2.2;
+  // d6 table placeholder
+  ctx.strokeStyle='rgba(160,130,100,0.3)'; ctx.lineWidth=0.2;
+  ctx.strokeRect(x,cy,w,g*6*0.85);
+  for(let i=0;i<6;i++){
+    ctx.beginPath(); ctx.moveTo(x,cy+i*g*0.85); ctx.lineTo(x+w,cy+i*g*0.85); ctx.stroke();
+    ctx.font=`italic ${3*sc}px serif`; ctx.fillStyle='rgba(100,75,45,0.4)';
+    ctx.fillText(`${i+1} · ...`,x+1*sc,cy+i*g*0.85+g*0.6);
+  }
+  cy+=g*6*0.85+g*0.5;
+  previewLines(ctx,x,cy,w,3,g*0.9);
+}
+
+function drawLedgerPreview(ctx,x,y,w,h,sc) {
+  const g=3.5*sc;
+  // Header row
+  ctx.fillStyle='rgba(220,210,190,0.6)'; ctx.fillRect(x,y,w,g);
+  ctx.font=`bold ${3*sc}px serif`; ctx.fillStyle='rgba(60,45,25,0.7)';
+  ['Title','Genre','Cond.','Lent To','Status'].forEach((col,i)=>{
+    const cx=[0,0.38,0.56,0.74,0.90];
+    ctx.fillText(col, x+cx[i]*w+0.5*sc, y+g*0.75);
+  });
+  // Rows
+  for(let i=0;i<12;i++){
+    const ry=y+g*(i+1);
+    if(i%2===0){ctx.fillStyle='rgba(250,247,240,0.6)'; ctx.fillRect(x,ry,w,g);}
+    ctx.strokeStyle='rgba(200,185,160,0.3)'; ctx.lineWidth=0.15;
+    ctx.beginPath(); ctx.moveTo(x,ry+g); ctx.lineTo(x+w,ry+g); ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(130,100,60,0.4)'; ctx.lineWidth=0.3;
+  ctx.strokeRect(x,y,w,g*13);
+}
+
+function drawMapPreview(ctx,px,py,pw,ph,sc) {
+  const m=5*sc;
+  // Dot grid
+  ctx.fillStyle='rgba(130,100,60,0.4)';
+  for(let gx=px+m+2*sc;gx<=px+pw-m;gx+=5*sc)
+    for(let gy=py+16*sc;gy<=py+ph-18*sc;gy+=5*sc){
+      ctx.beginPath(); ctx.arc(gx,gy,0.4*sc,0,Math.PI*2); ctx.fill();
+    }
+  // Compass rose (small)
+  const cx=px+pw-m-8*sc, cy2=py+22*sc;
+  ctx.strokeStyle='rgba(80,55,25,0.5)'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(cx,cy2-5*sc); ctx.lineTo(cx,cy2+5*sc); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-5*sc,cy2); ctx.lineTo(cx+5*sc,cy2); ctx.stroke();
+  ctx.font=`bold ${3*sc}px serif`; ctx.fillStyle='rgba(80,55,25,0.6)';
+  ctx.textAlign='center'; ctx.fillText('N',cx,cy2-6*sc); ctx.textAlign='left';
+  // Legend box
+  ctx.strokeStyle='rgba(130,100,60,0.3)'; ctx.lineWidth=0.25;
+  ctx.strokeRect(px+m,py+ph-18*sc,pw*0.4,15*sc);
+  ctx.font=`italic ${3*sc}px serif`; ctx.fillStyle='rgba(100,75,45,0.5)';
+  ctx.fillText('Legend',px+m+1*sc,py+ph-15*sc);
+}
+
+// Wire up all inputs
+document.querySelectorAll('input[type=radio]').forEach(el=>el.addEventListener('change',updatePreview));
+document.getElementById('librarianName').addEventListener('input',updatePreview);
+
+setTimeout(updatePreview,100); setTimeout(updatePreview,500);
+window.addEventListener('resize',updatePreview);
+updateStats();
+</script>
+</body>
+</html>

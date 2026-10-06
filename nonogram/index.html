@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nonogram Generator — The Insert Studio</title>
+<script src="../assets/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="stylesheet" href="../assets/studio.css">
+<script src="../assets/studio.js" defer></script>
+<style>
+/* nonogram-specific styles; shared styles live in ../assets/studio.css */
+/* Size grid */
+.size-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.size-btn { border: 1.5px solid var(--rule); background: var(--warm); padding: 8px 4px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.62rem; text-align: center; transition: all 0.12s; color: var(--ink-soft); }
+.size-btn:hover { border-color: var(--accent); }
+.size-btn.active { border-color: var(--accent); background: var(--accent-pale); color: var(--accent); }
+.size-name { display: block; font-weight: 500; font-size: 0.72rem; }
+.size-diff { display: block; font-size: 0.54rem; color: var(--muted); margin-top: 1px; }
+.size-btn.active .size-diff { color: var(--accent-lt); }
+/* Custom size */
+.custom-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.custom-label { font-size: 0.62rem; color: var(--muted); }
+.custom-input { width: 60px; font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--ink); border: 1.5px solid var(--rule); background: var(--warm); padding: 6px 8px; outline: none; text-align: center; transition: border-color 0.12s; }
+.custom-input:focus { border-color: var(--accent); }
+/* Radio */
+.rb-title { display: block; font-size: 0.76rem; font-weight: 500; margin-bottom: 1px; }
+.rb-sub { display: block; font-size: 0.6rem; color: var(--muted); }
+/* Toggle */
+.tog { width: 32px; height: 18px; background: var(--rule); border-radius: 9px; position: relative; transition: background 0.15s; flex-shrink: 0; }
+.tog.on { background: var(--accent); }
+.tog::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: transform 0.15s; }
+.tog.on::after { transform: translateX(14px); }
+/* Count */
+.count-val { font-family: 'Playfair Display', serif; font-size: 1.5rem; width: 52px; text-align: center; border: 1.5px solid var(--rule); background: var(--warm); padding: 2px; outline: none; color: var(--accent); -moz-appearance: textfield; }
+.count-val::-webkit-inner-spin-button { -webkit-appearance: none; }
+/* Seed */
+.seed-row { display: flex; gap: 8px; align-items: center; }
+.seed-input { flex: 1; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--ink); border: 1.5px solid var(--rule); background: var(--warm); padding: 8px 10px; outline: none; transition: border-color 0.12s; }
+.seed-input:focus { border-color: var(--accent); }
+.seed-input::placeholder { color: var(--muted); }
+.seed-roll { padding: 8px 12px; border: 1.5px solid var(--rule); background: var(--warm); cursor: pointer; font-size: 0.7rem; transition: all 0.12s; }
+.seed-roll:hover { border-color: var(--accent); background: var(--accent); color: white; }
+/* Duplex */
+.duplex-banner.ok { background: #f0f7f0; border-color: #2a5a3a; color: #1a3a2a; }
+/* Difficulty badge */
+.diff-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 2px; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; }
+.diff-badge.beginner { background: #eaf4ee; color: #2a5a3a; border: 1px solid #2a5a3a; }
+.diff-badge.easy { background: #eef4ea; color: #3a5a2a; border: 1px solid #5a8a3a; }
+.diff-badge.medium { background: #fef4e0; color: #7a5a00; border: 1px solid #d4a017; }
+.diff-badge.hard { background: #fdf0eb; color: var(--accent); border: 1px solid var(--accent); }
+/* Preview */
+.preview-meta { display: flex; gap: 8px; align-items: center; }
+.preview-sheet { width: 100%; max-width: 700px; position: relative; z-index: 1; background: white; box-shadow: var(--shadow-lg); overflow: hidden; aspect-ratio: 297 / 210; }
+/* Regenerate btn */
+.regen-btn { padding: 6px 14px; border: 1px solid rgba(139,58,26,0.6); background: transparent; color: rgba(139,58,26,0.8); font-family: 'DM Mono', monospace; font-size: 0.6rem; cursor: pointer; transition: all 0.12s; letter-spacing: 0.08em; }
+.regen-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+/* Modal */
+</style>
+</head>
+<body>
+
+<nav class="topbar" data-tool="nonogram"><a href="../">← The Insert Studio</a></nav>
+
+<header>
+  <div class="logo">Nono<em>gram</em></div>
+  <div class="header-tag">Logic Puzzle Inserts</div>
+</header>
+
+<main>
+<aside class="settings-panel">
+<div class="settings-inner">
+
+  <!-- Grid size -->
+  <div class="section">
+    <div class="section-title">Grid Size</div>
+    <div class="size-grid">
+      <div class="size-btn" id="sz-5" onclick="setSize(5)"><span class="size-name">5×5</span><span class="size-diff">Beginner</span></div>
+      <div class="size-btn active" id="sz-10" onclick="setSize(10)"><span class="size-name">10×10</span><span class="size-diff">Easy</span></div>
+      <div class="size-btn" id="sz-15" onclick="setSize(15)"><span class="size-name">15×15</span><span class="size-diff">Medium</span></div>
+      <div class="size-btn" id="sz-20" onclick="setSize(20)"><span class="size-name">20×20</span><span class="size-diff">Hard</span></div>
+      <div class="size-btn" id="sz-custom" onclick="setSize('custom')"><span class="size-name">Custom</span><span class="size-diff">5–25</span></div>
+    </div>
+    <div class="custom-row" id="customRow" style="display:none">
+      <span class="custom-label">Cols:</span>
+      <input type="number" class="custom-input" id="customW" value="12" min="5" max="25" oninput="regenerate()">
+      <span class="custom-label">Rows:</span>
+      <input type="number" class="custom-input" id="customH" value="12" min="5" max="25" oninput="regenerate()">
+    </div>
+    <div id="diffBadge" class="diff-badge easy" style="margin-top:8px;">
+      <span id="diffText">Easy · 10×10</span>
+    </div>
+  </div>
+
+  <!-- Density -->
+  <div class="section">
+    <div class="section-title">Fill Density</div>
+    <div class="radio-group cols-2">
+      <label class="radio-option"><input type="radio" name="density" value="light" onchange="regenerate()"><span class="radio-btn"><span class="rb-title">Light</span><span class="rb-sub">~35% filled</span></span></label>
+      <label class="radio-option"><input type="radio" name="density" value="medium" checked onchange="regenerate()"><span class="radio-btn"><span class="rb-title">Medium</span><span class="rb-sub">~50% filled</span></span></label>
+      <label class="radio-option"><input type="radio" name="density" value="heavy" onchange="regenerate()"><span class="radio-btn"><span class="rb-title">Heavy</span><span class="rb-sub">~65% filled</span></span></label>
+      <label class="radio-option"><input type="radio" name="density" value="random" onchange="regenerate()"><span class="radio-btn"><span class="rb-title">Random</span><span class="rb-sub">mixed</span></span></label>
+    </div>
+  </div>
+
+  <!-- Options -->
+  <div class="section">
+    <div class="section-title">Options</div>
+    <div class="toggle-row" onclick="toggleOpt('solution')">
+      <div><div class="toggle-label">Include Solution</div><div class="toggle-sub">Right panel shows filled grid</div></div>
+      <div class="tog on" id="tog-solution"></div>
+    </div>
+    <div class="toggle-row" onclick="toggleOpt('numbers')">
+      <div><div class="toggle-label">Puzzle Number</div><div class="toggle-sub">Header with # and difficulty</div></div>
+      <div class="tog on" id="tog-numbers"></div>
+    </div>
+    <div class="toggle-row" onclick="toggleOpt('bold5')">
+      <div><div class="toggle-label">Bold Every 5th Line</div><div class="toggle-sub">Helps counting on larger grids</div></div>
+      <div class="tog on" id="tog-bold5"></div>
+    </div>
+  </div>
+
+  <!-- Notebook size -->
+  <div class="section">
+    <div class="section-title">Notebook Size</div>
+    <div class="radio-group cols-2">
+      <label class="radio-option"><input type="radio" name="nbsize" value="regular" checked onchange="updatePreview()"><span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm wide</span></span></label>
+      <label class="radio-option"><input type="radio" name="nbsize" value="passport" onchange="updatePreview()"><span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm</span></span></label>
+    </div>
+  </div>
+
+  <!-- Count -->
+  <div class="section">
+    <div class="section-title">Number of Puzzles</div>
+    <div class="count-row">
+      <button class="count-btn" onclick="changeCount(-1)">−</button>
+      <input type="number" class="count-val" id="countVal" value="4" min="1" max="50">
+      <button class="count-btn" onclick="changeCount(1)">+</button>
+      <span style="font-size:0.58rem;color:var(--muted)">puzzles</span>
+    </div>
+  </div>
+
+  <!-- Seed -->
+  <div class="section">
+    <div class="section-title">Seed (Reproducible Puzzles)</div>
+    <div class="seed-row">
+      <input type="text" class="seed-input" id="seedInput" placeholder="e.g. 42 or leave blank" oninput="regenerate()">
+      <button class="seed-roll" onclick="rollSeed()">🎲 Roll</button>
+    </div>
+  </div>
+
+  <!-- Printer -->
+  <div class="section">
+    <div class="section-title">Printer</div>
+    <div id="duplexBanner" class="duplex-banner manual">
+      <span>⚠</span>
+      <span>Manual duplex — two PDFs. <a href="#" id="duplexOverride" style="color:var(--accent)">My printer supports duplex →</a></span>
+    </div>
+    <div id="duplexOptions" style="display:none;margin-top:8px;">
+      <div style="font-size:0.58rem;color:var(--muted);margin-bottom:6px;">Printer flip direction</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <label style="cursor:pointer;">
+          <input type="radio" name="flipEdge" value="long" checked style="display:none" onchange="updatePreview()">
+          <div class="radio-btn active" id="flip-long" onclick="setFlip('long')" style="padding:8px 10px;">
+            <span class="rb-title">Long edge</span>
+            <span class="rb-sub">Flip like a book ← recommended</span>
+          </div>
+        </label>
+        <label style="cursor:pointer;">
+          <input type="radio" name="flipEdge" value="short" style="display:none" onchange="updatePreview()">
+          <div class="radio-btn" id="flip-short" onclick="setFlip('short')" style="padding:8px 10px;">
+            <span class="rb-title">Short edge</span>
+            <span class="rb-sub">Flip like a notepad</span>
+          </div>
+        </label>
+      </div>
+      <div style="font-size:0.58rem;color:var(--muted);margin-top:6px;line-height:1.5;">
+        Select <strong>Long edge</strong> in your printer's duplex dialog. The PDF automatically rotates even pages so everything lines up after cutting.
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="settings-footer">
+  <button class="generate-btn" id="generateBtn">Generate Puzzle Pack</button>
+  <div class="progress" id="progress">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText">Generating puzzles...</div>
+  </div>
+</div>
+</aside>
+
+<!-- Preview -->
+<section class="preview-panel">
+  <div class="preview-header">
+    <span class="preview-label">Live Preview — Puzzle 1</span>
+    <div class="preview-meta">
+      <button class="regen-btn" onclick="regenerate()">↺ New Puzzle</button>
+      <span class="preview-badge" id="previewBadge">10×10</span>
+    </div>
+  </div>
+  <div class="preview-sheet"><canvas id="previewCanvas"></canvas></div>
+  <div class="preview-info">
+    <div class="preview-stat"><span class="preview-stat-val" id="statSize">10×10</span><span class="preview-stat-label">Grid</span></div>
+    <div class="preview-stat"><span class="preview-stat-val" id="statClues">—</span><span class="preview-stat-label">Clue Groups</span></div>
+    <div class="preview-stat"><span class="preview-stat-val" id="statPuzzles">4</span><span class="preview-stat-label">Puzzles</span></div>
+  </div>
+</section>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Print your puzzles</div>
+    <div class="modal-sub">Manual duplex</div>
+    <div id="modalSteps"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalBtn">Download PDF</button>
+      <button class="modal-btn ghost" onclick="document.getElementById('modalOverlay').classList.remove('visible')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let gridSize = 10;
+let currentGrid = null;
+let duplexSupported = false;
+let generatedDoc = null;
+const opts = { solution: true, numbers: true, bold5: true };
+
+// ── Seeded RNG (Mulberry32) ───────────────────────────────────────────────────
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function getSeed() {
+  const v = document.getElementById('seedInput').value.trim();
+  if (!v) return Math.floor(Math.random() * 999999);
+  return parseInt(v) || v.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+}
+
+function rollSeed() {
+  document.getElementById('seedInput').value = Math.floor(Math.random() * 99999);
+  regenerate();
+}
+
+// ── Grid generation ───────────────────────────────────────────────────────────
+function getDensityTarget(rng) {
+  const d = document.querySelector('input[name="density"]:checked')?.value || 'medium';
+  if (d === 'light')  return 0.25 + rng() * 0.15;
+  if (d === 'medium') return 0.42 + rng() * 0.16;
+  if (d === 'heavy')  return 0.58 + rng() * 0.15;
+  return 0.2 + rng() * 0.5; // random
+}
+
+function generateGrid(cols, rows, rng) {
+  const density = getDensityTarget(rng);
+  const grid = [];
+  for (let r = 0; r < rows; r++) {
+    grid.push([]);
+    for (let c = 0; c < cols; c++) {
+      grid[r].push(rng() < density ? 1 : 0);
+    }
+  }
+  return grid;
+}
+
+function getClues(line) {
+  const clues = [];
+  let count = 0;
+  for (const cell of line) {
+    if (cell) { count++; }
+    else if (count) { clues.push(count); count = 0; }
+  }
+  if (count) clues.push(count);
+  return clues.length ? clues : [0];
+}
+
+function getRowClues(grid) { return grid.map(row => getClues(row)); }
+function getColClues(grid) {
+  const cols = grid[0].length;
+  return Array.from({length: cols}, (_, c) => getClues(grid.map(r => r[c])));
+}
+
+function countClueGroups(grid) {
+  const rc = getRowClues(grid).filter(c => !(c.length===1&&c[0]===0)).length;
+  const cc = getColClues(grid).filter(c => !(c.length===1&&c[0]===0)).length;
+  return rc + cc;
+}
+
+function buildPuzzle(cols, rows, seed) {
+  const rng = mulberry32(seed);
+  // Try up to 20 times to get a non-trivial grid
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const grid = generateGrid(cols, rows, rng);
+    const filled = grid.flat().filter(Boolean).length;
+    const total = cols * rows;
+    const ratio = filled / total;
+    if (ratio > 0.15 && ratio < 0.9) return grid;
+  }
+  return generateGrid(cols, rows, rng);
+}
+
+function getDifficulty(cols, rows) {
+  const n = cols * rows;
+  if (n <= 25)  return { label: 'Beginner', cls: 'beginner' };
+  if (n <= 100) return { label: 'Easy',     cls: 'easy' };
+  if (n <= 225) return { label: 'Medium',   cls: 'medium' };
+  return          { label: 'Hard',          cls: 'hard' };
+}
+
+function getGridDims() {
+  if (gridSize === 'custom') {
+    return {
+      cols: Math.max(5, Math.min(25, parseInt(document.getElementById('customW').value) || 12)),
+      rows: Math.max(5, Math.min(25, parseInt(document.getElementById('customH').value) || 12)),
+    };
+  }
+  return { cols: gridSize, rows: gridSize };
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function setSize(s) {
+  gridSize = s;
+  document.querySelectorAll('.size-btn').forEach(el => el.classList.remove('active'));
+  const id = s === 'custom' ? 'sz-custom' : `sz-${s}`;
+  document.getElementById(id)?.classList.add('active');
+  document.getElementById('customRow').style.display = s === 'custom' ? 'flex' : 'none';
+  regenerate();
+}
+
+function toggleOpt(key) {
+  opts[key] = !opts[key];
+  document.getElementById('tog-' + key).classList.toggle('on', opts[key]);
+  updatePreview();
+}
+
+function changeCount(d) {
+  const el = document.getElementById('countVal');
+  el.value = Math.max(1, parseInt(el.value) + d);
+  document.getElementById('statPuzzles').textContent = el.value;
+}
+
+function setProgress(pct, txt) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = txt;
+}
+
+function setFlip(edge) {
+  document.getElementById('flip-long').classList.toggle('active', edge === 'long');
+  document.getElementById('flip-short').classList.toggle('active', edge === 'short');
+  document.querySelector(`input[value="${edge}"][name="flipEdge"]`).checked = true;
+}
+function getFlipEdge() {
+  return document.querySelector('input[name="flipEdge"]:checked')?.value || 'long';
+}
+
+document.getElementById('duplexBanner').addEventListener('click', e => {
+  if (e.target.id !== 'duplexOverride') return;
+  e.preventDefault();
+  duplexSupported = true;
+  document.getElementById('duplexBanner').className = 'duplex-banner ok';
+  document.getElementById('duplexBanner').innerHTML = '<span>✓</span><span>Duplex enabled — one combined PDF.</span>';
+  document.getElementById('duplexOptions').style.display = 'block';
+});
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('visible');
+});
+
+// ── PDF drawing ───────────────────────────────────────────────────────────────
+function drawNonogramPDF(doc, px, py, pw, ph, grid, puzzleNum, showSolution) {
+  const rowClues = getRowClues(grid);
+  const colClues = getColClues(grid);
+  const rows = grid.length, cols = grid[0].length;
+  const m = 3;
+
+  doc.setFillColor(255,255,255); doc.rect(px,py,pw,ph,'F');
+
+  // Header bar
+  const headerH = opts.numbers ? 8 : 0;
+  if (opts.numbers) {
+    doc.setFillColor(15,12,8); doc.rect(px,py,pw,headerH,'F');
+    doc.setFont('times','bold'); doc.setFontSize(5.5); doc.setTextColor(245,240,228);
+    const diff = getDifficulty(cols,rows);
+    const label = showSolution ? `#${puzzleNum} Solution` : `#${puzzleNum} · ${diff.label} · ${cols}×${rows}`;
+    doc.text(label, px+pw/2, py+5.5, {align:'center'});
+  }
+
+  // Calculate clue area sizes
+  const maxRowClueLen = Math.max(...rowClues.map(c => c.length));
+  const maxColClueLen = Math.max(...colClues.map(c => c.length));
+
+  const availW = pw - m*2;
+  const availH = ph - m*2 - headerH;
+
+  // Cell size
+  const clueColW = maxRowClueLen * 4.5 + 2;
+  const clueRowH = maxColClueLen * 4 + 2;
+  const gridW = availW - clueColW;
+  const gridH = availH - clueRowH;
+  const cellW = Math.min(gridW / cols, gridH / rows);
+  const cellH = cellW;
+
+  // Center the whole puzzle
+  const totalW = clueColW + cols * cellW;
+  const totalH = clueRowH + rows * cellH;
+  const ox = px + m + (availW - totalW) / 2;
+  const oy = py + headerH + m + (availH - totalH) / 2;
+
+  const gx = ox + clueColW; // grid origin x
+  const gy = oy + clueRowH; // grid origin y
+
+  // ── Column clues ──
+  doc.setFont('times','normal'); doc.setFontSize(Math.min(4.5, cellW * 0.65));
+  doc.setTextColor(20,18,14);
+  colClues.forEach((clue, c) => {
+    const cx = gx + c * cellW + cellW / 2;
+    const startY = gy - clue.length * 4;
+    clue.forEach((n, i) => {
+      const tw = doc.getTextWidth(String(n));
+      doc.text(String(n), cx - tw/2, startY + i * 4 + 3.5);
+    });
+  });
+
+  // ── Row clues ──
+  rowClues.forEach((clue, r) => {
+    const cy = gy + r * cellH + cellH * 0.68;
+    const clueStr = clue.join('  ');
+    const tw = doc.getTextWidth(clueStr);
+    doc.text(clueStr, gx - tw - 1.5, cy);
+  });
+
+  // ── Grid cells ──
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cx = gx + c * cellW;
+      const cy = gy + r * cellH;
+
+      if (showSolution && grid[r][c]) {
+        doc.setFillColor(15,12,8); doc.rect(cx,cy,cellW,cellH,'F');
+      } else {
+        // Subtle alternating bg for 5×5 blocks
+        if (opts.bold5 && (Math.floor(r/5) + Math.floor(c/5)) % 2 === 1) {
+          doc.setFillColor(248,245,240); doc.rect(cx,cy,cellW,cellH,'F');
+        }
+      }
+
+      // Cell border
+      const is5r = opts.bold5 && r % 5 === 0 && rows > 10;
+      const is5c = opts.bold5 && c % 5 === 0 && cols > 10;
+      doc.setDrawColor(is5r||is5c ? 80:180, is5r||is5c ? 70:170, is5r||is5c ? 55:145);
+      doc.setLineWidth(is5r||is5c ? 0.5 : 0.15);
+      doc.rect(cx, cy, cellW, cellH);
+    }
+  }
+
+  // Heavy outer grid border
+  doc.setDrawColor(15,12,8); doc.setLineWidth(0.7);
+  doc.rect(gx, gy, cols*cellW, rows*cellH);
+
+  // Bold every-5 lines
+  if (opts.bold5 && cols > 5) {
+    doc.setDrawColor(60,55,45); doc.setLineWidth(0.45);
+    for (let c = 5; c < cols; c += 5) doc.line(gx+c*cellW, gy, gx+c*cellW, gy+rows*cellH);
+    for (let r = 5; r < rows; r += 5) doc.line(gx, gy+r*cellH, gx+cols*cellW, gy+r*cellH);
+  }
+
+  // Panel border
+  doc.setDrawColor(15,12,8); doc.setLineWidth(0.5);
+  doc.rect(px,py,pw,ph);
+}
+
+// ── Cover page ────────────────────────────────────────────────────────────────
+function drawCoverPage(doc, count, cols, rows) {
+  const W=297, H=210, colW=110, m=8;
+
+  // Left panel — blank
+  doc.setFillColor(253,250,245); doc.rect(0,0,colW,H,'F');
+
+  // Right panel — cover face
+  doc.setFillColor(253,250,245); doc.rect(colW,0,colW,H,'F');
+
+  const fx=colW+m, fy=m, fw=colW-m*2, fh=H-m*2;
+  const cx=fx+fw/2;
+
+  // Outer frame
+  doc.setDrawColor(30,25,18); doc.setLineWidth(0.8); doc.rect(fx,fy,fw,fh);
+  // Inner frame
+  doc.setLineWidth(0.25); doc.rect(fx+3,fy+3,fw-6,fh-6);
+
+  // Corner flourishes
+  const cs=5;
+  for(const[ox,oy,sx,sy] of [[fx+3,fy+3,1,1],[fx+fw-3,fy+3,-1,1],[fx+3,fy+fh-3,1,-1],[fx+fw-3,fy+fh-3,-1,-1]]){
+    doc.setLineWidth(0.5); doc.setDrawColor(139,58,26);
+    doc.line(ox,oy,ox+sx*cs,oy); doc.line(ox,oy,ox,oy+sy*cs);
+  }
+
+  // Top ornament
+  doc.setFont('times','normal'); doc.setFontSize(7); doc.setTextColor(139,58,26);
+  doc.text('✦ · ✦', cx, fy+14, {align:'center'});
+
+  // Title
+  doc.setFont('times','bolditalic'); doc.setFontSize(20); doc.setTextColor(15,12,8);
+  doc.text('Nono', cx, fy+fh*0.36, {align:'center'});
+  doc.text('gram', cx, fy+fh*0.36+14, {align:'center'});
+
+  // Gold rules
+  doc.setDrawColor(139,58,26); doc.setLineWidth(0.4);
+  doc.line(fx+12, fy+fh*0.36+17, fx+fw-12, fy+fh*0.36+17);
+  doc.setLineWidth(0.15);
+  doc.line(fx+12, fy+fh*0.36+19, fx+fw-12, fy+fh*0.36+19);
+
+  // Subtitle
+  doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(100,75,40);
+  doc.text('Logic Puzzle Inserts', cx, fy+fh*0.36+24, {align:'center'});
+
+  // Grid size & count info
+  const diff = getDifficulty(cols, rows);
+  doc.setFont('times','italic'); doc.setFontSize(6); doc.setTextColor(80,60,35);
+  doc.text(`${cols}×${rows} · ${diff.label}`, cx, fy+fh*0.62, {align:'center'});
+  doc.setFont('times','normal'); doc.setFontSize(5); doc.setTextColor(130,110,75);
+  doc.text(`${count} puzzle${count!==1?'s':''}`, cx, fy+fh*0.62+7, {align:'center'});
+
+  // Grid preview decoration — tiny ghost grid
+  const previewSize = Math.min(cols, rows, 10);
+  const cellSz = Math.min(fw*0.55/previewSize, 4.5);
+  const gw = previewSize*cellSz, gh = previewSize*cellSz;
+  const gox = cx-gw/2, goy = fy+fh*0.67;
+  doc.setDrawColor(200,185,160); doc.setLineWidth(0.1);
+  for(let r=0;r<=previewSize;r++) doc.line(gox, goy+r*cellSz, gox+gw, goy+r*cellSz);
+  for(let c=0;c<=previewSize;c++) doc.line(gox+c*cellSz, goy, gox+c*cellSz, goy+gh);
+  // Fill some cells of the ghost grid
+  doc.setFillColor(200,185,160);
+  const pattern=[[0,1],[0,3],[1,0],[1,2],[2,1],[2,4],[3,0],[3,3],[4,2],[4,4],[5,1],[6,0],[6,3],[7,2],[8,1],[8,4],[9,0],[9,3]];
+  pattern.forEach(([r,c])=>{ if(r<previewSize&&c<previewSize){ doc.setGState(new doc.GState({opacity:0.35})); doc.rect(gox+c*cellSz,goy+r*cellSz,cellSz,cellSz,'F'); doc.setGState(new doc.GState({opacity:1})); }});
+  doc.setDrawColor(80,60,35); doc.setLineWidth(0.3);
+  doc.rect(gox, goy, gw, gh);
+
+  // Bottom ornament
+  doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(139,58,26);
+  doc.text('✦', cx, fy+fh-6, {align:'center'});
+
+  // Fold/cut lines
+  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
+  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
+  doc.setLineDashPattern([],0);
+  doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,130,110);
+  doc.text('--- fold', 2*colW+2, H/2-4);
+  doc.text('... cut',  2*colW+2, H/2);
+}
+
+// ── Build doc ─────────────────────────────────────────────────────────────────
+function buildDoc(allGrids) {
+  const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+  const W=297, H=210;
+  const nbsize = document.querySelector('input[name="nbsize"]:checked')?.value || 'regular';
+  const colW = nbsize==='regular' ? 110 : 134;
+  const ph   = nbsize==='regular' ? 210 : 98;
+  const {cols, rows} = getGridDims();
+  const flipEdge = duplexSupported ? getFlipEdge() : 'long';
+
+  // Cover page = page 1 (odd, no rotation needed)
+  drawCoverPage(doc, allGrids.length, cols, rows);
+
+  allGrids.forEach((grid, i) => {
+    doc.addPage();
+
+    // Page number within PDF: cover = 1, puzzles start at 2
+    // Even pages = back sides = need 180° rotation for long-edge duplex
+    const pageNum = i + 2; // 2, 3, 4, ...
+    const needsRotation = duplexSupported && flipEdge === 'long' && pageNum % 2 === 0;
+
+    if (needsRotation) {
+      // Rotate coordinate system 180° around page centre
+      // Equivalent: draw at (W-x-w, H-y-h) for every rect/panel
+      const drawRotated = (drawFn, px, py, pw, pph, ...args) =>
+        drawFn(doc, W-px-pw, H-py-pph, pw, pph, ...args);
+
+      if (nbsize === 'regular') {
+        // Back: solution on left (was right), puzzle on right (was left) — both rotated
+        if (opts.solution) {
+          drawNonogramPDF(doc, W-colW, 0, colW, H, grid, i+1, true);   // rotated left = orig right
+        } else {
+          doc.setFillColor(255,255,255); doc.rect(W-colW,0,colW,H,'F');
+          doc.setDrawColor(15,12,8); doc.setLineWidth(0.5); doc.rect(W-colW,0,colW,H);
+        }
+        drawNonogramPDF(doc, W-2*colW, 0, colW, H, grid, i+1, false); // rotated right = orig left
+      } else {
+        const sx=(W-colW*2)/2, sy=(H-ph*2)/2;
+        drawNonogramPDF(doc, W-sx-colW,    H-sy-ph,    colW, ph, grid, i+1, false);
+        drawNonogramPDF(doc, W-sx-2*colW,  H-sy-ph,    colW, ph, grid, i+1, opts.solution);
+        drawNonogramPDF(doc, W-sx-colW,    H-sy-2*ph,  colW, ph, grid, i+1, false);
+        drawNonogramPDF(doc, W-sx-2*colW,  H-sy-2*ph,  colW, ph, grid, i+1, opts.solution);
+      }
+
+      // Fold/cut lines (mirrored for rotated page)
+      doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+      doc.setLineDashPattern([2,1.5],0); doc.line(W-colW,0,W-colW,H);
+      doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(W-2*colW,0,W-2*colW,H);
+      doc.setLineDashPattern([],0);
+      doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,130,110);
+      doc.text('--- fold', 2, H/2-4);
+      doc.text('... cut',  2, H/2);
+
+    } else {
+      // Normal (odd pages, or short-edge, or manual)
+      if (nbsize === 'regular') {
+        drawNonogramPDF(doc, 0, 0, colW, ph, grid, i+1, false);
+        if (opts.solution) {
+          drawNonogramPDF(doc, colW, 0, colW, ph, grid, i+1, true);
+        } else {
+          doc.setFillColor(255,255,255); doc.rect(colW,0,colW,ph,'F');
+          doc.setDrawColor(15,12,8); doc.setLineWidth(0.5); doc.rect(colW,0,colW,ph);
+        }
+      } else {
+        const sx=(W-colW*2)/2, sy=(H-ph*2)/2;
+        drawNonogramPDF(doc, sx,    sy,    colW, ph, grid, i+1, false);
+        drawNonogramPDF(doc, sx+colW, sy,  colW, ph, grid, i+1, opts.solution);
+        drawNonogramPDF(doc, sx,    sy+ph, colW, ph, grid, i+1, false);
+        drawNonogramPDF(doc, sx+colW, sy+ph, colW, ph, grid, i+1, opts.solution);
+      }
+
+      // Fold/cut lines
+      doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
+      doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
+      doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
+      doc.setLineDashPattern([],0);
+      doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,130,110);
+      doc.text('--- fold', 2*colW+2, H/2-4);
+      doc.text('... cut',  2*colW+2, H/2);
+    }
+  });
+  return doc;
+}
+
+// ── Generate & store current puzzle ──────────────────────────────────────────
+function regenerate() {
+  const {cols,rows} = getGridDims();
+  const seed = getSeed();
+  currentGrid = buildPuzzle(cols, rows, seed);
+
+  const diff = getDifficulty(cols,rows);
+  const badge = document.getElementById('diffBadge');
+  badge.className = 'diff-badge ' + diff.cls;
+  document.getElementById('diffText').textContent = `${diff.label} · ${cols}×${rows}`;
+  document.getElementById('statSize').textContent = `${cols}×${rows}`;
+  document.getElementById('previewBadge').textContent = `${cols}×${rows}`;
+  const groups = countClueGroups(currentGrid);
+  document.getElementById('statClues').textContent = groups;
+
+  updatePreview();
+}
+
+// ── Generate PDF ──────────────────────────────────────────────────────────────
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  document.getElementById('progress').classList.add('visible');
+  const count = parseInt(document.getElementById('countVal').value) || 4;
+  const {cols,rows} = getGridDims();
+  const baseSeed = getSeed();
+
+  const allGrids = [];
+  for (let i=0; i<count; i++) {
+    setProgress(Math.round((i/count)*80), `Generating puzzle ${i+1} of ${count}...`);
+    await new Promise(r => setTimeout(r, 0));
+    allGrids.push(buildPuzzle(cols, rows, baseSeed + i * 7919));
+  }
+  setProgress(90,'Laying out PDF...');
+  await new Promise(r => setTimeout(r,80));
+  const doc = buildDoc(allGrids);
+  setProgress(100,'Done!');
+  await new Promise(r => setTimeout(r,300));
+
+  const slug = `nonogram-${cols}x${rows}`;
+  if (duplexSupported) {
+    doc.save(slug+'.pdf');
+  } else {
+    generatedDoc = {doc, slug};
+    document.getElementById('modalSteps').innerHTML = `
+      <div class="step"><div class="step-num">1</div><div class="step-text">Click <strong>Download</strong> and print A4 <strong>landscape</strong>.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Flip face-down and reinsert without rotating.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Fold at 110mm, cut at 220mm. Puzzle left, solution right.</div></div>`;
+    const mb = document.getElementById('modalBtn');
+    mb.textContent='Download PDF'; mb.disabled=false;
+    mb.onclick = () => {
+      generatedDoc.doc.save(generatedDoc.slug+'.pdf');
+      document.querySelectorAll('#modalSteps .step-num').forEach(el=>{el.classList.add('done');el.textContent='✓';});
+      mb.textContent='✓ Done!'; mb.disabled=true;
+    };
+    document.getElementById('modalOverlay').classList.add('visible');
+  }
+
+  btn.disabled = false;
+  document.getElementById('progress').classList.remove('visible');
+  document.getElementById('progressFill').style.width = '0%';
+});
+
+// ── Canvas preview ────────────────────────────────────────────────────────────
+function updatePreview() {
+  if (!currentGrid) return;
+  const canvas = document.getElementById('previewCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W=rect.width, H=rect.height;
+  if (!W||!H) { setTimeout(updatePreview,150); return; }
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  canvas.width=Math.round(W*devicePixelRatio);
+  canvas.height=Math.round(H*devicePixelRatio);
+  const ctx=canvas.getContext('2d');
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  ctx.fillStyle='#f0ead8'; ctx.fillRect(0,0,W,H);
+
+  const sc=W/297;
+  const nbsize=document.querySelector('input[name="nbsize"]:checked')?.value||'regular';
+  const colW=(nbsize==='regular'?110:134)*sc;
+
+  drawCanvasNonogram(ctx, 0, 0, colW, H, sc, currentGrid, 1, false);
+  if (opts.solution) {
+    drawCanvasNonogram(ctx, colW, 0, colW, H, sc, currentGrid, 1, true);
+  } else {
+    ctx.fillStyle='#fff'; ctx.fillRect(colW,0,colW,H);
+    ctx.strokeStyle='rgba(15,12,8,0.6)'; ctx.lineWidth=0.6; ctx.strokeRect(colW,0,colW,H);
+  }
+
+  // Fold/cut
+  ctx.strokeStyle='rgba(100,100,100,0.4)'; ctx.lineWidth=0.8;
+  ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(colW,0); ctx.lineTo(colW,H); ctx.stroke();
+  ctx.setLineDash([2,4]); ctx.strokeStyle='rgba(80,80,80,0.4)';
+  ctx.beginPath(); ctx.moveTo(2*colW,0); ctx.lineTo(2*colW,H); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(200,190,165,0.35)'; ctx.fillRect(2*colW,0,W-2*colW,H);
+}
+
+function drawCanvasNonogram(ctx, px, py, pw, ph, sc, grid, puzzleNum, showSolution) {
+  const rows=grid.length, cols=grid[0].length;
+  const rowClues=getRowClues(grid), colClues=getColClues(grid);
+  const m=3*sc;
+  const headerH = opts.numbers ? 8*sc : 0;
+
+  ctx.fillStyle='#fff'; ctx.fillRect(px,py,pw,ph);
+
+  if (opts.numbers) {
+    ctx.fillStyle='#0f0c08'; ctx.fillRect(px,py,pw,headerH);
+    ctx.font=`bold ${5*sc}px serif`; ctx.fillStyle='#f5f0e4';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    const diff=getDifficulty(cols,rows);
+    const label=showSolution ? `#${puzzleNum} Solution` : `#${puzzleNum} · ${diff.label} · ${cols}×${rows}`;
+    ctx.fillText(label, px+pw/2, py+headerH/2);
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  }
+
+  const maxRowLen=Math.max(...rowClues.map(c=>c.length));
+  const maxColLen=Math.max(...colClues.map(c=>c.length));
+  const availW=pw-m*2, availH=ph-headerH-m*2;
+  const clueColW=maxRowLen*4.5*sc+2*sc;
+  const clueRowH=maxColLen*4*sc+2*sc;
+  const cellSize=Math.min((availW-clueColW)/cols, (availH-clueRowH)/rows);
+  const totalW=clueColW+cols*cellSize, totalH=clueRowH+rows*cellSize;
+  const ox=px+m+(availW-totalW)/2;
+  const oy=py+headerH+m+(availH-totalH)/2;
+  const gx=ox+clueColW, gy=oy+clueRowH;
+
+  // Col clues
+  ctx.font=`${Math.min(4*sc, cellSize*0.6)}px monospace`;
+  ctx.fillStyle='rgba(20,18,14,0.85)';
+  colClues.forEach((clue,c)=>{
+    const cx=gx+c*cellSize+cellSize/2;
+    clue.forEach((n,i)=>{
+      const tw=ctx.measureText(String(n)).width;
+      ctx.fillText(String(n), cx-tw/2, gy-(clue.length-1-i)*4*sc-3*sc);
+    });
+  });
+
+  // Row clues
+  rowClues.forEach((clue,r)=>{
+    const cy=gy+r*cellSize+cellSize*0.68;
+    const str=clue.join('  ');
+    const tw=ctx.measureText(str).width;
+    ctx.fillText(str, gx-tw-1.5*sc, cy);
+  });
+
+  // Cells
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const cx=gx+c*cellSize, cy=gy+r*cellSize;
+      if(showSolution && grid[r][c]){
+        ctx.fillStyle='#0f0c08'; ctx.fillRect(cx,cy,cellSize,cellSize);
+      } else if(opts.bold5 && (Math.floor(r/5)+Math.floor(c/5))%2===1){
+        ctx.fillStyle='rgba(248,245,240,0.8)'; ctx.fillRect(cx,cy,cellSize,cellSize);
+      }
+      const is5r=opts.bold5&&r%5===0&&rows>10;
+      const is5c=opts.bold5&&c%5===0&&cols>10;
+      ctx.strokeStyle=is5r||is5c?'rgba(60,55,45,0.7)':'rgba(180,170,145,0.5)';
+      ctx.lineWidth=is5r||is5c?0.5:0.15;
+      ctx.strokeRect(cx,cy,cellSize,cellSize);
+    }
+  }
+
+  // Bold grid lines every 5
+  if(opts.bold5&&cols>5){
+    ctx.strokeStyle='rgba(60,55,45,0.6)'; ctx.lineWidth=0.5;
+    for(let c=5;c<cols;c+=5){ctx.beginPath();ctx.moveTo(gx+c*cellSize,gy);ctx.lineTo(gx+c*cellSize,gy+rows*cellSize);ctx.stroke();}
+    for(let r=5;r<rows;r+=5){ctx.beginPath();ctx.moveTo(gx,gy+r*cellSize);ctx.lineTo(gx+cols*cellSize,gy+r*cellSize);ctx.stroke();}
+  }
+
+  // Outer border
+  ctx.strokeStyle='rgba(15,12,8,0.85)'; ctx.lineWidth=0.7;
+  ctx.strokeRect(gx,gy,cols*cellSize,rows*cellSize);
+  ctx.strokeStyle='rgba(15,12,8,0.6)'; ctx.lineWidth=0.5;
+  ctx.strokeRect(px,py,pw,ph);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+regenerate();
+window.addEventListener('resize', updatePreview);
+document.getElementById('countVal').addEventListener('input', ()=>{
+  document.getElementById('statPuzzles').textContent = document.getElementById('countVal').value;
+});
+</script>
+</body>
+</html>

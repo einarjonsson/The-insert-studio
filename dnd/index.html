@@ -319,9 +319,25 @@ document.getElementById('modalClose').addEventListener('click', () => document.g
 document.getElementById('modalOverlay').addEventListener('click', e => { if(e.target === document.getElementById('modalOverlay')) document.getElementById('modalOverlay').classList.remove('visible'); });
 
 // ── PDF DRAWING HELPERS ───────────────────────────────────────────────────────
-function pF(doc, size, style='normal', face='times') { doc.setFont(face, style); doc.setFontSize(size); }
+// face: 'serif' = Playfair (titles, headings, numerals), 'mono' = DM Mono (labels, lists). Sizes are pt.
+function pF(doc, size, style='normal', face='serif') {
+  const mono = face === 'mono';
+  if (mono && style === 'italic') style = 'normal';
+  if (mono && style === 'bolditalic') style = 'bold';
+  doc.setFont(mono ? PDFKit.mono() : PDFKit.serif(), style); doc.setFontSize(size);
+}
 function pC(doc, r, g, b) { doc.setTextColor(r,g,b); }
 function pD(doc, r, g, b, lw=0.3) { doc.setDrawColor(r,g,b); doc.setLineWidth(lw); }
+function dndFooter(doc, px, py, pw, ph, label) {
+  pF(doc, 3.6, 'normal', 'mono'); pC(doc, 154,144,128);
+  PDFKit.text(doc, ('The Insert Studio · ' + label).toUpperCase(), px+pw/2, py+ph-4, {align:'center'}, 0.4);
+}
+function dndBand(doc, px, py, pw, title, sub) {
+  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
+  pF(doc,11,'bold','serif'); pC(doc,212,180,120);
+  doc.text(title, px+pw/2, py+7.4, {align:'center'});
+  if (sub) { pF(doc,6.5,'italic','serif'); pC(doc,154,123,42); doc.text(sub, px+pw-5, py+7.2, {align:'right'}); }
+}
 
 // Ornate runic border
 function drawDndBorder(doc, x, y, w, h) {
@@ -340,7 +356,7 @@ function drawDndBorder(doc, x, y, w, h) {
 
 // Section header with crimson rule
 function dndSectionHeader(doc, text, x, y, w, fs=5) {
-  pF(doc, fs, 'bold', 'times');
+  pF(doc, fs*1.3, 'bold', 'serif');
   pC(doc, 100,25,25);
   doc.text(text.toUpperCase(), x, y);
   const tw = doc.getTextWidth(text.toUpperCase());
@@ -353,29 +369,29 @@ function drawAbilityBox(doc, x, y, w, h, label, score) {
   // Box
   pD(doc, 80,30,20, 0.4); doc.rect(x,y,w,h);
   // Label
-  pF(doc, 3.5, 'bold', 'times'); pC(doc, 100,25,25);
-  doc.text(label, x+w/2, y+4, {align:'center'});
+  pF(doc, 5, 'bold', 'mono'); pC(doc, 100,25,25);
+  doc.text(label, x+w/2, y+4.2, {align:'center'});
   // Score (big)
-  pF(doc, 9, 'bold', 'times'); pC(doc, 20,10,5);
+  pF(doc, 14, 'bold', 'serif'); pC(doc, 20,10,5);
   doc.text(score, x+w/2, y+h*0.62, {align:'center'});
   // Modifier circle
-  const mod = Math.floor((parseInt(score)||10-10)/2);
+  const mod = Math.floor(((parseInt(score)||10)-10)/2);
   const modStr = (mod>=0?'+':'')+mod;
   pD(doc, 154,123,42, 0.3);
   doc.circle(x+w/2, y+h-3, 3);
-  pF(doc, 4, 'bold', 'times'); pC(doc, 80,30,20);
-  doc.text(modStr, x+w/2, y+h-1.5, {align:'center'});
+  pF(doc, 5.2, 'bold', 'mono'); pC(doc, 80,30,20);
+  doc.text(modStr, x+w/2, y+h-2.1, {align:'center'});
 }
 
 // Ruled lines
 function dndLines(doc, x, y, w, n, gap=4.5) {
-  pD(doc, 180,155,110, 0.18);
+  pD(doc, 201,185,143, 0.2);
   for (let i=0;i<n;i++) doc.line(x, y+i*gap, x+w, y+i*gap);
 }
 
 // Field with dotted underline
 function dndField(doc, label, x, y, w, fs=4) {
-  pF(doc, fs, 'italic', 'times'); pC(doc, 100,80,45);
+  pF(doc, fs+1, 'normal', 'mono'); pC(doc, 100,80,45);
   doc.text(label, x, y);
   const lw = doc.getTextWidth(label);
   pD(doc, 180,155,110, 0.2);
@@ -387,109 +403,28 @@ function dndField(doc, label, x, y, w, fs=4) {
 // Checkbox row
 function dndCheck(doc, label, x, y, checked=false) {
   pD(doc, 120,80,40, 0.25); doc.rect(x, y-3, 3, 3);
-  pF(doc, 4, 'normal', 'times'); pC(doc, 30,20,10);
+  pF(doc, 5.4, 'normal', 'mono'); pC(doc, 30,20,10);
   doc.text(label, x+4.5, y);
 }
 
 // ── COVER PAGE ─────────────────────────────────────────────────────────────────
 function drawCoverPage(doc, info) {
-  const W=297, H=210, colW=110, m=8;
-
-  // Left panel — blank (folds behind cover)
-  doc.setFillColor(253,250,245);
-  doc.rect(0, 0, colW, H, 'F');
-
-  // Right panel — cover face
-  doc.setFillColor(253,250,245);
-  doc.rect(colW, 0, colW, H, 'F');
-
-  const fx=colW+m, fy=m, fw=colW-m*2, fh=H-m*2;
-
-  // Outer frame
-  doc.setDrawColor(80,60,30); doc.setLineWidth(0.8);
-  doc.rect(fx, fy, fw, fh);
-  // Inner frame
-  doc.setLineWidth(0.25);
-  doc.rect(fx+3, fy+3, fw-6, fh-6);
-
-  // Corner flourishes (matching wordsearch style)
-  const cs=5;
-  for(const[ox,oy,sx,sy] of [
-    [fx+3,fy+3,1,1],[fx+fw-3,fy+3,-1,1],
-    [fx+3,fy+fh-3,1,-1],[fx+fw-3,fy+fh-3,-1,-1]
-  ]){
-    doc.setLineWidth(0.5); doc.setDrawColor(139,58,26);
-    doc.line(ox,oy,ox+sx*cs,oy);
-    doc.line(ox,oy,ox,oy+sy*cs);
-  }
-
-  const cx = fx+fw/2;
-
-  // Top ornament
-  doc.setFont('times','normal'); doc.setFontSize(7); doc.setTextColor(154,123,42);
-  PDFKit.ornament(doc, cx, fy+12.6, 1.5);
-
-  // "FIELD MANUAL" — main title
-  doc.setFont('times','bolditalic'); doc.setFontSize(18); doc.setTextColor(20,13,6);
-  doc.text('Field', cx, fy+fh*0.38, {align:'center'});
-  doc.text('Manual', cx, fy+fh*0.38+14, {align:'center'});
-
-  // Gold rule under title
-  doc.setDrawColor(139,58,26); doc.setLineWidth(0.4);
-  doc.line(fx+12, fy+fh*0.38+17, fx+fw-12, fy+fh*0.38+17);
-  doc.setLineWidth(0.15);
-  doc.line(fx+12, fy+fh*0.38+19, fx+fw-12, fy+fh*0.38+19);
-
-  // Subtitle
-  doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(100,75,40);
-  doc.text('D&D Campaign Insert Pack', cx, fy+fh*0.38+24, {align:'center'});
-
-  // Character name block (if set)
   const hasName = info.name && info.name !== 'Character Name';
-  if(hasName) {
-    doc.setFont('times','bold'); doc.setFontSize(8); doc.setTextColor(30,20,10);
-    doc.text(info.name, cx, fy+fh*0.7, {align:'center'});
-    const meta=[info.cls, info.race, info.level ? `Level ${info.level}` : ''].filter(Boolean).join(' · ');
-    doc.setFont('times','italic'); doc.setFontSize(5); doc.setTextColor(120,90,55);
-    doc.text(meta, cx, fy+fh*0.7+6, {align:'center'});
-  } else {
-    // Blank name lines
-    doc.setFont('times','italic'); doc.setFontSize(5); doc.setTextColor(160,140,100);
-    doc.text('Character:', fx+10, fy+fh*0.7);
-    doc.setDrawColor(180,160,120); doc.setLineWidth(0.2);
-    doc.line(fx+28, fy+fh*0.7+0.5, fx+fw-6, fy+fh*0.7+0.5);
-    doc.text('Campaign:', fx+10, fy+fh*0.7+8);
-    doc.line(fx+28, fy+fh*0.7+8.5, fx+fw-6, fy+fh*0.7+8.5);
+  let sub = 'Campaign Insert Pack';
+  if (hasName) {
+    sub = [info.name, info.cls].filter(Boolean).join(' · ');
+    pF(doc, 8, 'italic', 'serif');
+    while (doc.getTextWidth(sub) > 60 && sub.length > 4) sub = sub.slice(0, -2).trimEnd() + '…';
   }
-
-  if(info.campaign && info.campaign !== 'Campaign') {
-    doc.setFont('times','italic'); doc.setFontSize(5); doc.setTextColor(120,90,55);
-    doc.text(info.campaign, cx, fy+fh*0.7+(hasName?12:16), {align:'center'});
-  }
-
-  // Bottom ornament
-  doc.setFont('times','normal'); doc.setFontSize(5.5); doc.setTextColor(154,123,42);
-  doc.setFillColor(doc.getTextColor()); PDFKit.star(doc, cx, fy+fh-7.5, 1.8);
-
-  // Fold/cut lines
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-  doc.setLineDashPattern([],0);
-  doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,110,60);
-  doc.text('--- fold', 2*colW+2, H/2-4);
-  doc.text('... cut',  2*colW+2, H/2);
+  PDFKit.cover(doc, { kicker: 'D&D Insert Pack', title: 'Field Manual', subtitle: sub, blank: !hasName });
+  PDFKit.marks(doc, 'regular', { label: 'D&D Field Manual' });
 }
 
 // ── CHARACTER BACK ─────────────────────────────────────────────────────────────
 function drawCharBack(doc, px, py, pw, ph, info) {
   const m=5, iw=pw-m*2;
-  doc.setFillColor(246,240,220); doc.rect(px,py,pw,ph,'F');
   drawDndBorder(doc,px,py,pw,ph);
-
-  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
-  pF(doc,7,'bold','times'); pC(doc,212,180,120);
-  doc.text('Character — Notes', px+pw/2, py+7.5, {align:'center'});
+  dndBand(doc,px,py,pw,'Character — Notes');
 
   let cy=py+15;
 
@@ -516,7 +451,7 @@ function drawCharBack(doc, px, py, pw, ph, info) {
   appFields.forEach(([l],i)=>{
     const col=i%3, row=Math.floor(i/3);
     const ax=px+m+col*(afw+1), ay=cy+row*8;
-    pF(doc,3.5,'italic','times'); pC(doc,100,80,45);
+    pF(doc,4.8,'normal','mono'); pC(doc,100,80,45);
     doc.text(l,ax,ay+3.5);
     pD(doc,180,155,110,0.18);
     doc.setLineDashPattern([0.5,0.8],0);
@@ -531,20 +466,16 @@ function drawCharBack(doc, px, py, pw, ph, info) {
     dndLines(doc,px+m,cy,iw,Math.floor((py+ph-m-6-cy)/4.5));
   }
 
-  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
-  doc.text('D&D Field Manual · Character Notes', px+pw/2, py+ph-m+1, {align:'center'});
+  dndFooter(doc,px,py,pw,ph,'Character Notes');
 }
 
 // ── CHARACTER SHEET ───────────────────────────────────────────────────────────
 function drawCharSheet(doc, px, py, pw, ph, info) {
   const m=5, iw=pw-m*2;
-  doc.setFillColor(246,240,220); doc.rect(px,py,pw,ph,'F');
   drawDndBorder(doc,px,py,pw,ph);
 
   // Dark header bar
-  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
-  pF(doc,7.5,'bold','times'); pC(doc,212,180,120);
-  doc.text(info.name||'Character Sheet', px+pw/2, py+7.5, {align:'center'});
+  dndBand(doc,px,py,pw,info.name||'Character Sheet');
 
   let cy = py+15;
 
@@ -553,9 +484,9 @@ function drawCharSheet(doc, px, py, pw, ph, info) {
   const mw = iw/4 - 1;
   meta.forEach(({l,v},i) => {
     const mx = px+m+i*(mw+1.3);
-    pF(doc,3.2,'bold','times'); pC(doc,140,100,50);
+    pF(doc,4.4,'bold','mono'); pC(doc,140,100,50);
     doc.text(l.toUpperCase(), mx, cy);
-    pF(doc,4.8,'normal','times'); pC(doc,20,10,5);
+    pF(doc,8,'normal','serif'); pC(doc,20,10,5);
     let val = v||'—';
     while(doc.getTextWidth(val)>mw-0.5&&val.length>2) val=val.slice(0,-1);
     doc.text(val, mx, cy+5);
@@ -582,15 +513,15 @@ function drawCharSheet(doc, px, py, pw, ph, info) {
   combat.forEach(([l,v],i) => {
     const cx2 = px+m+i*(cw+1);
     pD(doc,80,30,20,0.3); doc.rect(cx2,cy,cw,10);
-    pF(doc,3,'bold','times'); pC(doc,100,25,25);
-    doc.text(l, cx2+cw/2, cy+3.5, {align:'center'});
-    pD(doc,180,155,110,0.18); doc.line(cx2+1,cy+6,cx2+cw-1,cy+6);
+    pF(doc,4.2,'bold','mono'); pC(doc,100,25,25);
+    doc.text(l, cx2+cw/2, cy+3.8, {align:'center'});
+    pD(doc,180,155,110,0.18); doc.line(cx2+1,cy+6.5,cx2+cw-1,cy+6.5);
   });
   cy+=14;
 
   // HP current tracker box
   pD(doc,80,30,20,0.3); doc.rect(px+m,cy,iw,8);
-  pF(doc,3.5,'italic','times'); pC(doc,100,80,45);
+  pF(doc,4.6,'normal','mono'); pC(doc,100,80,45);
   doc.text('Current HP tracker', px+m+1.5, cy+5);
   { const lw = doc.getTextWidth('Current HP tracker'); doc.setLineWidth(0.15); let bx = px+m+4+lw; const bs = Math.min(2.2, (iw-lw-8)/(25+4*1.5+24*0.5)); for(let g=0; g<5; g++){ bx = PDFKit.boxes(doc, bx, cy+4, 5, bs, 0.5) + 1.8; } }
   cy+=12;
@@ -600,20 +531,19 @@ function drawCharSheet(doc, px, py, pw, ph, info) {
   const baseX2 = px+m, baseX3 = px+m+colL+3;
 
   // Saving throws
-  dndSectionHeader(doc,'Saving Throws',baseX2,cy,colL,4.5); cy+=3;
+  const hdrY=cy; dndSectionHeader(doc,'Saving Throws',baseX2,cy,colL,4.5); cy+=5.5;
   ['Strength','Dexterity','Constitution','Intelligence','Wisdom','Charisma'].forEach((s,i) => {
     dndCheck(doc,s,baseX2,cy+i*5);
   });
-  const saveEndY = cy+6*5;
+  const saveEndY = cy+6*5-3;
 
   // Skills
-  let skillY = py+15; // reset — skills go alongside saves
   const skillsX = baseX3;
-  dndSectionHeader(doc,'Skills',skillsX,cy,colR,4.5);
+  dndSectionHeader(doc,'Skills',skillsX,hdrY,colR,4.5);
   const skills = ['Acrobatics (Dex)','Animal Handling (Wis)','Arcana (Int)','Athletics (Str)','Deception (Cha)','History (Int)','Insight (Wis)','Intimidation (Cha)','Investigation (Int)','Medicine (Wis)','Nature (Int)','Perception (Wis)','Performance (Cha)','Persuasion (Cha)','Religion (Int)','Sleight of Hand (Dex)','Stealth (Dex)','Survival (Wis)'];
-  skills.forEach((s,i) => { dndCheck(doc,s,skillsX,cy+3+i*4.5); });
+  skills.forEach((s,i) => { dndCheck(doc,s,skillsX,cy+i*4.5); });
 
-  cy = Math.max(saveEndY, cy+skills.length*4.5+3)+3;
+  cy = Math.max(saveEndY, cy+skills.length*4.5)+3;
 
   // Proficiencies & notes
   if (cy < py+ph-20) {
@@ -621,25 +551,16 @@ function drawCharSheet(doc, px, py, pw, ph, info) {
     dndLines(doc,px+m,cy,iw,3,4.5);
   }
 
-  // Page footer
-  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
-  doc.text('D&D Field Manual · Character Sheet', px+pw/2, py+ph-m+1, {align:'center'});
+  dndFooter(doc,px,py,pw,ph,'Character Sheet');
 }
 
 // ── SESSION NOTES ─────────────────────────────────────────────────────────────
 function drawSessionNotes(doc, px, py, pw, ph, info) {
   const m=5, iw=pw-m*2;
-  doc.setFillColor(246,240,220); doc.rect(px,py,pw,ph,'F');
   drawDndBorder(doc,px,py,pw,ph);
 
   // Header
-  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
-  pF(doc,7,'bold','times'); pC(doc,212,180,120);
-  doc.text('Session Notes', px+pw/2, py+7.5, {align:'center'});
-  if(info.campaign) {
-    pF(doc,3.8,'italic','times'); pC(doc,154,123,42);
-    doc.text(info.campaign, px+pw-m, py+9.5, {align:'right'});
-  }
+  dndBand(doc,px,py,pw,'Session Notes', info.campaign);
 
   let cy=py+15;
 
@@ -672,32 +593,27 @@ function drawSessionNotes(doc, px, py, pw, ph, info) {
     dndLines(doc,px+m,cy,iw,Math.floor((py+ph-m-4-cy)/4.5));
   }
 
-  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
-  doc.text('D&D Field Manual · Session Notes', px+pw/2, py+ph-m+1, {align:'center'});
+  dndFooter(doc,px,py,pw,ph,'Session Notes');
 }
 
 // ── ENCOUNTER TRACKER ─────────────────────────────────────────────────────────
 function drawEncounterTracker(doc, px, py, pw, ph, info) {
   const m=5, iw=pw-m*2;
-  doc.setFillColor(242,235,212); doc.rect(px,py,pw,ph,'F');
   drawDndBorder(doc,px,py,pw,ph);
 
   // Header
-  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
-  pF(doc,7,'bold','times'); pC(doc,212,180,120);
-  doc.text('Encounter Tracker', px+pw/2, py+7.5, {align:'center'});
+  dndBand(doc,px,py,pw,'Encounter Tracker');
 
-  let cy=py+15;
+  let cy=py+16.5;
 
   // Round counter — 10 boxes
   dndSectionHeader(doc,'Round',px+m,cy,24,4.5);
-  pF(doc,3.5,'normal','times'); pC(doc,100,75,35);
   const rboxW=5.5, rboxH=5.5;
   for(let r=0;r<10;r++) {
     const rx=px+m+28+r*(rboxW+1.5);
     pD(doc,80,30,20,0.35); doc.rect(rx,cy-4,rboxW,rboxH);
-    pF(doc,3,'normal','times'); pC(doc,120,90,45);
-    doc.text(String(r+1),rx+rboxW/2,cy-0.3,{align:'center'});
+    pF(doc,4.6,'normal','mono'); pC(doc,120,90,45);
+    doc.text(String(r+1),rx+rboxW/2,cy-0.5,{align:'center'});
   }
   cy+=5;
 
@@ -719,15 +635,17 @@ function drawEncounterTracker(doc, px, py, pw, ph, info) {
   doc.setFillColor(40,25,10); doc.rect(px+m,cy,iw,5,'F');
   let hx=px+m;
   cols.forEach(col=>{
-    pF(doc,3.2,'bold','times'); pC(doc,210,175,110);
-    doc.text(col.label,hx+col.w*iw/2,cy+3.6,{align:'center'});
+    pF(doc,3.9,'bold','mono'); pC(doc,210,175,110);
+    let lab=col.label.toUpperCase();
+    while(doc.getTextWidth(lab)>col.w*iw-1&&lab.length>2) lab=lab.slice(0,-1);
+    doc.text(lab,hx+col.w*iw/2,cy+3.4,{align:'center'});
     hx+=col.w*iw;
   });
   cy+=5;
 
   // 8 initiative rows
   for(let r=0;r<8;r++){
-    if(r%2===0){doc.setFillColor(250,245,230);doc.rect(px+m,cy,iw,clampedRowH,'F');}
+    if(r%2===0){doc.setFillColor(250,245,236);doc.rect(px+m,cy,iw,clampedRowH,'F');}
     let rx=px+m;
     cols.forEach((col,ci)=>{
       if(ci>0){pD(doc,200,175,130,0.12);doc.line(rx,cy,rx,cy+clampedRowH);}
@@ -746,29 +664,27 @@ function drawEncounterTracker(doc, px, py, pw, ph, info) {
   // Conditions reference strip
   const conditions=['Blinded','Charmed','Frightened','Grappled','Incapacitated','Paralyzed','Poisoned','Prone','Restrained','Stunned'];
   if(cy < py+ph-12) {
-    doc.setFillColor(50,30,10); doc.rect(px+m,cy,iw,5,'F');
-    pF(doc,3,'bold','times'); pC(doc,210,175,110);
-    doc.text('CONDITIONS: '+conditions.join(' · '), px+m+1, cy+3.5);
-    cy+=5;
+    pF(doc,4.2,'bold','mono');
+    const condLines = doc.splitTextToSize('CONDITIONS: '+conditions.join(' · ').toUpperCase(), iw-2);
+    const stripH = 1.6 + condLines.length*2.1;
+    doc.setFillColor(50,30,10); doc.rect(px+m,cy,iw,stripH,'F');
+    pC(doc,210,175,110);
+    condLines.forEach((ln,i)=>doc.text(ln, px+m+1, cy+2.9+i*2.1));
+    cy+=stripH;
     // Notes line
-    dndLines(doc,px+m,cy,iw,2);
+    dndLines(doc,px+m,cy+4,iw,2);
   }
 
-  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
-  doc.text('D&D Field Manual · Encounter Tracker', px+pw/2, py+ph-m+1, {align:'center'});
+  dndFooter(doc,px,py,pw,ph,'Encounter Tracker');
 }
 
 // ── LOOT LEDGER ───────────────────────────────────────────────────────────────
 function drawLootLedger(doc, px, py, pw, ph, info) {
   const m=5, iw=pw-m*2;
-  doc.setFillColor(246,240,220); doc.rect(px,py,pw,ph,'F');
   drawDndBorder(doc,px,py,pw,ph);
 
   // Header
-  doc.setFillColor(26,18,9); doc.rect(px,py,pw,11,'F');
-  pF(doc,7,'bold','times'); pC(doc,212,180,120);
-  doc.text('Loot Ledger', px+pw/2, py+7.5, {align:'center'});
-  if(info.name){pF(doc,3.8,'italic','times');pC(doc,154,123,42);doc.text(info.name,px+pw-m,py+9.5,{align:'right'});}
+  dndBand(doc,px,py,pw,'Loot Ledger', info.name);
 
   let cy=py+15;
 
@@ -778,15 +694,15 @@ function drawLootLedger(doc, px, py, pw, ph, info) {
   const cboxW=(iw-4)/5;
   coins.forEach(([l],i)=>{
     const cx2=px+m+i*(cboxW+1);
-    pD(doc,80,30,20,0.4); doc.rect(cx2,cy,cboxW,16);
     // Gold coin colour for GP
     if(i===1){doc.setFillColor(243,231,196);doc.rect(cx2,cy,cboxW,16,'F');}
-    pF(doc,3,'bold','times'); pC(doc,100,25,25);
+    pD(doc,80,30,20,0.4); doc.rect(cx2,cy,cboxW,16);
+    pF(doc,5.6,'bold','mono'); pC(doc,100,25,25);
     const [abbr,name]=l.split('\n');
-    doc.text(abbr, cx2+cboxW/2, cy+4, {align:'center'});
-    pF(doc,2.5,'normal','times'); pC(doc,140,110,60);
-    doc.text(name, cx2+cboxW/2, cy+7, {align:'center'});
-    pD(doc,180,155,110,0.2); doc.line(cx2+1,cy+9,cx2+cboxW-1,cy+9);
+    doc.text(abbr, cx2+cboxW/2, cy+4.4, {align:'center'});
+    pF(doc,4.2,'normal','mono'); pC(doc,140,110,60);
+    doc.text(name, cx2+cboxW/2, cy+7.6, {align:'center'});
+    pD(doc,180,155,110,0.2); doc.line(cx2+1,cy+10,cx2+cboxW-1,cy+10);
   });
   cy+=20;
 
@@ -797,8 +713,10 @@ function drawLootLedger(doc, px, py, pw, ph, info) {
   doc.setFillColor(40,25,10); doc.rect(px+m,cy,iw,5,'F');
   let hx2=px+m;
   icols.forEach(col=>{
-    pF(doc,3.2,'bold','times'); pC(doc,210,175,110);
-    doc.text(col.l,hx2+1,cy+3.6);
+    pF(doc,3.9,'bold','mono'); pC(doc,210,175,110);
+    let lab=col.l.toUpperCase();
+    while(doc.getTextWidth(lab)>col.w*iw-1.5&&lab.length>2) lab=lab.slice(0,-1);
+    doc.text(lab,hx2+1,cy+3.4);
     hx2+=col.w*iw;
   });
   cy+=5;
@@ -806,7 +724,7 @@ function drawLootLedger(doc, px, py, pw, ph, info) {
   const rowH2=(ph-(cy-py)-m-24)/12;
   const rH=Math.min(rowH2,8);
   for(let r=0;r<12;r++){
-    if(r%2===0){doc.setFillColor(250,245,230);doc.rect(px+m,cy,iw,rH,'F');}
+    if(r%2===0){doc.setFillColor(250,245,236);doc.rect(px+m,cy,iw,rH,'F');}
     let rx=px+m;
     icols.forEach((col,ci)=>{
       if(ci>0){pD(doc,200,175,130,0.12);doc.line(rx,cy,rx,cy+rH);}
@@ -827,62 +745,39 @@ function drawLootLedger(doc, px, py, pw, ph, info) {
     for(let s=0;s<3;s++){
       const sx=px+m+s*(slotW+2);
       pD(doc,139,26,26,0.4); doc.rect(sx,cy,slotW,10);
-      pF(doc,3.5,'italic','times'); pC(doc,100,80,45);
-      doc.text(`Slot ${s+1}`,sx+2,cy+4);
-      pD(doc,180,155,110,0.18);doc.line(sx+1,cy+7,sx+slotW-1,cy+7);
+      pF(doc,5,'normal','mono'); pC(doc,100,80,45);
+      doc.text(`Slot ${s+1}`,sx+2,cy+4.2);
+      pD(doc,180,155,110,0.18);doc.line(sx+1,cy+7.5,sx+slotW-1,cy+7.5);
     }
   }
 
-  pF(doc,3.5,'italic','times'); pC(doc,160,130,80);
-  doc.text('D&D Field Manual · Loot Ledger', px+pw/2, py+ph-m+1, {align:'center'});
+  dndFooter(doc,px,py,pw,ph,'Loot Ledger');
 }
 
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
 function drawRegularLayout(doc, drawFn, panelData) {
-  // 2-up layout: 2 full-height panels side by side (left + right)
-  // Each panel = 110mm wide × 210mm tall
-  // Split is vertical down the middle — fold at 110mm, cut at 220mm
-  const W=297, H=210, colW=110;
+  // 2-up layout: 2 full-height panels (110mm x 210mm) side by side; fold at 110mm, cut at 220mm
+  const colW=110, H=210;
   [0,1].forEach(col => {
     const d = panelData[col];
     if(d) drawFn(doc, col*colW, 0, colW, H, d);
   });
-  // Fold line at 110mm
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-  doc.setLineDashPattern([2,1.5],0); doc.line(colW,0,colW,H);
-  // Cut line at 220mm
-  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(2*colW,0,2*colW,H);
-  doc.setLineDashPattern([],0);
-  // Labels in waste strip
-  doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,110,60);
-  doc.text('--- fold', 2*colW+2, H/2-4);
-  doc.text('... cut',  2*colW+2, H/2);
-  // Waste strip shade
-  doc.setFillColor(220,210,185); doc.setGState(new doc.GState({opacity:0.25}));
-  doc.rect(2*colW,0,W-2*colW,H,'F');
-  doc.setGState(new doc.GState({opacity:1}));
+  PDFKit.marks(doc, 'regular', { label: 'D&D Field Manual' });
 }
 
 function buildDoc() {
   const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  PDFKit.register(doc);
   const info = getChar();
-  let first = true;
 
   // Cover page first
   drawCoverPage(doc, info);
-  first = false;
 
   // Page 2: character sheet left + character notes right
   doc.addPage();
   drawCharSheet(doc, 0, 0, 110, 210, info);
   drawCharBack(doc, 110, 0, 110, 210, info);
-  // Fold/cut lines only
-  doc.setDrawColor(100,100,100); doc.setLineWidth(0.25);
-  doc.setLineDashPattern([2,1.5],0); doc.line(110,0,110,210);
-  doc.setLineDashPattern([0.8,2],0); doc.setDrawColor(80,80,80); doc.line(220,0,220,210);
-  doc.setLineDashPattern([],0);
-  doc.setFont('times','italic'); doc.setFontSize(3.8); doc.setTextColor(140,110,60);
-  doc.text('--- fold', 222, 101); doc.text('... cut', 222, 106);
+  PDFKit.marks(doc, 'regular', { label: 'D&D Field Manual' });
 
   // Other insert types: 2-up per sheet
   const others = [
@@ -919,6 +814,7 @@ document.getElementById('generateBtn').addEventListener('click', async()=>{
   await new Promise(r=>setTimeout(r,80));
   setProgress(95,'Binding the manual...');
   await new Promise(r=>setTimeout(r,80));
+  await PDFKit.preload();
   const doc=buildDoc();
   const name=(getChar().name||'adventurer').replace(/[^a-z0-9]/gi,'-').toLowerCase();
   setProgress(100,'Ready!');

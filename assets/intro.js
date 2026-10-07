@@ -144,6 +144,7 @@ window.StudioIntro = (function () {
 
   // Load this tool's content, then wire everything up.
   function start() {
+    if (document.documentElement.classList.contains('embed')) return;   // no explainer inside the notebook builder
     const nav = document.querySelector('nav.topbar');
     const key = nav && nav.getAttribute('data-tool');
     if (!key) return;

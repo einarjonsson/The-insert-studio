@@ -33,6 +33,7 @@
     <h1>Build your <em>own notebook.</em></h1>
     <p>Pick as many inserts as you like (puzzles, planners, game pages), tune each one, and make them all in <strong>one print-ready PDF</strong>.</p>
     <button class="btn-gold" id="openBtn" type="button">Open the notebook <span aria-hidden="true">→</span></button>
+    <div class="leather" role="radiogroup" aria-label="Leather colour"><span class="fld-l">Leather <span class="swatch-name" data-leather-name></span></span><div class="swatches" data-swatches></div></div>
   </header>
 
   <div class="desk">
@@ -71,14 +72,14 @@
       <!-- the cover: leather outside, lining + settings inside -->
       <div class="nb-cover" id="cover">
         <div class="face front" id="coverFront" role="button" tabindex="0" aria-label="Open the notebook">
-          <div class="stitch" aria-hidden="true"></div>
           <div class="emboss">
             <span class="foil small">Traveler&rsquo;s Notebook</span>
             <span class="foil title" id="coverTitle">My Notebook</span>
             <span class="foil rule" aria-hidden="true"></span>
             <span class="foil small">The Insert Studio</span>
           </div>
-          <div class="elastic" aria-hidden="true"><span class="charm">I</span></div>
+          <div class="elastic" aria-hidden="true"><span class="charm"></span></div>
+          <div class="cord" aria-hidden="true"><i></i><i></i><i></i></div>
           <div class="edge-cue" aria-hidden="true"><i></i><i></i><i></i></div>
           <div class="hint">Drag the edge, or tap, to open</div>
           <div class="shade" aria-hidden="true"></div>
@@ -95,6 +96,11 @@
               <span class="fld-l">Title on the cover</span>
               <input id="titleIn" type="text" maxlength="28" value="My Notebook" autocomplete="off" spellcheck="false">
             </label>
+
+            <div class="fld" role="radiogroup" aria-label="Leather colour">
+              <span class="fld-l">Leather <span class="swatch-name" data-leather-name></span></span>
+              <div class="swatches" data-swatches></div>
+            </div>
 
             <fieldset class="fld">
               <legend class="fld-l">Notebook size</legend>

@@ -6,6 +6,7 @@
 <title>TN Word Search Generator</title>
 <script src="../assets/jspdf.umd.min.js"></script>
 <script src="../assets/pdf-kit.js"></script>
+<script src="../assets/seed.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -167,6 +168,12 @@
         </div>
       </div>
 
+      <!-- Seed -->
+      <div class="section">
+        <div class="section-title">Seed</div>
+        <div id="seedBox"></div>
+      </div>
+
       <!-- Printer -->
       <div class="section">
         <div class="section-title">Printer</div>
@@ -315,19 +322,19 @@ function generateWordSearch(words, gridSize, difficulty) {
   const dirs = getDirections(difficulty);
 
   // Shuffle words and try to place them
-  const shuffled = [...words].sort(() => Math.random() - 0.5);
+  const shuffled = [...words].sort(() => Seed.random() - 0.5);
   const toPlace = shuffled.slice(0, 15);
 
   for (const word of toPlace) {
     let success = false;
     const attempts = 200;
     for (let a = 0; a < attempts && !success; a++) {
-      const dir = dirs[Math.floor(Math.random() * dirs.length)];
+      const dir = dirs[Math.floor(Seed.random() * dirs.length)];
       const [dr, dc] = dir;
       const maxR = gridSize - (dr > 0 ? word.length : 0) - (dr < 0 ? word.length - 1 : 0);
       const maxC = gridSize - (dc > 0 ? word.length : 0) - (dc < 0 ? word.length - 1 : 0);
-      const startR = Math.floor(Math.random() * (dr < 0 ? gridSize : maxR + 1));
-      const startC = Math.floor(Math.random() * (dc < 0 ? gridSize : maxC + 1));
+      const startR = Math.floor(Seed.random() * (dr < 0 ? gridSize : maxR + 1));
+      const startC = Math.floor(Seed.random() * (dc < 0 ? gridSize : maxC + 1));
       const adjStartR = dr < 0 ? startR + word.length - 1 : startR;
       const adjStartC = dc < 0 ? startC + word.length - 1 : startC;
 
@@ -353,13 +360,16 @@ function generateWordSearch(words, gridSize, difficulty) {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   for (let r = 0; r < gridSize; r++)
     for (let c = 0; c < gridSize; c++)
-      if (grid[r][c] === '') grid[r][c] = letters[Math.floor(Math.random() * 26)];
+      if (grid[r][c] === '') grid[r][c] = letters[Math.floor(Seed.random() * 26)];
 
   return { grid, words: placed };
 }
 
 // ── PDF Drawing ────────────────────────────────────────────────────────────────
 const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+let bookSeed = '';
+const seedUI = Seed.mount(document.getElementById('seedBox'));
+const seedLabel = () => 'The Insert Studio' + (bookSeed ? ' · Seed ' + bookSeed : '');
 
 function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph) {
   const { grid, words } = puzzle, C = PDFKit.COLORS;
@@ -369,7 +379,7 @@ function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph) {
     eyebrow: 'The Insert Studio · ' + CATEGORY_LABELS[getCategory()] + ' · ' + DIFF_LABEL[getDifficulty()],
     title: 'Word Search', accent: 'No. ' + number, number
   });
-  const bottom = PDFKit.footer(doc, ox, oy, pw, ph);
+  const bottom = PDFKit.footer(doc, ox, oy, pw, ph, { label: seedLabel() });
 
   const rowH = isPassport ? 3.6 : 4.0;
   const listRows = Math.ceil(words.length / 4);
@@ -490,12 +500,15 @@ generateBtn.addEventListener('click', async () => {
   await PDFKit.preload();
   await new Promise(r => setTimeout(r, 50));
 
+  bookSeed = Seed.begin(seedUI.value());
   const puzzles = [];
   for (let i = 0; i < total; i++) {
     setProgress(i/total*80, `Building puzzle ${i+1} of ${total}...`);
     await new Promise(r => setTimeout(r, 0));
+    Seed.at(bookSeed, i + 1);
     puzzles.push(generateWordSearch(wordList, gridSize, difficulty));
   }
+  Seed.free(); seedUI.used(bookSeed);
 
   setProgress(90, 'Building PDF...');
   await new Promise(r => setTimeout(r, 50));

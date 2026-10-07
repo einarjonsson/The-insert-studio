@@ -6,6 +6,7 @@
 <title>Nonogram Generator — The Insert Studio</title>
 <script src="../assets/jspdf.umd.min.js"></script>
 <script src="../assets/pdf-kit.js"></script>
+<script src="../assets/seed.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <link rel="stylesheet" href="../assets/tokens.css">
@@ -38,12 +39,6 @@
 .count-val { font-family: 'Playfair Display', serif; font-size: 1.5rem; width: 52px; text-align: center; border: 1.5px solid var(--rule); background: var(--warm); padding: 2px; outline: none; color: var(--accent); -moz-appearance: textfield; }
 .count-val::-webkit-inner-spin-button { -webkit-appearance: none; }
 /* Seed */
-.seed-row { display: flex; gap: 8px; align-items: center; }
-.seed-input { flex: 1; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--ink); border: 1.5px solid var(--rule); background: var(--warm); padding: 8px 10px; outline: none; transition: border-color 0.12s; }
-.seed-input:focus { border-color: var(--accent); }
-.seed-input::placeholder { color: var(--muted); }
-.seed-roll { padding: 8px 12px; border: 1.5px solid var(--rule); background: var(--warm); cursor: pointer; font-size: 0.7rem; transition: all 0.12s; }
-.seed-roll:hover { border-color: var(--accent); background: var(--accent); color: white; }
 /* Duplex */
 .duplex-banner.ok { background: #f0f7f0; border-color: #2a5a3a; color: #1a3a2a; }
 /* Difficulty badge */
@@ -145,11 +140,9 @@
 
   <!-- Seed -->
   <div class="section">
-    <div class="section-title">Seed (Reproducible Puzzles)</div>
-    <div class="seed-row">
-      <input type="text" class="seed-input" id="seedInput" placeholder="e.g. 42 or leave blank" oninput="regenerate()">
-      <button class="seed-roll" onclick="rollSeed()">🎲 Roll</button>
-    </div>
+    <div class="section-title">Seed</div>
+    <div id="seedBox"></div>
+  </div>
   </div>
 
   <!-- Printer -->
@@ -243,16 +236,11 @@ function mulberry32(seed) {
   };
 }
 
-function getSeed() {
-  const v = document.getElementById('seedInput').value.trim();
-  if (!v) return Math.floor(Math.random() * 999999);
-  return parseInt(v) || v.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
-}
-
-function rollSeed() {
-  document.getElementById('seedInput').value = Math.floor(Math.random() * 99999);
-  regenerate();
-}
+let bookSeed = '';
+const seedUI = Seed.mount(document.getElementById('seedBox'), { onChange: () => regenerate() });
+const seedLabel = () => 'The Insert Studio' + (bookSeed ? ' · Seed ' + bookSeed : '');
+// live preview: the typed seed, or a fresh random one each time
+function getSeed() { return Seed.num(Seed.begin(seedUI.value())); }
 
 // ── Grid generation ───────────────────────────────────────────────────────────
 function getDensityTarget(rng) {
@@ -391,7 +379,7 @@ function drawNonogramPDF(doc, px, py, pw, ph, grid, puzzleNum, showSolution) {
         accent: showSolution ? 'Solution' : `No. ${puzzleNum}`, number: puzzleNum }
     : { eyebrow: `The Insert Studio · ${cols}×${rows} · ${diff.label}`, title: 'Nonogram',
         accent: showSolution ? 'Solution' : '' });
-  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number: opts.numbers && showSolution ? puzzleNum : null });
+  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number: opts.numbers && showSolution ? puzzleNum : null, label: seedLabel() });
 
   const m = 6;
   const availW = pw - m*2;
@@ -575,7 +563,9 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
   document.getElementById('progress').classList.add('visible');
   const count = parseInt(document.getElementById('countVal').value) || 4;
   const {cols,rows} = getGridDims();
-  const baseSeed = getSeed();
+  bookSeed = Seed.begin(seedUI.value());
+  const baseSeed = Seed.num(bookSeed);
+  seedUI.used(bookSeed);
 
   const allGrids = [];
   for (let i=0; i<count; i++) {

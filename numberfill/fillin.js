@@ -3,7 +3,8 @@
 (function (root) {
   'use strict';
 
-  const rnd = (n) => Math.floor(Math.random() * n);
+  const rand = () => (root.Seed ? root.Seed.random() : Math.random());   // seedable
+  const rnd = (n) => Math.floor(rand() * n);
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
   // Difficulty -> longest number allowed (in digits). Grid size also grows with difficulty (see GRID).

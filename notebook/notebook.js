@@ -39,19 +39,22 @@
   // One number, p (0 = shut ... 1 = open), drives the whole scene: the cover swings round the
   // spine, the notebook slides to centre, light and shadow follow, the headline fades.
   // Clicking animates p; dragging the cover's edge sets p straight from the pointer.
-  const ANGLE = 178;
+  const ANGLE = 180;
   let p = 0, raf = 0, drag = null, unhooked = false;
 
   const shiftPx = (q) => {                                  // how far the notebook travels sideways
     if (mobileMQ.matches) return 0;
     const closed = Math.min(window.innerWidth * 0.22, 300), open = nb.offsetWidth / 2;
-    return closed + (open - closed) * q;
+    return Math.round(closed + (open - closed) * q);
   };
 
   function render(q) {
     p = Math.max(0, Math.min(1, q));
     const rad = ANGLE * p * Math.PI / 180;
-    cover.style.transform = `translateZ(${(48 * Math.sin(Math.PI * p)).toFixed(1)}px) rotateY(${(-ANGLE * p).toFixed(2)}deg)`;
+    // fully open: lay the inside cover flat (no 3D layer), so its text is drawn pixel-sharp
+    const rest = p >= 0.999;
+    cover.classList.toggle('rest', rest);
+    cover.style.transform = rest ? 'translateX(-100%)' : `translateZ(${(48 * Math.sin(Math.PI * p)).toFixed(1)}px) rotateY(${(-ANGLE * p).toFixed(2)}deg)`;
     nb.style.transform = mobileMQ.matches ? '' : `translateX(${shiftPx(p).toFixed(1)}px)`;
     lede.style.opacity = String(Math.max(0, 1 - p * 2.4).toFixed(3));
     lede.style.transform = mobileMQ.matches ? '' : `translate(${(-70 * p).toFixed(1)}px, -50%)`;

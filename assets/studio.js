@@ -68,3 +68,11 @@
     document.body.appendChild(box);
   });
 })();
+
+// Load the "What is this?" intro (styles + engine) on tool pages.
+(function () {
+  if (!document.querySelector('nav.topbar')) return;
+  var base = (document.currentScript && document.currentScript.src || '').replace(/studio\.js.*$/, '');
+  var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = base + 'intro.css'; document.head.appendChild(css);
+  var js = document.createElement('script'); js.src = base + 'intro.js'; document.head.appendChild(js);
+})();

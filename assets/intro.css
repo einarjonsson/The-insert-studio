@@ -116,6 +116,7 @@ html.intro-open, html.intro-open body { overflow: hidden; }
 
 /* ── Phones ── */
 @media (max-width: 860px) {
+  .intro-btn { min-height: 44px; }
   .intro { padding: 0; align-items: stretch; }
   .intro-sheet { width: 100%; border-radius: 0; }
   .intro-hero { border-radius: 0; min-height: 0; padding: 64px 24px 0; }
@@ -131,6 +132,11 @@ html.intro-open, html.intro-open body { overflow: hidden; }
   .intro-cta span { display: none; }
   .intro-cta .intro-go { width: 100%; }
   .header-actions { justify-content: flex-start; }
+}
+@media (max-width: 600px) {
+  .header-actions { flex-wrap: nowrap; gap: 8px; width: 100%; }
+  .intro-btn { letter-spacing: 0.06em; padding-right: 12px; gap: 8px; font-size: 0.6rem; flex: 0 0 auto; }
+  .header-actions .header-tag { min-width: 0; padding: 4px 8px; font-size: 0.5rem; letter-spacing: 0.06em; white-space: normal; line-height: 1.3; }
 }
 @media (prefers-reduced-motion: reduce) { .intro, .intro-sheet, .ill .float, .ill .float2, .ill .twinkle, .ill .twinkle2, .ill .spin { animation: none !important; } }
 @media print { .intro, .intro-btn { display: none !important; } }

@@ -227,7 +227,7 @@ main { display: grid; grid-template-columns: var(--panel-w) minmax(0, 1fr); min-
 @media (max-width: 600px) {
   /* tool switcher replaces the inline links */
   .topbar { gap: 8px; }
-  .topbar-menu { display: inline-flex; align-items: center; gap: 8px; font: 500 0.62rem 'DM Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-lt); background: none; border: 1px solid rgba(184,134,11,0.45); border-radius: 999px; padding: 0 14px; min-height: 36px; }
+  .topbar-menu { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; max-width: 62vw; overflow: hidden; font: 500 0.62rem 'DM Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-lt); background: none; border: 1px solid rgba(184,134,11,0.45); border-radius: 999px; padding: 0 14px; min-height: 36px; }
   .topbar-menu::after { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s; }
   .topbar-menu[aria-expanded="true"]::after { transform: rotate(-135deg) translate(-2px, -2px); }
   .topbar-drawer { position: fixed; top: var(--topbar-h); left: 0; right: 0; z-index: 190; background: #1a120a; border-bottom: 1px solid rgba(184,134,11,0.3); padding: 8px 16px 16px; box-shadow: 0 16px 30px rgba(0,0,0,0.4); }

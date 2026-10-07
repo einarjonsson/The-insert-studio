@@ -159,6 +159,39 @@
   }
   mobileMQ.addEventListener('change', placeSettings);
 
+  // ── leather colours ───────────────────────────────────────────────────────
+  const LEATHERS = [
+    { key: 'chocolate', name: 'Chocolate', l: ['#7a4a2a', '#5a3219', '#3b1e0d'], band: '#14110e', hint: 'rgba(246,224,160,0.85)', dark: true,  pdf: [122, 46, 14] },
+    { key: 'camel',     name: 'Camel',     l: ['#dba96a', '#c08846', '#97622b'], band: '#3b2a1d', hint: 'rgba(255,240,215,0.85)',      dark: true,  pdf: [151, 98, 43] },
+    { key: 'black',     name: 'Black',     l: ['#3d4045', '#26282c', '#131416'], band: '#d9822b', hint: 'rgba(255,255,255,0.6)',  dark: false, pdf: [217, 130, 43] },
+    { key: 'navy',      name: 'Navy',      l: ['#456287', '#2d4466', '#1a2a45'], band: '#e6d3a8', hint: 'rgba(255,255,255,0.65)', dark: false, pdf: [45, 68, 102] },
+    { key: 'olive',     name: 'Olive',     l: ['#82915a', '#5e6e3e', '#3c4826'], band: '#2a2118', hint: 'rgba(255,255,255,0.65)', dark: false, pdf: [94, 110, 62] },
+    { key: 'burgundy',  name: 'Burgundy',  l: ['#9a3445', '#72222f', '#4a1520'], band: '#1a1210', hint: 'rgba(255,255,255,0.65)', dark: false, pdf: [114, 34, 47] }
+  ];
+  function applyLeather(key, save) {
+    const lt = LEATHERS.find((x) => x.key === key) || LEATHERS[0];
+    state.leather = lt;
+    const s = nb.style;
+    s.setProperty('--l1', lt.l[0]); s.setProperty('--l2', lt.l[1]); s.setProperty('--l3', lt.l[2]);
+    s.setProperty('--band', lt.band); s.setProperty('--hint', lt.hint);
+    s.setProperty('--deb', lt.dark ? 'rgba(0,0,0,0.42)' : 'rgba(255,255,255,0.34)');
+    s.setProperty('--debs', lt.dark ? '0 1px 0 rgba(255,225,180,0.16)' : '0 -1px 0 rgba(0,0,0,0.45)');
+    document.querySelectorAll('.swatch').forEach((b) => b.setAttribute('aria-checked', b.dataset.key === lt.key ? 'true' : 'false'));
+    document.querySelectorAll('[data-leather-name]').forEach((n) => { n.textContent = '· ' + lt.name; });
+    if (save) { try { localStorage.setItem('insertStudio.leather', lt.key); } catch (e) { /* fine */ } }
+  }
+  document.querySelectorAll('[data-swatches]').forEach((box) => {
+    LEATHERS.forEach((lt) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'swatch'; b.dataset.key = lt.key; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', lt.name); b.title = lt.name;
+      b.style.setProperty('--l1', lt.l[0]); b.style.setProperty('--l3', lt.l[2]);
+      b.addEventListener('click', (e) => { e.stopPropagation(); applyLeather(lt.key, true); });
+      box.appendChild(b);
+    });
+  });
+  let savedLeather = null; try { savedLeather = localStorage.getItem('insertStudio.leather'); } catch (e) { /* fine */ }
+  applyLeather(savedLeather, false);
+
   // ── settings on the inside cover ──────────────────────────────────────────
   const titleIn = $('#titleIn');
   titleIn.addEventListener('input', () => {
@@ -356,7 +389,7 @@
     await PDFKit.preload();
     const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     PDFKit.register(doc);
-    PDFKit.cover(doc, { kicker: 'Traveler’s Notebook', title: state.title, subtitle: `${state.items.length} insert${state.items.length > 1 ? 's' : ''}` });
+    PDFKit.cover(doc, { kicker: 'Traveler’s Notebook', title: state.title, subtitle: `${state.items.length} insert${state.items.length > 1 ? 's' : ''}`, accentColor: state.leather.pdf });
     PDFKit.marks(doc, 'regular', { label: 'Cover' });
     return new Uint8Array(doc.output('arraybuffer'));
   }

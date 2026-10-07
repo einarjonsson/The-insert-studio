@@ -3,7 +3,7 @@
 //
 //   await PDFKit.preload();            // once, before building documents (fetches fonts)
 //   const doc = new jsPDF(...); PDFKit.register(doc);
-//   PDFKit.header(doc, ox, oy, pw, { eyebrow, title, accent, number });  // -> y where content may start
+//   PDFKit.header(doc, ox, oy, pw, { eyebrow, title, accent });  // -> y where content may start
 //   PDFKit.footer(doc, ox, oy, pw, ph, { number });
 //   PDFKit.marks(doc, 'regular' | 'passport', { label, title, horizontal });
 //   PDFKit.cover(doc, { kicker, title, subtitle, accent });
@@ -110,7 +110,7 @@ window.PDFKit = (function () {
 
   // ── Panel header / footer ────────────────────────────────────────────────────
   const M = 6; // panel side margin for header and footer
-  // opts: { eyebrow, title, accent, number, accentColor }. Returns the y (mm) where content may begin.
+  // opts: { eyebrow, title, accent, accentColor }. Returns the y (mm) where content may begin.
   function header(doc, ox, oy, pw, opts) {
     const accentColor = opts.accentColor || COLORS.rust;
     const x = ox + M;
@@ -127,11 +127,6 @@ window.PDFKit = (function () {
     if (opts.accent) { set(doc, serif(), 'bolditalic', size, accentColor); doc.text(opts.accent, tx, ty); }
     // gold rule
     doc.setDrawColor(...COLORS.gold); doc.setLineWidth(0.5); doc.line(x, oy + 13.2, x + 16, oy + 13.2);
-    // panel number, right
-    if (opts.number != null) {
-      set(doc, serif(), 'italic', 10, accentColor);
-      doc.text(String(opts.number).padStart(2, '0'), ox + pw - M, oy + 10.4, { align: 'right' });
-    }
     return oy + 15.8;
   }
 

@@ -391,7 +391,7 @@ function drawNonogramPDF(doc, px, py, pw, ph, grid, puzzleNum, showSolution) {
         accent: showSolution ? 'Solution' : `No. ${puzzleNum}`, number: puzzleNum }
     : { eyebrow: `The Insert Studio · ${cols}×${rows} · ${diff.label}`, title: 'Nonogram',
         accent: showSolution ? 'Solution' : '' });
-  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number: opts.numbers ? puzzleNum : null });
+  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number: opts.numbers && showSolution ? puzzleNum : null });
 
   const m = 6;
   const availW = pw - m*2;

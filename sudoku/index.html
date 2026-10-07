@@ -78,21 +78,21 @@
             <input type="radio" name="difficulty" value="easy">
             <span class="radio-btn">
               <span class="rb-title">Easy</span>
-              <span class="rb-sub">36 removed</span>
+              <span class="rb-sub">40 clues</span>
             </span>
           </label>
           <label class="radio-option">
             <input type="radio" name="difficulty" value="medium" checked>
             <span class="radio-btn">
               <span class="rb-title">Medium</span>
-              <span class="rb-sub">45 removed</span>
+              <span class="rb-sub">32 clues</span>
             </span>
           </label>
           <label class="radio-option">
             <input type="radio" name="difficulty" value="hard">
             <span class="radio-btn">
               <span class="rb-title">Hard</span>
-              <span class="rb-sub">54 removed</span>
+              <span class="rb-sub">26 clues</span>
             </span>
           </label>
         </div>
@@ -393,12 +393,48 @@ function solve(board) {
   }
   return true;
 }
+// Counts solutions (stops at `limit`) using bitmasks and "fewest candidates first".
+function countSolutions(board, limit) {
+  const rows = Array(9).fill(0), cols = Array(9).fill(0), boxes = Array(9).fill(0);
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+    const v = board[r][c]; if (v) { const bit = 1 << v; rows[r] |= bit; cols[c] |= bit; boxes[Math.floor(r/3)*3 + Math.floor(c/3)] |= bit; }
+  }
+  let found = 0;
+  (function go() {
+    let br = -1, bc = -1, best = 10, bmask = 0;
+    for (let r = 0; r < 9 && best > 1; r++) for (let c = 0; c < 9; c++) {
+      if (board[r][c]) continue;
+      const mask = ~(rows[r] | cols[c] | boxes[Math.floor(r/3)*3 + Math.floor(c/3)]) & 0x3fe;
+      let n = 0; for (let m = mask; m; m &= m - 1) n++;
+      if (n < best) { best = n; br = r; bc = c; bmask = mask; if (n <= 1) break; }
+    }
+    if (br < 0) { found++; return; }
+    const bi = Math.floor(br/3)*3 + Math.floor(bc/3);
+    for (let v = 1; v <= 9 && found < limit; v++) {
+      const bit = 1 << v; if (!(bmask & bit)) continue;
+      board[br][bc] = v; rows[br] |= bit; cols[bc] |= bit; boxes[bi] |= bit;
+      go();
+      board[br][bc] = 0; rows[br] &= ~bit; cols[bc] &= ~bit; boxes[bi] &= ~bit;
+    }
+  })();
+  return found;
+}
+
+// How many numbers are printed in the grid. Fewer = harder. Every puzzle has exactly one solution.
+const CLUES = { easy: 40, medium: 32, hard: 26 };
 function generateSudoku(difficulty) {
-  const removals = difficulty === "easy" ? 36 : difficulty === "hard" ? 54 : 45;
+  const target = CLUES[difficulty] || CLUES.medium;
   const board = Array.from({length:9}, ()=>Array(9).fill(0));
   solve(board);
   const cells = []; for (let r=0;r<9;r++) for (let c=0;c<9;c++) cells.push([r,c]);
-  shuffle(cells); for (const [r,c] of cells.slice(0, removals)) board[r][c]=0;
+  shuffle(cells);
+  let clues = 81;
+  for (const [r, c] of cells) {
+    if (clues <= target) break;
+    const v = board[r][c];
+    board[r][c] = 0;
+    if (countSolutions(board, 2) === 1) clues--; else board[r][c] = v;   // would allow a 2nd solution: put it back
+  }
   return board;
 }
 
@@ -410,9 +446,9 @@ function drawPanel(doc, px, py, pw, ph, puzzle, number) {
   const label = puzzleLabel(number);                       // "Sudoku 3" | "No. 3" | "III"
   const accent = /^Sudoku\s/.test(label) ? 'No. ' + number : label;
   const top = PDFKit.header(doc, px, py, pw, {
-    eyebrow: 'The Insert Studio · ' + DIFF_LABEL[getDifficulty()], title: 'Sudoku', accent, number
+    eyebrow: 'The Insert Studio · ' + DIFF_LABEL[getDifficulty()], title: 'Sudoku', accent
   });
-  const bottom = PDFKit.footer(doc, px, py, pw, ph, { number });
+  const bottom = PDFKit.footer(doc, px, py, pw, ph);
   const notesH = getNotes() === 'notes' ? 14 : 0;
   const size = Math.min(pw - 14, bottom - top - notesH - 2);
   const ox = px + (pw - size) / 2, oy = top + (bottom - top - notesH - size) / 2;

@@ -1,4 +1,19 @@
 // Renders the shared top bar. Usage: <nav class="topbar" data-tool="sudoku"></nav>
+// Embed mode (?embed): the notebook builder shows a tool's settings inside its own page.
+// Chrome (top bar, header, generate button) is hidden by CSS; the builder drives generation.
+(function () {
+  if (!/[?&]embed\b/.test(location.search)) return;
+  document.documentElement.classList.add('embed');
+  function tidy() {
+    // the builder owns notebook size, cover and printing, so hide those controls here
+    var none = document.querySelector('input[name="cover"][value="none"]');
+    if (none) { none.checked = true; var g = none.closest('.radio-group'); if (g) g.style.display = 'none'; }
+    document.querySelectorAll('input[name="size"], input[name="nbsize"]').forEach(function (i) { var s = i.closest('.section'); if (s) s.style.display = 'none'; });
+    var d = document.getElementById('duplexBanner'); if (d) { var s2 = d.closest('.section'); if (s2) s2.style.display = 'none'; }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tidy); else tidy();
+})();
+
 (function () {
   // collapsible settings sections
   document.querySelectorAll('.settings-panel .section > .section-title').forEach(function (h) {
@@ -35,11 +50,11 @@
     box.insertBefore(eb, box.firstChild);
   }
   var current = TOOLS.filter(function (x) { return x[0] === cur; })[0];
-  nav.innerHTML = '<a href="../">← The Insert Studio</a><div class="topbar-tools">' + links + '</div>' +
+  nav.innerHTML = '<a href="../">← The Insert Studio</a><div class="topbar-tools">' + links + '<a class="topbar-nb" href="../notebook/">★ Build a notebook</a></div>' +
     '<button class="topbar-menu" type="button" aria-expanded="false" aria-controls="toolDrawer">' + (current ? current[1].replace('&', '&amp;') : 'Tools') + '</button>';
   var drawer = document.createElement('div');
   drawer.className = 'topbar-drawer'; drawer.id = 'toolDrawer';
-  drawer.innerHTML = '<a href="../">← All tools</a>' + links;
+  drawer.innerHTML = '<a href="../">← All tools</a>' + links + '<a class="topbar-nb" href="../notebook/">★ Build a notebook</a>';
   document.body.appendChild(drawer);
   var btn = nav.querySelector('.topbar-menu');
   btn.addEventListener('click', function () {

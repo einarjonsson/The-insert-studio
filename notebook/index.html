@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build a Notebook — The Insert Studio</title>
+<meta name="description" content="Mix sudoku, word search, habit trackers, D&D pages and more, then make them all in one print-ready PDF for your Traveler's Notebook.">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,800;0,900;1,400;1,700;1,800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="notebook.css">
+<script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
+<script src="../assets/pdf-lib.min.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/favicon.svg" alt="">The Insert Studio</a>
+    <div class="nav-links">
+      <a href="../#tools">All tools</a>
+      <a href="./" aria-current="page">Build a notebook</a>
+    </div>
+  </div>
+</nav>
+
+<main class="stage" id="stage" data-state="closed">
+
+  <!-- headline: shown while the notebook is closed -->
+  <header class="lede" id="lede">
+    <div class="eyebrow">New · Mix &amp; match</div>
+    <h1>Build your <em>own notebook.</em></h1>
+    <p>Pick as many inserts as you like (puzzles, planners, game pages), tune each one, and make them all in <strong>one print-ready PDF</strong>.</p>
+    <button class="btn-gold" id="openBtn" type="button">Open the notebook <span aria-hidden="true">→</span></button>
+  </header>
+
+  <div class="desk">
+    <div class="nb" id="nb">
+      <div class="nb-shadow" aria-hidden="true"></div>
+
+      <!-- right-hand page: the builder -->
+      <section class="nb-page" id="pageRight" aria-label="Your inserts" inert>
+        <div class="ribbon" aria-hidden="true"></div>
+        <div class="page-scroll" id="pageScroll">
+          <div class="page-eyebrow">Step 2</div>
+          <h2 class="page-h">Pick your <em>inserts.</em></h2>
+          <p class="page-sub">Tap an insert to add it. Add the same one twice if you want two different sets.</p>
+
+          <div class="shelf" id="shelf" role="list"></div>
+
+          <div class="list-head">
+            <div class="page-eyebrow">Step 3</div>
+            <h3 class="page-h2">In your notebook <span id="count">0</span></h3>
+          </div>
+          <div class="cords" id="cords">
+            <ol class="booklets" id="booklets"></ol>
+            <div class="empty" id="empty">
+              <svg viewBox="0 0 120 80" aria-hidden="true"><rect x="22" y="10" width="76" height="60" rx="4" fill="none" stroke="#c9b98f" stroke-width="2" stroke-dasharray="5 5"/><path d="M60 28v24M48 40h24" stroke="#b8860b" stroke-width="3" stroke-linecap="round"/></svg>
+              <p>Nothing in here yet.<br>Add an insert from the shelf above.</p>
+            </div>
+          </div>
+        </div>
+        <footer class="page-foot">
+          <div class="tally" id="tally" aria-live="polite">Add an insert to begin</div>
+          <button class="btn-make" id="makeBtn" type="button" disabled>Make my PDF <span aria-hidden="true">→</span></button>
+        </footer>
+      </section>
+
+      <!-- the cover: leather outside, lining + settings inside -->
+      <div class="nb-cover" id="cover">
+        <div class="face front" id="coverFront" role="button" tabindex="0" aria-label="Open the notebook">
+          <div class="stitch" aria-hidden="true"></div>
+          <div class="emboss">
+            <span class="foil small">Traveler&rsquo;s Notebook</span>
+            <span class="foil title" id="coverTitle">My Notebook</span>
+            <span class="foil rule" aria-hidden="true"></span>
+            <span class="foil small">The Insert Studio</span>
+          </div>
+          <div class="elastic" aria-hidden="true"><span class="charm">I</span></div>
+          <div class="hint">Tap to open</div>
+        </div>
+
+        <div class="face back">
+          <div class="lining" aria-hidden="true"></div>
+          <section class="settings-card" aria-label="Notebook settings">
+            <div class="page-eyebrow">Step 1</div>
+            <h2 class="page-h">Shape your <em>notebook.</em></h2>
+
+            <label class="fld">
+              <span class="fld-l">Title on the cover</span>
+              <input id="titleIn" type="text" maxlength="28" value="My Notebook" autocomplete="off" spellcheck="false">
+            </label>
+
+            <fieldset class="fld">
+              <legend class="fld-l">Notebook size</legend>
+              <div class="sizes" role="radiogroup">
+                <label class="size"><input type="radio" name="nbsize" value="regular" checked>
+                  <span class="size-card"><svg viewBox="0 0 44 64" aria-hidden="true"><rect x="8" y="4" width="28" height="56" rx="3" class="body"/><rect x="31" y="4" width="3" height="56" class="band"/></svg><b>Regular</b><i>110 × 210 mm</i></span></label>
+                <label class="size"><input type="radio" name="nbsize" value="passport">
+                  <span class="size-card"><svg viewBox="0 0 44 64" aria-hidden="true"><rect x="9" y="14" width="26" height="36" rx="3" class="body"/><rect x="29" y="14" width="3" height="36" class="band"/></svg><b>Passport</b><i>98 × 134 mm</i></span></label>
+              </div>
+              <p class="note" id="sizeNote" hidden></p>
+            </fieldset>
+
+            <fieldset class="fld">
+              <legend class="fld-l">Printing</legend>
+              <div class="seg" role="radiogroup">
+                <label><input type="radio" name="mode" value="duplex" checked><span><b>Both sides</b><i>My printer does duplex</i></span></label>
+                <label><input type="radio" name="mode" value="manual"><span><b>Flip by hand</b><i>Two PDFs, one per side</i></span></label>
+              </div>
+            </fieldset>
+
+            <label class="check" id="coverRow">
+              <input id="coverIn" type="checkbox" checked>
+              <span class="box" aria-hidden="true"></span>
+              <span><b>Add a cover sheet</b><i>A framed front cover with your title</i></span>
+            </label>
+          </section>
+          <div class="pocket" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- insert settings (each insert's own page runs inside, live) -->
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+  <header class="drawer-head">
+    <div><div class="page-eyebrow" id="drawerKicker">Insert settings</div><h3 id="drawerTitle">Sudoku</h3></div>
+    <button class="btn-gold small" id="drawerDone" type="button">Done</button>
+  </header>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<!-- binding the PDF -->
+<div class="binding" id="binding" role="dialog" aria-modal="true" aria-labelledby="bindTitle" hidden>
+  <div class="binding-card">
+    <div class="bind-art" aria-hidden="true">
+      <svg viewBox="0 0 160 120"><g class="stack"><rect x="30" y="64" width="100" height="14" rx="3" fill="#4a2610"/><rect x="34" y="50" width="92" height="14" rx="3" fill="#b8860b"/><rect x="38" y="36" width="84" height="14" rx="3" fill="#7a2e0e"/><rect x="42" y="22" width="76" height="14" rx="3" fill="#fbf7ea" stroke="#1d160d" stroke-width="2"/></g><rect x="64" y="14" width="12" height="76" rx="3" fill="#1d160d" class="band"/></svg>
+    </div>
+    <h2 id="bindTitle">Binding your notebook…</h2>
+    <ul class="steps" id="bindSteps"></ul>
+    <div class="bar"><i id="bindBar"></i></div>
+    <div class="result" id="result" hidden>
+      <div class="result-stats" id="resultStats"></div>
+      <div class="result-actions" id="resultActions"></div>
+      <ol class="howto" id="howto"></ol>
+      <div class="result-links"><button type="button" id="backBtn">← Keep editing</button><button type="button" id="againBtn">Start a new notebook</button></div>
+    </div>
+    <p class="err" id="bindErr" hidden></p>
+  </div>
+</div>
+
+<script src="thumbs.js"></script>
+<script src="notebook.js"></script>
+</body>
+</html>

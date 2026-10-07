@@ -22,6 +22,7 @@ a { color: inherit; }
 .nav-links { display: flex; gap: 22px; font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; }
 .nav-links a { color: rgba(212,168,67,0.7); text-decoration: none; transition: color .15s; white-space: nowrap; }
 .nav-links a:hover { color: var(--gold-lt); }
+.nav-links .nav-new { color: var(--gold-lt); border-bottom: 1px solid rgba(212,168,67,0.5); }
 
 /* ── Hero ── */
 .hero { background: var(--spine); color: var(--paper); position: relative; overflow: hidden; }
@@ -78,6 +79,20 @@ section { padding: 88px 0; }
 @media (min-width: 1101px) { .grid { grid-template-columns: repeat(4, 1fr); } }
 @media (min-width: 701px) and (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
 
+
+/* ── Notebook builder teaser ── */
+.nbband { background: var(--spine); color: var(--paper); padding: 72px 0; position: relative; overflow: hidden; }
+.nbband::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-55deg, transparent, transparent 36px, rgba(255,255,255,0.016) 36px, rgba(255,255,255,0.016) 37px); }
+.nbband::after { content: ''; position: absolute; left: 4%; top: -40%; width: 46%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(212,168,67,0.2), transparent 62%); }
+.nbband-in { position: relative; z-index: 1; display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 56px; align-items: center; }
+.nbband-art { max-width: 300px; margin-inline: auto; transition: transform .4s; } .nbband-art:hover { transform: rotate(-3deg) scale(1.03); }
+.nbsvg { width: 100%; filter: drop-shadow(0 24px 30px rgba(0,0,0,0.55)); }
+.nbband h2 { font-family: 'Playfair Display', serif; font-weight: 900; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.02; letter-spacing: -0.02em; margin: 14px 0 18px; }
+.nbband h2 em { color: var(--gold-lt); }
+.nbband p { max-width: 50ch; font-size: 0.86rem; color: rgba(246,239,220,0.75); margin-bottom: 28px; }
+.nbband strong { color: var(--paper); font-weight: 500; }
+@media (max-width: 900px) { .nbband-in { grid-template-columns: 1fr; gap: 28px; text-align: center; } .nbband .eyebrow { justify-content: center; } .nbband .eyebrow::before { display: none; } .nbband p { margin-inline: auto; } .nbband { padding: 56px 0; } }
+
 /* ── How it works ── */
 .how { background: var(--cream); border-block: 1px solid var(--rule); }
 .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; counter-reset: s; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--warm-white); }
@@ -128,6 +143,7 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
   <div class="wrap">
     <a class="brand" href="./"><img src="assets/favicon.svg" alt="">The Insert Studio</a>
     <div class="nav-links">
+      <a href="notebook/" class="nav-new">Build a notebook</a>
       <a href="#tools">Tools</a>
       <a href="#how">How it works</a>
       <a href="https://github.com/einarjonsson">GitHub</a>
@@ -143,7 +159,7 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
       <p>Free, browser-based generators for printable Traveler's Notebook inserts. Pick a tool, customise it with a live preview, and download a print-ready PDF.</p>
       <div class="cta-row">
         <a class="btn btn-gold" href="#tools">Browse the tools →</a>
-        <a class="btn btn-ghost" href="#how">How to print</a>
+        <a class="btn btn-ghost" href="notebook/">Build a whole notebook</a>
       </div>
       <div class="stats">
         <div><b>8</b><small>Tools</small></div>
@@ -273,6 +289,34 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
   </div>
 </section>
 
+
+<section class="nbband" id="notebook">
+  <div class="wrap nbband-in">
+    <div class="nbband-art reveal" aria-hidden="true">
+      <svg viewBox="0 0 320 340" class="nbsvg">
+        <defs><linearGradient id="lthr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a4120"/><stop offset=".55" stop-color="#5a2e14"/><stop offset="1" stop-color="#3d1d0b"/></linearGradient></defs>
+        <g transform="rotate(5 160 170)">
+          <rect x="196" y="40" width="82" height="250" rx="5" fill="#fbf7ea" stroke="#1d160d" stroke-width="2.5"/><rect x="196" y="40" width="82" height="22" fill="#4d6a3f"/>
+          <rect x="204" y="60" width="86" height="250" rx="5" fill="#eee5cb" stroke="#1d160d" stroke-width="2.5" transform="rotate(4 247 185)"/><rect x="204" y="60" width="86" height="22" fill="#b8860b" transform="rotate(4 247 185)"/>
+          <rect x="60" y="30" width="200" height="280" rx="8" fill="url(#lthr)" stroke="#1d160d" stroke-width="2.5"/>
+          <rect x="72" y="42" width="176" height="256" rx="4" fill="none" stroke="#e8c97a" stroke-opacity=".55" stroke-width="2" stroke-dasharray="6 6"/>
+          <rect x="204" y="22" width="14" height="296" fill="#14100c"/>
+          <text x="128" y="156" text-anchor="middle" font-family="Playfair Display, serif" font-weight="900" font-size="26" fill="#e8c97a">My</text>
+          <text x="128" y="186" text-anchor="middle" font-family="Playfair Display, serif" font-weight="900" font-size="26" fill="#e8c97a">Notebook</text>
+          <path d="M96 202h64" stroke="#e8c97a" stroke-width="2"/>
+          <circle cx="211" cy="278" r="12" fill="#e8c97a"/><text x="211" y="283" text-anchor="middle" font-family="Playfair Display, serif" font-weight="900" font-size="14" fill="#4a2610">I</text>
+        </g>
+      </svg>
+    </div>
+    <div class="nbband-txt reveal">
+      <div class="eyebrow">New</div>
+      <h2>Make a whole notebook <em>in one go.</em></h2>
+      <p>Want a sudoku, a habit tracker and a D&amp;D character sheet in the same notebook? Pick as many inserts as you like, tune each one, and get <strong>a single PDF</strong> with a cover sheet, ready to print.</p>
+      <a class="btn btn-gold" href="notebook/">Build a notebook <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+</section>
+
 <section class="how" id="how">
   <div class="wrap">
     <div class="sec-head reveal">
@@ -307,6 +351,7 @@ footer .wrap { display: grid; grid-template-columns: 1.2fr 2fr; gap: 40px; }
       <a href="calligraphy/">Calligraphy Practice</a>
       <a href="nonogram/">Nonogram Puzzles</a>
       <a href="numberfill/">Number Fill-In</a>
+      <a href="notebook/">Build a notebook</a>
       <a href="https://github.com/einarjonsson">GitHub — einarjonsson</a>
       <a href="https://www.buymeacoffee.com/einarjonssi">Buy me a coffee</a>
     </div>

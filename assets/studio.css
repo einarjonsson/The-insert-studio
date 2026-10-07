@@ -31,6 +31,7 @@ body {
 .topbar a:hover { color: var(--gold-lt); }
 .topbar-tools { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; }
 .topbar-tools::-webkit-scrollbar { display: none; }
+.topbar-tools .topbar-nb, .topbar-drawer .topbar-nb { color: var(--gold-lt); font-weight: 500; }
 .topbar-tools a[aria-current="page"] { color: var(--gold-lt); border-bottom: 1px solid var(--gold-lt); }
 
 /* ── Page header: a quiet chapter opener ── */
@@ -242,5 +243,13 @@ main { display: grid; grid-template-columns: var(--panel-w) minmax(0, 1fr); min-
   .logo { font-size: 1.2rem; }
   .preview-panel { padding-top: 16px; }
 }
+
+
+/* ── Embed mode (inside the notebook builder) ── */
+html.embed .topbar, html.embed .spine, html.embed header, html.embed .topbar-drawer, html.embed .settings-footer, html.embed .intro-btn { display: none !important; }
+html.embed body { display: block; padding: 0; height: auto; min-height: 100vh; overflow: visible; background: var(--warm-white); }
+html.embed body::after { display: none; }
+@media (min-width: 901px) { html.embed body { height: 100vh; overflow: hidden; } html.embed main { height: 100vh; } }
+html.embed .settings-inner { padding-bottom: 28px; }
 
 @media print { .topbar, .spine { display: none; } body { padding: 0; } }

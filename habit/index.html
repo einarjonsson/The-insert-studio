@@ -98,7 +98,7 @@
             <div class="toggle on" id="toggle-notes"></div>
           </div>
           <div class="toggle-row" id="toggleStreak" onclick="toggle('streak')">
-            <div><div class="toggle-label">Streak Counter</div><div class="toggle-sub">Best streak column on the right</div></div>
+            <div><div class="toggle-label">Streak Counter</div><div class="toggle-sub">A box under each habit for its longest run</div></div>
             <div class="toggle on" id="toggle-streak"></div>
           </div>
         </div>
@@ -303,7 +303,7 @@ const HB_SAGE = PDFKit.COLORS.sage;
 const HB_TINT = [236, 241, 231];   // pale sage for weekend rows
 
 function drawHabitPage(doc, px, py, pw, ph, config, number) {
-  const { month, year, habits, font, showMood } = config;
+  const { month, year, habits, font, showMood, showStreak } = config;
   const C = PDFKit.COLORS;
   const days = getDaysInMonth(month, year);
   const habitCount = habits.length;
@@ -316,9 +316,10 @@ function drawHabitPage(doc, px, py, pw, ph, config, number) {
 
   const dayW = 7;    // day-number column
   const labelH = 9;  // habit name row height
-  const streakH = showMood ? 6 : 0;
+  const rowH = 6;                                                    // height of the mood / streak rows
+  const extraH = (showMood ? rowH + 1 : 0) + (showStreak ? rowH + 1 : 0);
   const availW = pw - m*2 - dayW;
-  const availH = bottom - top - labelH - streakH - 1;
+  const availH = bottom - top - labelH - extraH - 1;
   const cellW = availW / habitCount;
   const cellH = Math.min(availH / days, 6);
   const actualGridH = cellH * days;
@@ -373,16 +374,19 @@ function drawHabitPage(doc, px, py, pw, ph, config, number) {
   doc.setDrawColor(...C.ink); doc.setLineWidth(0.4);
   doc.rect(gx, gy, habitCount * cellW, actualGridH);
 
-  // ── Mood row ──
-  if (showMood && streakH > 0) {
-    const sy = gy + actualGridH + 1;
+  // ── Mood row and streak row: one box per habit under the grid ──
+  let sy = gy + actualGridH + 1;
+  const boxRow = (label) => {
     PDFKit.set(doc, PDFKit.serif(), 'italic', 5.5, HB_SAGE);
-    doc.text('mood', gx - 1.6, sy + streakH * 0.62, { align: 'right' });
+    doc.text(label, gx - 1.6, sy + rowH * 0.62, { align: 'right' });
     doc.setDrawColor(...C.tan); doc.setLineWidth(0.15);
-    for (let h = 0; h < habitCount; h++) doc.rect(gx + h*cellW + 0.4, sy + 0.4, cellW - 0.8, streakH - 0.8);
+    for (let h = 0; h < habitCount; h++) doc.rect(gx + h*cellW + 0.4, sy + 0.4, cellW - 0.8, rowH - 0.8);
     doc.setDrawColor(...C.ink); doc.setLineWidth(0.3);
-    doc.rect(gx, sy, habitCount*cellW, streakH);
-  }
+    doc.rect(gx, sy, habitCount*cellW, rowH);
+    sy += rowH + 1;
+  };
+  if (showMood) boxRow('mood');
+  if (showStreak) boxRow('streak');
 }
 
 function drawNotesPanel(doc, px, py, pw, ph, config, number) {
@@ -573,8 +577,9 @@ function drawGridPanel(ctx, px, py, pw, ph, scale, month, year, habitCount, days
   const titleW = 9*scale;
   const labelH = 8*scale;
   const moodRowH = toggleState.mood ? 7*scale : 0;
+  const streakRowH = toggleState.streak ? 7*scale : 0;
   const availW = pw - m*2 - titleW;
-  const availH = ph - m*2 - labelH - moodRowH;
+  const availH = ph - m*2 - labelH - moodRowH - streakRowH;
   const cellW = availW / habitCount;
   const cellH = Math.min(availH / days, 6*scale);
   const actualGridH = cellH * days;
@@ -589,17 +594,13 @@ function drawGridPanel(ctx, px, py, pw, ph, scale, month, year, habitCount, days
   ctx.save();
   ctx.rect(px+m, py+m, titleW-scale, ph-m*2); // clip to strip
   ctx.clip();
-  ctx.translate(px+m+(titleW-scale)/2, py+ph/2);
-  ctx.rotate(-Math.PI/2);
-  // Scale font so text fits within strip width (= ph - m*2 rotated)
-  const maxTextW = ph - m*2 - 4*scale;
-  ctx.font = `bold ${4.8*scale}px serif`;
-  ctx.fillStyle = '#f5f0e4';
+  // month and year sit at the top of the strip (the day numbers use the rest), as in the PDF
+  const mcx = px + m + (titleW - scale) / 2;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  // Shrink if needed
-  let mText = `${month} ${year}`;
-  while (ctx.measureText(mText).width > maxTextW && mText.length > 4) mText = mText.slice(0,-1);
-  ctx.fillText(mText, 0, 0);
+  ctx.font = `bold ${4.4*scale}px serif`; ctx.fillStyle = '#f5f0e4';
+  ctx.fillText(month.slice(0,3).toUpperCase(), mcx, py + m + 3.4*scale);
+  ctx.font = `${3.2*scale}px serif`; ctx.fillStyle = '#d4af69';
+  ctx.fillText(String(year), mcx, py + m + 6.6*scale);
   ctx.restore();
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 
@@ -651,7 +652,7 @@ function drawGridPanel(ctx, px, py, pw, ph, scale, month, year, habitCount, days
 
   // Grid lines
   ctx.strokeStyle='rgba(210,195,170,0.4)'; ctx.lineWidth=0.15;
-  for (let h=0;h<=habitCount;h++) { ctx.beginPath();ctx.moveTo(gx+h*cellW,gy);ctx.lineTo(gx+h*cellW,gy+actualGridH+moodRowH);ctx.stroke(); }
+  for (let h=0;h<=habitCount;h++) { ctx.beginPath();ctx.moveTo(gx+h*cellW,gy);ctx.lineTo(gx+h*cellW,gy+actualGridH);ctx.stroke(); }
   for (let d=0;d<=days;d++) {
     ctx.lineWidth = d%7===0 ? 0.3 : 0.12;
     ctx.beginPath();ctx.moveTo(gx,gy+d*cellH);ctx.lineTo(gx+habitCount*cellW,gy+d*cellH);ctx.stroke();
@@ -661,19 +662,22 @@ function drawGridPanel(ctx, px, py, pw, ph, scale, month, year, habitCount, days
   ctx.strokeStyle='rgba(80,60,35,0.75)'; ctx.lineWidth=0.6;
   ctx.strokeRect(gx, gy, habitCount*cellW, actualGridH);
 
-  // Mood row
-  if (toggleState.mood) {
-    const sy = gy+actualGridH;
-    ctx.fillStyle='rgba(240,232,215,0.6)'; ctx.fillRect(gx,sy,habitCount*cellW,moodRowH);
+  // Mood row and streak row
+  let sy = gy+actualGridH;
+  const boxRow = (label, rowH) => {
+    ctx.fillStyle='rgba(240,232,215,0.6)'; ctx.fillRect(gx,sy,habitCount*cellW,rowH);
     ctx.font=`italic ${3*scale}px serif`; ctx.fillStyle='rgba(120,100,70,0.7)';
-    ctx.fillText('mood', px+m+scale, sy+moodRowH*0.72);
+    ctx.fillText(label, px+m+scale, sy+rowH*0.72);
     for (let h=0;h<habitCount;h++) {
       ctx.strokeStyle='rgba(180,165,140,0.4)'; ctx.lineWidth=0.15;
-      ctx.strokeRect(gx+h*cellW+0.4,sy+0.4,cellW-0.8,moodRowH-0.8);
+      ctx.strokeRect(gx+h*cellW+0.4,sy+0.4,cellW-0.8,rowH-0.8);
     }
     ctx.strokeStyle='rgba(100,80,55,0.5)'; ctx.lineWidth=0.3;
-    ctx.strokeRect(gx,sy,habitCount*cellW,moodRowH);
-  }
+    ctx.strokeRect(gx,sy,habitCount*cellW,rowH);
+    sy += rowH;
+  };
+  if (toggleState.mood) boxRow('mood', moodRowH);
+  if (toggleState.streak) boxRow('streak', streakRowH);
 }
 
 function drawNotesPreview(ctx, px, py, pw, ph, scale, month, year) {

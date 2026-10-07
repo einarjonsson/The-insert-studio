@@ -57,7 +57,7 @@ StudioIntro.register('habit', {
     body: [
       '<strong>A habit tracker</strong> is a simple chart. Days run down the side, your habits run across the top, and each square is one habit on one day. Did it? Colour it in.',
       'The point is the picture. A row of filled boxes shows at a glance what you keep up and what slips. Many people find that not wanting to break a streak is the nudge they need.',
-      'This generator makes the whole month for you. The grid, weekend shading, a mood row and a reflection page all print to fit a Traveler&rsquo;s Notebook.'
+      'This generator makes the whole month for you. The grid, weekend shading, a mood row, a streak row and a reflection page all print to fit a Traveler&rsquo;s Notebook.'
     ]
   },
 
@@ -76,7 +76,7 @@ StudioIntro.register('habit', {
   },
   {
     "title": "Spot your streaks",
-    "text": "Unbroken runs of colour show how consistent you have been. Count your longest chain and try to beat it next month.",
+    "text": "Unbroken runs of colour show how consistent you have been. Count your longest chain, write it in the streak row under the grid, and try to beat it next month.",
     "icon": `<svg class="ill" viewBox="0 0 64 64"><path class="i-gold" d="M33 4c6 8 14 14 14 26a14 14 0 0 1-28 0c0-6 3-10 6-13 0 5 2 8 5 8-2-8 0-15 3-21z" stroke="#1d160d" stroke-width="3" stroke-linejoin="round"/><path class="i-rust" d="M33 28c4 4 7 8 7 12a7 7 0 0 1-14 0c0-3 2-6 4-7z"/><path class="i-none" stroke="#4d6a3f" stroke-width="4" d="M10 58h44"/></svg>`
   },
   {

@@ -6,6 +6,7 @@
 <title>TN Sudoku Generator</title>
 <script src="../assets/jspdf.umd.min.js"></script>
 <script src="../assets/pdf-kit.js"></script>
+<script src="../assets/seed.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
@@ -234,6 +235,12 @@
         </div>
       </div>
 
+      <!-- Seed -->
+      <div class="section">
+        <div class="section-title">Seed</div>
+        <div id="seedBox"></div>
+      </div>
+
       <!-- Printer -->
       <div class="section">
         <div class="section-title">Printer</div>
@@ -305,6 +312,8 @@ let generatedPuzzles = null;
 let generatedSize = null;
 let generatedPages = null;
 let generatedDifficulty = null;
+let bookSeed = '';
+const seedUI = Seed.mount(document.getElementById('seedBox'));
 let generatedTitle = null;
 
 const countInput = document.getElementById('countDisplay');
@@ -379,7 +388,7 @@ function isValid(board, row, col, num) {
   return true;
 }
 function shuffle(arr) {
-  for (let i = arr.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  for (let i = arr.length-1; i > 0; i--) { const j = Math.floor(Seed.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
   return arr;
 }
 function solve(board) {
@@ -438,6 +447,8 @@ function generateSudoku(difficulty) {
   return board;
 }
 
+const seedLabel = () => 'The Insert Studio' + (bookSeed ? ' · Seed ' + bookSeed : '');
+
 // ── PDF drawing ───────────────────────────────────────────────────────────────
 const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
 
@@ -448,7 +459,7 @@ function drawPanel(doc, px, py, pw, ph, puzzle, number) {
   const top = PDFKit.header(doc, px, py, pw, {
     eyebrow: 'The Insert Studio · ' + DIFF_LABEL[getDifficulty()], title: 'Sudoku', accent
   });
-  const bottom = PDFKit.footer(doc, px, py, pw, ph);
+  const bottom = PDFKit.footer(doc, px, py, pw, ph, { label: seedLabel() });
   const notesH = getNotes() === 'notes' ? 14 : 0;
   const size = Math.min(pw - 14, bottom - top - notesH - 2);
   const ox = px + (pw - size) / 2, oy = top + (bottom - top - notesH - size) / 2;
@@ -563,12 +574,15 @@ generateBtn.addEventListener('click', async () => {
 
   await new Promise(r => setTimeout(r, 50));
 
+  bookSeed = Seed.begin(seedUI.value());
   const puzzles = [];
   for (let i=0; i<total; i++) {
     setProgress(i/total*60, `Generating puzzle ${i+1} of ${total}...`);
     await new Promise(r => setTimeout(r, 0));
+    Seed.at(bookSeed, i + 1);
     puzzles.push(generateSudoku(getDifficulty()));
   }
+  Seed.free(); seedUI.used(bookSeed);
 
   setProgress(80, 'Building PDF...');
   await PDFKit.preload();

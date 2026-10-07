@@ -6,6 +6,7 @@
 <title>Number Fill-In Generator — The Insert Studio</title>
 <script src="../assets/jspdf.umd.min.js"></script>
 <script src="../assets/pdf-kit.js"></script>
+<script src="../assets/seed.js"></script>
 <script src="fillin.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
@@ -126,6 +127,12 @@
           <button class="count-btn" id="incBtn">+</button>
           <span class="count-hint" id="countHint">= 4 puzzles</span>
         </div>
+      </div>
+
+      <!-- Seed -->
+      <div class="section">
+        <div class="section-title">Seed</div>
+        <div id="seedBox"></div>
       </div>
 
       <!-- Printer -->
@@ -249,6 +256,9 @@ function setProgress(pct, text) {
 
 // ── PDF Drawing ────────────────────────────────────────────────────────────────
 const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+let bookSeed = '';
+const seedUI = Seed.mount(document.getElementById('seedBox'));
+const seedLabel = () => 'The Insert Studio' + (bookSeed ? ' · Seed ' + bookSeed : '');
 
 function drawFillInPage(doc, puzzle, number, ox, oy, pw, ph, size) {
   const C = PDFKit.COLORS;
@@ -256,7 +266,7 @@ function drawFillInPage(doc, puzzle, number, ox, oy, pw, ph, size) {
     eyebrow: 'The Insert Studio · ' + DIFF_LABEL[getDifficulty()],
     title: 'Number', accent: 'Fill-In', number
   });
-  const bottom = PDFKit.footer(doc, ox, oy, pw, ph, { number });
+  const bottom = PDFKit.footer(doc, ox, oy, pw, ph, { number, label: seedLabel() });
   const L = FillIn.layout(puzzle, pw, ph, size, { top: top - oy + 1.2, bottom: bottom - oy - 0.5, side: 7 });
   const { n, cell, gx, gy } = L;
 
@@ -368,12 +378,15 @@ generateBtn.addEventListener('click', async () => {
   await PDFKit.preload();
   await new Promise(r => setTimeout(r, 50));
 
+  bookSeed = Seed.begin(seedUI.value());
   const puzzles = [];
   for (let i = 0; i < total; i++) {
     setProgress(i/total*80, `Building puzzle ${i+1} of ${total}...`);
     await new Promise(r => setTimeout(r, 0));
+    Seed.at(bookSeed, i + 1);
     puzzles.push(FillIn.generate(size, difficulty));
   }
+  Seed.free(); seedUI.used(bookSeed);
 
   setProgress(90, 'Building PDF...');
   await new Promise(r => setTimeout(r, 50));

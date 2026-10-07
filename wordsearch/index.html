@@ -369,7 +369,7 @@ function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph) {
     eyebrow: 'The Insert Studio · ' + CATEGORY_LABELS[getCategory()] + ' · ' + DIFF_LABEL[getDifficulty()],
     title: 'Word Search', accent: 'No. ' + number, number
   });
-  const bottom = PDFKit.footer(doc, ox, oy, pw, ph, { number });
+  const bottom = PDFKit.footer(doc, ox, oy, pw, ph);
 
   const rowH = isPassport ? 3.6 : 4.0;
   const listRows = Math.ceil(words.length / 4);

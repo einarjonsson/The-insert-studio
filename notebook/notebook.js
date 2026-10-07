@@ -30,35 +30,126 @@
   const drawer = $('#drawer'), drawerBody = $('#drawerBody'), scrim = $('#scrim');
   const mobileMQ = window.matchMedia('(max-width: 900px)');
 
-  card.setAttribute('inert', '');
+  const lede = $('#lede'), nb = $('#nb'), grab = $('#grab');
+  const shadeFront = $('.face.front .shade'), shadeBack = $('.face.back .shade'), pageShade = $('.page-shade');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  card.setAttribute('inert', ''); grab.setAttribute('inert', '');
 
   // ── open / close the notebook ──────────────────────────────────────────────
-  function openNotebook() {
-    if (state.opened) return;
-    state.opened = true;
-    cover.classList.add('snap');                              // the elastic snaps off...
-    setTimeout(() => {                                        // ...then the cover swings open
-      cover.classList.add('open');
-      stage.dataset.state = 'open';
-      pageRight.removeAttribute('inert'); card.removeAttribute('inert');
-      placeSettings();
-      coverFront.setAttribute('tabindex', '-1');
-      if (mobileMQ.matches) setTimeout(() => stage.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-    }, 380);
+  // One number, p (0 = shut ... 1 = open), drives the whole scene: the cover swings round the
+  // spine, the notebook slides to centre, light and shadow follow, the headline fades.
+  // Clicking animates p; dragging the cover's edge sets p straight from the pointer.
+  const ANGLE = 178;
+  let p = 0, raf = 0, drag = null, unhooked = false;
+
+  const shiftPx = (q) => {                                  // how far the notebook travels sideways
+    if (mobileMQ.matches) return 0;
+    const closed = Math.min(window.innerWidth * 0.22, 300), open = nb.offsetWidth / 2;
+    return closed + (open - closed) * q;
+  };
+
+  function render(q) {
+    p = Math.max(0, Math.min(1, q));
+    const rad = ANGLE * p * Math.PI / 180;
+    cover.style.transform = `translateZ(${(48 * Math.sin(Math.PI * p)).toFixed(1)}px) rotateY(${(-ANGLE * p).toFixed(2)}deg)`;
+    nb.style.transform = mobileMQ.matches ? '' : `translateX(${shiftPx(p).toFixed(1)}px)`;
+    lede.style.opacity = String(Math.max(0, 1 - p * 2.4).toFixed(3));
+    lede.style.transform = mobileMQ.matches ? '' : `translate(${(-70 * p).toFixed(1)}px, -50%)`;
+    shadeFront.style.opacity = (0.5 * (1 - Math.cos(rad))).toFixed(3);       // the outside darkens as it turns away
+    shadeBack.style.opacity = (0.5 * (1 + Math.cos(rad))).toFixed(3);        // light returns to the lining
+    pageShade.style.opacity = Math.sin(rad).toFixed(3);                      // the cover's shadow falls across the page
+    if (p > 0.06 && !unhooked) { unhooked = true; cover.classList.add('snap'); }      // the elastic lets go
+    if (p < 0.02 && unhooked) { unhooked = false; cover.classList.remove('snap'); }
   }
-  function closeNotebook() {
-    if (!state.opened) return;
-    state.opened = false;
-    pageRight.setAttribute('inert', ''); card.setAttribute('inert', '');
-    cover.classList.remove('open', 'snap');
-    stage.dataset.state = 'closed';
+
+  function settle() {                                       // the cover has come to rest: update the page
+    if (p >= 0.999 && !state.opened) {
+      state.opened = true; stage.dataset.state = 'open';
+      pageRight.removeAttribute('inert'); card.removeAttribute('inert'); grab.removeAttribute('inert');
+      coverFront.setAttribute('tabindex', '-1');
+      placeSettings();
+      if (mobileMQ.matches) setTimeout(() => stage.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    }
+  }
+  function lockPage() {                                     // the notebook is closing or shut
+    state.opened = false; stage.dataset.state = 'closed';
+    pageRight.setAttribute('inert', ''); card.setAttribute('inert', ''); grab.setAttribute('inert', '');
     coverFront.setAttribute('tabindex', '0');
     placeSettings();
+  }
+
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  function animateTo(target, ms) {
+    cancelAnimationFrame(raf);
+    const from = p, d = ms != null ? ms : 450 + 850 * Math.abs(target - from);
+    if (reduceMotion.matches || Math.abs(target - from) < 0.001) { render(target); settle(); return; }
+    const t0 = performance.now();
+    (function step(now) {
+      const t = Math.min(1, (now - t0) / d);
+      render(from + (target - from) * ease(t));
+      if (t < 1) raf = requestAnimationFrame(step); else settle();
+    })(t0);
+  }
+  const openNotebook = () => { if (!state.opened && !drag) animateTo(1); };
+  function closeNotebook() {
+    if (!state.opened && p < 0.001) return;
+    if (state.opened) { lockPage(); render(1); }            // mobile hides the cover while open, so put it back first
+    animateTo(0);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  // ── grab the cover's edge and swing it, like the real thing ──
+  // Where the cover's free edge is on screen for a given p (the spine stays put while the notebook slides).
+  function edgeX(spine0, W, q) { return spine0 + shiftPx(q) + W * Math.cos(ANGLE * q * Math.PI / 180); }
+  function solve(spine0, W, x) {                            // which p puts the edge under the pointer?
+    if (x >= edgeX(spine0, W, 0)) return 0;
+    if (x <= edgeX(spine0, W, 1)) return 1;
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 26; i++) { const m = (lo + hi) / 2; if (edgeX(spine0, W, m) > x) lo = m; else hi = m; }
+    return (lo + hi) / 2;
+  }
+  function beginDrag(e, from) {
+    if (e.button > 0 || (from === 'front' && state.opened)) return;
+    cancelAnimationFrame(raf);
+    const W = nb.offsetWidth, spine0 = nb.getBoundingClientRect().left - shiftPx(p);
+    drag = { from, id: e.pointerId, startX: e.clientX, startP: p, W, spine0, offset: e.clientX - edgeX(spine0, W, p), moved: false, samples: [{ t: performance.now(), x: e.clientX }] };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function moveDrag(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.moved && Math.abs(e.clientX - drag.startX) < 6) return;
+    if (!drag.moved) { drag.moved = true; nb.classList.add('dragging'); if (state.opened) lockPage(); }
+    render(solve(drag.spine0, drag.W, e.clientX - drag.offset));
+    const now = performance.now();
+    drag.samples.push({ t: now, x: e.clientX });
+    while (drag.samples.length > 2 && now - drag.samples[0].t > 110) drag.samples.shift();
+  }
+  function endDrag(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag; drag = null; nb.classList.remove('dragging');
+    if (!d.moved) { if (d.from === 'front') animateTo(1); else closeNotebook(); return; }      // a plain tap on the cover opens it (on the grab strip, shuts it)
+    const a = d.samples[0], b = d.samples[d.samples.length - 1];
+    const v = b.t > a.t ? (b.x - a.x) / (b.t - a.t) : 0;                  // px per ms; negative = towards the left (opening)
+    const open = v < -0.5 ? true : v > 0.5 ? false : p > 0.5;              // a flick decides; otherwise whichever side it is nearer
+    if (open) animateTo(1, 260 + 560 * (1 - p)); else animateTo(0, 260 + 560 * p);
+    // swallow the click that follows a drag
+    window.addEventListener('click', (ev) => ev.stopPropagation(), { capture: true, once: true });
+  }
+  [[coverFront, 'front'], [grab, 'back']].forEach(([elm, from]) => {
+    elm.addEventListener('pointerdown', (e) => beginDrag(e, from));
+    elm.addEventListener('pointermove', moveDrag);
+    elm.addEventListener('pointerup', endDrag);
+    elm.addEventListener('pointercancel', endDrag);
+  });
+  // a little peek when the pointer hovers over the shut notebook
+  coverFront.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && p < 0.001 && !drag && !state.opened) animateTo(0.035, 280); });
+  coverFront.addEventListener('pointerleave', () => { if (!drag && !state.opened && p > 0.001 && p < 0.06) animateTo(0, 280); });
+  grab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeNotebook(); } });
+
   $('#openBtn').addEventListener('click', openNotebook);
-  coverFront.addEventListener('click', openNotebook);
   coverFront.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNotebook(); } });
+  window.addEventListener('resize', () => render(p));
+  render(0);
 
   // on phones the settings card moves onto the page so everything scrolls together
   function placeSettings() {

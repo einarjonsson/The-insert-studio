@@ -24,7 +24,7 @@ button { font: inherit; color: inherit; }
 .eyebrow, .page-eyebrow { display: flex; align-items: center; gap: 14px; font: 500 0.66rem 'DM Mono', monospace; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); }
 .eyebrow::before, .page-eyebrow::before { content: ''; width: 26px; height: 1px; background: currentColor; }
 
-.lede { position: absolute; left: max(24px, calc(50% - 600px)); top: 50%; width: min(460px, 38vw); transform: translateY(-50%); color: var(--paper); transition: opacity .6s, transform .9s var(--ease); z-index: 2; }
+.lede { position: absolute; left: max(24px, calc(50% - 600px)); top: 50%; width: min(460px, 38vw); transform: translateY(-50%); color: var(--paper); z-index: 2; will-change: opacity, transform; }
 .lede h1 { font-family: 'Playfair Display', serif; font-weight: 900; font-size: clamp(2.6rem, 5.4vw, 4.6rem); line-height: 0.98; letter-spacing: -0.03em; margin: 22px 0 22px; }
 .lede h1 em { display: block; color: var(--gold-lt); }
 .lede p { max-width: 38ch; font-size: 0.9rem; color: rgba(246,239,220,0.75); margin-bottom: 30px; }
@@ -32,12 +32,11 @@ button { font: inherit; color: inherit; }
 .btn-gold { display: inline-flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 28px; border: 0; border-radius: 8px; cursor: pointer; background: var(--gold-lt); color: var(--spine); font: 500 0.74rem 'DM Mono', monospace; letter-spacing: 0.14em; text-transform: uppercase; box-shadow: 0 3px 0 #8a6508; transition: transform .12s, background .15s; }
 .btn-gold:hover { transform: translateY(-1px); background: #e0b650; }
 .btn-gold.small { min-height: 44px; padding: 0 22px; }
-.stage[data-state="open"] .lede { opacity: 0; transform: translate(-40px, -50%); pointer-events: none; }
+.stage[data-state="open"] .lede { pointer-events: none; }
 
 .desk { perspective: 2400px; perspective-origin: 50% 40%; }
-.nb { position: relative; width: var(--nbw); height: var(--nbh); transform-style: preserve-3d; transform: translateX(min(22vw, 300px)); transition: transform 1.2s var(--ease); }
-.stage[data-state="open"] .nb { transform: translateX(calc(var(--nbw) / 2)); }
-.nb-shadow { position: absolute; left: 4%; right: -2%; bottom: -26px; height: 34px; background: radial-gradient(closest-side, rgba(0,0,0,0.55), transparent); filter: blur(6px); transition: transform 1.2s var(--ease); }
+.nb { position: relative; width: var(--nbw); height: var(--nbh); transform-style: preserve-3d; transform: translateX(min(22vw, 300px)); will-change: transform; }
+.nb-shadow { position: absolute; left: 4%; right: -2%; bottom: -26px; height: 34px; background: radial-gradient(closest-side, rgba(0,0,0,0.55), transparent); filter: blur(6px); }
 
 /* ── right page (builder) ── */
 .nb-page { position: absolute; inset: 0; z-index: 1; border-radius: 3px 14px 14px 3px; background: linear-gradient(to right, rgba(29,22,13,0.14), transparent 22px), repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(184,134,11,0.12) 31px, rgba(184,134,11,0.12) 32px), var(--paper);
@@ -96,11 +95,9 @@ button { font: inherit; color: inherit; }
 @keyframes pulse { 50% { box-shadow: 0 3px 0 var(--gold), 0 0 0 6px rgba(184,134,11,0.25); } }
 
 /* ── the cover ── */
-.nb-cover { position: absolute; inset: 0; z-index: 5; transform-origin: left center; transform-style: preserve-3d; transition: transform 1.25s var(--ease); }
-.nb-cover.open { transform: rotateY(-178deg); }
-.nb-cover:not(.open):hover { transform: rotateY(-7deg); }
+.nb-cover { position: absolute; inset: 0; z-index: 5; transform-origin: left center; transform-style: preserve-3d; will-change: transform; }
 .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 4px 14px 14px 4px; }
-.face.front { cursor: pointer; overflow: hidden;
+.face.front { cursor: grab; overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none;
   background:
     radial-gradient(120% 80% at 28% 14%, rgba(255,230,180,0.2), transparent 55%),
     radial-gradient(90% 70% at 85% 100%, rgba(0,0,0,0.45), transparent 60%),
@@ -122,6 +119,21 @@ button { font: inherit; color: inherit; }
 @keyframes swing { 50% { transform: rotate(6deg); } 0%, 100% { transform: rotate(-6deg); } }
 .hint { position: absolute; left: 30px; right: 70px; bottom: 30px; text-align: center; font: 500 0.6rem 'DM Mono', monospace; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(246,224,160,0.8); animation: hint 2.4s ease-in-out infinite; pointer-events: none; }
 @keyframes hint { 50% { opacity: .35; } }
+
+/* light and shadow that follow the cover as it swings (opacity is set from script) */
+.shade { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; background: linear-gradient(to right, rgba(0,0,0,0.92), rgba(0,0,0,0.25) 62%, rgba(0,0,0,0.55)); }
+.face.back .shade { background: linear-gradient(to left, rgba(0,0,0,0.88), rgba(0,0,0,0.18) 66%, rgba(0,0,0,0.42)); }
+.page-shade { position: absolute; inset: 0; z-index: 7; pointer-events: none; opacity: 0; border-radius: inherit; background: linear-gradient(to right, rgba(20,12,4,0.55), rgba(20,12,4,0) 42%); }
+.nb.dragging, .nb.dragging * { cursor: grabbing !important; }
+.nb.dragging .face.front .hint, .nb.dragging .charm { animation: none; }
+
+/* grab cues: a ridge on the free edge of the cover, outside and in */
+.edge-cue { position: absolute; top: 50%; right: 5px; width: 6px; height: 74px; margin-top: -37px; display: grid; gap: 7px; align-content: center; pointer-events: none; opacity: .9; animation: cue 2.6s ease-in-out infinite; }
+.edge-cue i { display: block; height: 12px; border-radius: 3px; background: linear-gradient(90deg, rgba(0,0,0,.45), rgba(255,226,170,.55)); }
+@keyframes cue { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+.grab { position: absolute; left: 0; top: 0; bottom: 0; width: 30px; border: 0; padding: 0; cursor: grab; touch-action: pan-y; display: grid; align-content: center; gap: 7px; justify-items: center; z-index: 4; border-radius: 14px 0 0 14px; background: linear-gradient(to right, rgba(255,226,170,.2), transparent); }
+.grab i { display: block; width: 6px; height: 12px; border-radius: 3px; background: linear-gradient(90deg, rgba(255,226,170,.6), rgba(0,0,0,.4)); }
+.grab:hover { background: linear-gradient(to right, rgba(255,226,170,.34), transparent); }
 
 .face.back { transform: rotateY(180deg); overflow: hidden;
   background: radial-gradient(90% 60% at 80% 0%, rgba(255,230,180,0.12), transparent 60%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .45 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(225deg, #5a2e14, #3d1d0b);

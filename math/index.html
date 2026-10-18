@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Worksheets — The Insert Studio</title>
+<script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
+<script src="../assets/seed.js"></script>
+<script src="math.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/studio.css">
+<script src="../assets/studio.js" defer></script>
+<style>
+/* math-specific styles; shared styles live in ../assets/studio.css */
+.preview-panel { overflow-y: auto; }
+.preview-sheet { aspect-ratio: 210 / 297; max-width: 440px; flex-shrink: 0; }
+.note { font-size: 0.62rem; line-height: 1.5; color: var(--muted); margin-top: 8px; }
+@media (max-width: 860px) {
+  main { grid-template-columns: 1fr; }
+  header { padding: 20px 24px; }
+}
+</style>
+</head>
+<body>
+<nav class="topbar" data-tool="math"><a href="../">← The Insert Studio</a></nav>
+
+<header>
+  <div class="logo">Math <em>Worksheets</em></div>
+  <div class="header-tag">A4 Printable Pages</div>
+</header>
+
+<main>
+  <aside class="settings-panel">
+    <div class="settings-inner">
+
+      <!-- Operations -->
+      <div class="section">
+        <div class="section-title">Sums to practise</div>
+        <div class="radio-group cols-3">
+          <label class="radio-option">
+            <input type="checkbox" name="op" value="add" checked>
+            <span class="radio-btn"><span class="rb-title">Add</span><span class="rb-sub">3 + 4</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="checkbox" name="op" value="sub">
+            <span class="radio-btn"><span class="rb-title">Subtract</span><span class="rb-sub">9 − 5</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="checkbox" name="op" value="mul">
+            <span class="radio-btn"><span class="rb-title">Multiply</span><span class="rb-sub">2 × 5</span></span>
+          </label>
+        </div>
+        <p class="note">Tick more than one for a mixed page.</p>
+      </div>
+
+      <!-- Level -->
+      <div class="section">
+        <div class="section-title">Level</div>
+        <div class="radio-group cols-2">
+          <label class="radio-option">
+            <input type="radio" name="level" value="starter" checked>
+            <span class="radio-btn"><span class="rb-title">Starter</span><span class="rb-sub">to 10 · ×2 ×5 ×10</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="level" value="easy">
+            <span class="radio-btn"><span class="rb-title">Easy</span><span class="rb-sub">to 20 · tables to 5</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="level" value="medium">
+            <span class="radio-btn"><span class="rb-title">Medium</span><span class="rb-sub">to 100 · tables to 10</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="level" value="hard">
+            <span class="radio-btn"><span class="rb-title">Hard</span><span class="rb-sub">carry &amp; borrow · to 12×12</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Layout -->
+      <div class="section">
+        <div class="section-title">Layout</div>
+        <div class="radio-group cols-2">
+          <label class="radio-option">
+            <input type="radio" name="layout" value="horizontal" checked>
+            <span class="radio-btn"><span class="rb-title">Across</span><span class="rb-sub">7 + 5 = __</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="layout" value="vertical">
+            <span class="radio-btn"><span class="rb-title">Stacked</span><span class="rb-sub">one under the other</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Size -->
+      <div class="section">
+        <div class="section-title">Problems per page</div>
+        <div class="radio-group cols-3">
+          <label class="radio-option">
+            <input type="radio" name="size" value="large">
+            <span class="radio-btn"><span class="rb-title">12</span><span class="rb-sub">big print</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="size" value="medium" checked>
+            <span class="radio-btn"><span class="rb-title">20</span><span class="rb-sub">standard</span></span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="size" value="small">
+            <span class="radio-btn"><span class="rb-title">30</span><span class="rb-sub">more practice</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Personalisation -->
+      <div class="section">
+        <div class="section-title">Personalisation</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <input type="text" id="customTitle" class="text-input" placeholder="Page title (optional)">
+          <input type="text" id="childName" class="text-input" placeholder="Name to print on the page (optional)">
+          <div class="radio-group cols-2">
+            <label class="radio-option">
+              <input type="radio" name="answers" value="none" checked>
+              <span class="radio-btn"><span class="rb-title">No answers</span><span class="rb-sub">worksheets only</span></span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="answers" value="key">
+              <span class="radio-btn"><span class="rb-title">Answer pages</span><span class="rb-sub">added at the end</span></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pages -->
+      <div class="section">
+        <div class="section-title">Number of Pages</div>
+        <div class="count-row">
+          <button class="count-btn" id="decBtn">−</button>
+          <input type="number" id="countDisplay" class="count-input" value="2" min="1" max="99">
+          <button class="count-btn" id="incBtn">+</button>
+          <span class="count-hint" id="countHint">= 40 problems</span>
+        </div>
+      </div>
+
+      <!-- Seed -->
+      <div class="section">
+        <div class="section-title">Seed</div>
+        <div id="seedBox"></div>
+      </div>
+
+    </div>
+
+    <div class="settings-footer">
+      <button class="generate-btn" id="generateBtn">Generate &amp; Download PDF</button>
+      <div class="progress" id="progress">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText">Building worksheets...</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Preview -->
+  <section class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-label">Live Preview</span>
+      <span class="preview-badge" id="previewBadge">Add · Starter</span>
+    </div>
+    <div class="preview-sheet"><canvas id="previewCanvas"></canvas></div>
+    <div class="preview-info">
+      <div class="preview-stat">
+        <span class="preview-stat-val" id="statProblems">40</span>
+        <span class="preview-stat-label">Problems</span>
+      </div>
+      <div class="preview-stat">
+        <span class="preview-stat-val" id="statPerPage">20</span>
+        <span class="preview-stat-label">Per page</span>
+      </div>
+      <div class="preview-stat">
+        <span class="preview-stat-val" id="statSheets">2</span>
+        <span class="preview-stat-label">PDF Pages</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let pageCount = 2;
+let previewSeed = Seed.fresh();   // preview samples; reshuffled when settings change
+
+const countInput  = document.getElementById('countDisplay');
+const countHint   = document.getElementById('countHint');
+const decBtn      = document.getElementById('decBtn');
+const incBtn      = document.getElementById('incBtn');
+const generateBtn = document.getElementById('generateBtn');
+const progress    = document.getElementById('progress');
+const progressFill= document.getElementById('progressFill');
+const progressText= document.getElementById('progressText');
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+const checked  = (name, d) => document.querySelector(`input[name="${name}"]:checked`)?.value || d;
+const getOps   = () => [...document.querySelectorAll('input[name="op"]:checked')].map(e => e.value);
+const getLevel = () => checked('level', 'starter');
+const getLayout= () => checked('layout', 'horizontal');
+const getSize  = () => checked('size', 'medium');
+const getAnswers = () => checked('answers', 'none');
+const getTitle = () => document.getElementById('customTitle').value.trim();
+const getName  = () => document.getElementById('childName').value.trim();
+const perPage  = () => MathSheet.PER_PAGE[getSize()];
+const settings = () => ({ ops: getOps(), level: getLevel(), layout: getLayout(), size: getSize() });
+
+// ── UI ─────────────────────────────────────────────────────────────────────────
+function updateStats() {
+  pageCount = Math.max(1, Math.min(99, parseInt(countInput.value) || 1));
+  const n = perPage();
+  countHint.textContent = `= ${pageCount * n} problems`;
+  document.getElementById('statProblems').textContent = pageCount * n;
+  document.getElementById('statPerPage').textContent = n;
+  document.getElementById('statSheets').textContent = pageCount * (getAnswers() === 'key' ? 2 : 1);
+}
+function refresh(reshuffle) {
+  if (reshuffle) previewSeed = Seed.fresh();
+  updateStats(); updatePreview();
+}
+
+decBtn.addEventListener('click', () => { if (pageCount > 1) { countInput.value = pageCount - 1; refresh(); } });
+incBtn.addEventListener('click', () => { countInput.value = pageCount + 1; refresh(); });
+countInput.addEventListener('input', () => refresh());
+document.querySelectorAll('input[name=op]').forEach(el => el.addEventListener('change', () => {
+  if (!getOps().length) el.checked = true;          // always keep one operation ticked
+  refresh(true);
+}));
+document.querySelectorAll('input[type=radio]').forEach(el => el.addEventListener('change', () => refresh(el.name !== 'answers')));
+['customTitle', 'childName'].forEach(id => document.getElementById(id).addEventListener('input', () => updatePreview()));
+
+function setProgress(pct, text) {
+  progressFill.style.width = pct + '%';
+  progressText.textContent = text;
+}
+
+// ── Page content ───────────────────────────────────────────────────────────────
+const seedUI = Seed.mount(document.getElementById('seedBox'), { onChange: () => {} });
+let bookSeed = '';
+const seedLabel = () => 'The Insert Studio' + (bookSeed ? ' · Seed ' + bookSeed : '');
+const sheetTitle = () => getTitle() || MathSheet.title(getOps());
+const levelLabel = () => MathSheet.LEVEL_LABEL[getLevel()];
+
+function rgb(c, a) { return a == null ? `rgb(${c[0]},${c[1]},${c[2]})` : `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
+
+// ── PDF ────────────────────────────────────────────────────────────────────────
+function paintPdf(doc, ops) {
+  const C = PDFKit.COLORS;
+  for (const o of ops) {
+    if (o.t === 'line') {
+      doc.setDrawColor(...(C[o.c] || C.ink)); doc.setLineWidth(o.w); doc.line(o.x1, o.y1, o.x2, o.y2);
+    } else {
+      PDFKit.set(doc, PDFKit.mono(), o.bold ? 'bold' : 'normal', o.pt, C[o.c] || C.ink);
+      doc.text(o.s, o.x, o.y, o.align ? { align: o.align } : undefined);
+    }
+  }
+}
+
+function drawPage(doc, sheet, number, answers) {
+  const C = PDFKit.COLORS, W = 210, H = 297;
+  const top = PDFKit.header(doc, 0, 0, W, {
+    eyebrow: 'The Insert Studio · ' + levelLabel(),
+    title: sheetTitle(), accent: answers ? 'Answers' : '', number, titleSize: 17
+  });
+  PDFKit.footer(doc, 0, 0, W, H, { number, label: seedLabel() });
+  paintPdf(doc, MathSheet.layout(sheet, { getName: getName(), answers, top }));
+}
+
+function buildDoc(sheets) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  PDFKit.register(doc);
+  let n = 0;
+  sheets.forEach(s => { if (n) doc.addPage(); drawPage(doc, s, ++n, false); });
+  if (getAnswers() === 'key') sheets.forEach((s, i) => { doc.addPage(); drawPage(doc, s, i + 1, true); });
+  return doc;
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────────
+generateBtn.addEventListener('click', async () => {
+  const pages = pageCount;
+  generateBtn.disabled = true;
+  progress.classList.add('visible');
+  await PDFKit.preload();
+  await new Promise(r => setTimeout(r, 50));
+
+  bookSeed = Seed.begin(seedUI.value());
+  const sheets = [];
+  for (let i = 0; i < pages; i++) {
+    setProgress(i / pages * 80, `Making page ${i + 1} of ${pages}...`);
+    await new Promise(r => setTimeout(r, 0));
+    Seed.at(bookSeed, i + 1);
+    sheets.push(MathSheet.generate(settings()));
+  }
+  Seed.free(); seedUI.used(bookSeed);
+
+  setProgress(90, 'Building PDF...');
+  await new Promise(r => setTimeout(r, 50));
+  const slug = getTitle().replace(/[^a-z0-9]/gi, '-').toLowerCase().replace(/-+/g, '-').replace(/^-|-$/g, '');
+  buildDoc(sheets).save(`${slug || 'tn-math-' + getOps().join('-') + '-' + getLevel()}-${pages}pages.pdf`);
+  setProgress(100, 'Done!');
+
+  await new Promise(r => setTimeout(r, 300));
+  generateBtn.disabled = false;
+  progress.classList.remove('visible');
+  progressFill.style.width = '0%';
+});
+
+// ── Preview ────────────────────────────────────────────────────────────────────
+function updatePreview() {
+  const canvas = document.getElementById('previewCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  if (!W || !H) { setTimeout(updatePreview, 150); return; }
+
+  const opsList = getOps().map(o => MathSheet.OP_LABEL[o]).join(' + ');
+  document.getElementById('previewBadge').textContent = `${opsList} · ${levelLabel()}`;
+
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.width = Math.round(W * window.devicePixelRatio);
+  canvas.height = Math.round(H * window.devicePixelRatio);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+
+  const s = W / 210, C = PDFKit.COLORS, show = getAnswers() === 'key';
+  Seed.at(previewSeed, 1);
+  const sheet = MathSheet.generate(settings());
+  Seed.free();
+
+  // header (simplified version of PDFKit.header / footer)
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.fillStyle = rgb(C.gold); ctx.font = `${4.6 / 2.835 * s}px DM Mono, monospace`;
+  ctx.fillText(('The Insert Studio · ' + levelLabel()).toUpperCase(), 12.5 * s, 5.6 * s);
+  ctx.fillStyle = rgb(C.ink); ctx.font = `bold ${17 / 2.835 * s}px Playfair Display, serif`;
+  ctx.fillText(sheetTitle(), 6 * s, 12.4 * s);
+  ctx.fillStyle = rgb(C.gold); ctx.fillRect(6 * s, 13.2 * s, 16 * s, 0.5 * s);
+  ctx.fillStyle = rgb(C.rule); ctx.fillRect(6 * s, 290.6 * s, 198 * s, 0.15 * s);
+  ctx.fillStyle = rgb(C.muted); ctx.font = `${3.4 / 2.835 * s}px DM Mono, monospace`;
+  ctx.fillText('THE INSERT STUDIO', 6 * s, 293.6 * s);
+
+  for (const o of MathSheet.layout(sheet, { getName: getName(), answers: show, top: 15.8 })) {
+    if (o.t === 'line') {
+      ctx.strokeStyle = rgb(C[o.c] || C.ink); ctx.lineWidth = Math.max(0.5, o.w * s);
+      ctx.beginPath(); ctx.moveTo(o.x1 * s, o.y1 * s); ctx.lineTo(o.x2 * s, o.y2 * s); ctx.stroke();
+    } else {
+      ctx.fillStyle = rgb(C[o.c] || C.ink);
+      ctx.font = `${o.bold ? 'bold ' : ''}${o.pt / 2.835 * s}px DM Mono, monospace`;
+      ctx.textAlign = o.align || 'left';
+      ctx.fillText(o.s, o.x * s, o.y * s);
+    }
+  }
+}
+window.updatePreview = updatePreview;
+
+// Init
+setTimeout(updatePreview, 100);
+setTimeout(updatePreview, 500);
+window.addEventListener('resize', updatePreview);
+updateStats();
+</script>
+</body>
+</html>

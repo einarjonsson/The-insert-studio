@@ -3,7 +3,7 @@ StudioIntro.register('math', {
   title: ['Math', 'Worksheets'],
   hook: 'Fresh addition, subtraction and multiplication pages in a minute. Print one, hand over a pencil, and check the answers together.',
   cta: 'Make my worksheets',
-  footer: 'A4 portrait · Starter to Hard',
+  footer: 'Regular notebook panels · Starter to Hard',
 
   hero: `<svg class="ill" viewBox="0 0 640 460" role="img" aria-label="A math worksheet on a desk with a pencil">
     <g class="i-gold">
@@ -41,7 +41,8 @@ StudioIntro.register('math', {
   },
 
   facts: [
-    { icon: 'print', title: 'Print on A4', text: 'Portrait, one page per worksheet. Answer pages come at the end of the same PDF.' },
+    { icon: 'print', title: 'Print on A4', text: 'Landscape, eight worksheets per sheet. Duplex printers get a single PDF; others get a guided two-step flow.' },
+    { icon: 'fold', title: 'Fold, cut, done', text: 'Each worksheet is a notebook panel: fold at 110mm, cut at 220mm. Marks are printed for you. Answer panels come on extra sheets at the end.' },
     { icon: 'lock', title: 'Private by design', text: 'Everything is made in your browser. A name you type is only printed on the page, never uploaded.' }
   ]
 });

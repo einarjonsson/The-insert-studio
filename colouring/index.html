@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colouring Pages — The Insert Studio</title>
+<script src="../assets/jspdf.umd.min.js"></script>
+<script src="../assets/pdf-kit.js"></script>
+<script src="../assets/seed.js"></script>
+<script src="colouring.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/studio.css">
+<script src="../assets/studio.js" defer></script>
+<style>
+/* colouring-specific styles; shared styles live in ../assets/studio.css */
+.note { font-size: 0.62rem; line-height: 1.5; color: var(--muted); margin-top: 8px; }
+@media (max-width: 860px) {
+  main { grid-template-columns: 1fr; }
+  header { padding: 20px 24px; }
+}
+</style>
+</head>
+<body>
+<nav class="topbar" data-tool="colouring"><a href="../">← The Insert Studio</a></nav>
+
+<header>
+  <div class="logo">Colouring <em>Pages</em></div>
+  <div class="header-tag">A4 Printable Inserts</div>
+</header>
+
+<main>
+  <aside class="settings-panel">
+    <div class="settings-inner">
+
+      <!-- Pictures -->
+      <div class="section">
+        <div class="section-title">Pictures</div>
+        <div class="radio-group cols-3">
+          <label class="radio-option"><input type="checkbox" name="pic" value="flower" checked><span class="radio-btn"><span class="rb-title">Flower</span><span class="rb-sub">garden</span></span></label>
+          <label class="radio-option"><input type="checkbox" name="pic" value="butterfly" checked><span class="radio-btn"><span class="rb-title">Butterfly</span><span class="rb-sub">wings</span></span></label>
+          <label class="radio-option"><input type="checkbox" name="pic" value="fish" checked><span class="radio-btn"><span class="rb-title">Fish</span><span class="rb-sub">underwater</span></span></label>
+          <label class="radio-option"><input type="checkbox" name="pic" value="rainbow" checked><span class="radio-btn"><span class="rb-title">Rainbow</span><span class="rb-sub">sky</span></span></label>
+          <label class="radio-option"><input type="checkbox" name="pic" value="mandala"><span class="radio-btn"><span class="rb-title">Mandala</span><span class="rb-sub">pattern</span></span></label>
+        </div>
+        <p class="note">Tick more than one to mix them through the pages.</p>
+      </div>
+
+      <!-- Detail -->
+      <div class="section">
+        <div class="section-title">Detail</div>
+        <div class="radio-group cols-3">
+          <label class="radio-option"><input type="radio" name="detail" value="simple" checked><span class="radio-btn"><span class="rb-title">Simple</span><span class="rb-sub">big shapes</span></span></label>
+          <label class="radio-option"><input type="radio" name="detail" value="medium"><span class="radio-btn"><span class="rb-title">Medium</span><span class="rb-sub">+ scenery</span></span></label>
+          <label class="radio-option"><input type="radio" name="detail" value="detailed"><span class="radio-btn"><span class="rb-title">Detailed</span><span class="rb-sub">+ patterns</span></span></label>
+        </div>
+      </div>
+
+      <!-- Line -->
+      <div class="section">
+        <div class="section-title">Outline</div>
+        <div class="radio-group cols-2">
+          <label class="radio-option"><input type="radio" name="line" value="thick" checked><span class="radio-btn"><span class="rb-title">Chunky</span><span class="rb-sub">easy for crayons</span></span></label>
+          <label class="radio-option"><input type="radio" name="line" value="fine"><span class="radio-btn"><span class="rb-title">Fine</span><span class="rb-sub">pencils &amp; pens</span></span></label>
+        </div>
+      </div>
+
+      <!-- Personalisation -->
+      <div class="section">
+        <div class="section-title">Personalisation</div>
+        <input type="text" id="childName" class="text-input" placeholder="Name to print on the page (optional)">
+      </div>
+
+      <!-- Pages -->
+      <div class="section">
+        <div class="section-title">Number of Pages</div>
+        <div class="count-row">
+          <button class="count-btn" id="decBtn">−</button>
+          <input type="number" id="countDisplay" class="count-input" value="1" min="1" max="99">
+          <button class="count-btn" id="incBtn">+</button>
+          <span class="count-hint" id="countHint">= 8 pictures</span>
+        </div>
+      </div>
+
+      <!-- Seed -->
+      <div class="section">
+        <div class="section-title">Seed</div>
+        <div id="seedBox"></div>
+      </div>
+
+      <!-- Printer -->
+      <div class="section">
+        <div class="section-title">Printer</div>
+        <div id="duplexBanner" class="duplex-banner manual">
+          <span>⚠</span>
+          <span>Two PDFs will be generated — Side 1 first, then Side 2 after reinserting the paper. <a href="#" id="duplexOverride" style="color:var(--accent);font-size:0.65rem;">My printer supports duplex →</a></span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="settings-footer">
+      <button class="generate-btn" id="generateBtn">Generate &amp; Download PDF</button>
+      <div class="progress" id="progress">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText">Drawing pictures...</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Preview -->
+  <section class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-label">Live Preview</span>
+      <span class="preview-badge" id="previewBadge">Simple</span>
+    </div>
+    <div class="preview-sheet"><canvas id="previewCanvas"></canvas></div>
+    <div class="preview-info">
+      <div class="preview-stat"><span class="preview-stat-val" id="statPictures">8</span><span class="preview-stat-label">Pictures</span></div>
+      <div class="preview-stat"><span class="preview-stat-val" id="statKinds">4</span><span class="preview-stat-label">Kinds</span></div>
+      <div class="preview-stat"><span class="preview-stat-val" id="statSheets">2</span><span class="preview-stat-label">PDF Pages</span></div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Two-step printing</div>
+    <div class="modal-sub">No automatic duplex detected</div>
+    <div id="modalSteps"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalBtn1">Download Side 1</button>
+      <button class="modal-btn ghost" id="modalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let pageCount = 1;
+let duplexSupported = false;
+let generatedDocs = null;
+let previewSeed = Seed.fresh();   // preview samples; reshuffled when settings change
+
+const countInput  = document.getElementById('countDisplay');
+const countHint   = document.getElementById('countHint');
+const decBtn      = document.getElementById('decBtn');
+const incBtn      = document.getElementById('incBtn');
+const generateBtn = document.getElementById('generateBtn');
+const progress    = document.getElementById('progress');
+const progressFill= document.getElementById('progressFill');
+const progressText= document.getElementById('progressText');
+const duplexBanner= document.getElementById('duplexBanner');
+const modalOverlay= document.getElementById('modalOverlay');
+const modalBtn1   = document.getElementById('modalBtn1');
+const modalClose  = document.getElementById('modalClose');
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+const checked   = (name, d) => document.querySelector(`input[name="${name}"]:checked`)?.value || d;
+const getPics   = () => [...document.querySelectorAll('input[name="pic"]:checked')].map(e => e.value);
+const getDetail = () => checked('detail', 'simple');
+const getThick  = () => checked('line', 'thick') === 'thick';
+const getName   = () => document.getElementById('childName').value.trim();
+const DETAIL_LABEL = { simple: 'Simple', medium: 'Medium', detailed: 'Detailed' };
+const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+// ── UI ─────────────────────────────────────────────────────────────────────────
+function updateStats() {
+  pageCount = Math.max(1, Math.min(99, parseInt(countInput.value) || 1));
+  countHint.textContent = `= ${pageCount * 8} pictures`;
+  document.getElementById('statPictures').textContent = pageCount * 8;
+  document.getElementById('statKinds').textContent = getPics().length;
+  document.getElementById('statSheets').textContent = pageCount * 2;
+}
+function refresh(reshuffle) {
+  if (reshuffle) previewSeed = Seed.fresh();
+  updateStats(); updatePreview();
+}
+
+decBtn.addEventListener('click', () => { if (pageCount > 1) { countInput.value = pageCount - 1; refresh(); } });
+incBtn.addEventListener('click', () => { countInput.value = pageCount + 1; refresh(); });
+countInput.addEventListener('input', () => refresh());
+document.querySelectorAll('input[name=pic]').forEach(el => el.addEventListener('change', () => {
+  if (!getPics().length) el.checked = true;          // always keep one picture ticked
+  refresh(true);
+}));
+document.querySelectorAll('input[type=radio]').forEach(el => el.addEventListener('change', () => refresh()));
+document.getElementById('childName').addEventListener('input', () => updatePreview());
+
+// Duplex
+duplexBanner.addEventListener('click', e => {
+  if (e.target.id === 'duplexOverride') {
+    e.preventDefault();
+    duplexSupported = true;
+    duplexBanner.className = 'duplex-banner supported';
+    duplexBanner.innerHTML = '<span>✓</span><span>Duplex enabled — one combined PDF will be generated.</span>';
+  }
+});
+modalClose.addEventListener('click', () => modalOverlay.classList.remove('visible'));
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) modalOverlay.classList.remove('visible'); });
+
+function setProgress(pct, text) {
+  progressFill.style.width = pct + '%';
+  progressText.textContent = text;
+}
+
+// ── Page content ───────────────────────────────────────────────────────────────
+const seedUI = Seed.mount(document.getElementById('seedBox'));
+let bookSeed = '';
+const seedLabel = () => 'The Insert Studio' + (bookSeed ? ' · Seed ' + bookSeed : '');
+const BODY_TOP = 17.5;   // mm below the panel's top edge where the 98 x 78 mm drawing area starts
+
+// ── PDF ────────────────────────────────────────────────────────────────────────
+function drawPanel(doc, panel, ox, oy, pw, ph) {
+  const C = PDFKit.COLORS;
+  PDFKit.header(doc, ox, oy, pw, {
+    eyebrow: 'The Insert Studio · ' + DETAIL_LABEL[getDetail()],
+    title: 'Colour the', accent: ColourPage.SUBJECTS[panel.subject], number: panel.number, titleSize: 12
+  });
+  PDFKit.footer(doc, ox, oy, pw, ph, { number: panel.number, label: seedLabel() });
+  if (getName()) {
+    PDFKit.set(doc, PDFKit.serif(), 'italic', 8, C.rust);
+    doc.text('for ' + getName(), ox + pw - 6, oy + 11.2, { align: 'right' });
+  }
+  doc.setLineJoin('round'); doc.setLineCap('round'); doc.setDrawColor(...C.ink); doc.setFillColor(255, 255, 255);
+  for (const o of ColourPage.place(panel.ops, ox, oy, BODY_TOP)) {
+    const segs = [];
+    for (let i = 1; i < o.pts.length; i++) segs.push([o.pts[i][0] - o.pts[i - 1][0], o.pts[i][1] - o.pts[i - 1][1]]);
+    doc.setLineWidth(o.w);
+    doc.lines(segs, o.pts[0][0], o.pts[0][1], [1, 1], o.fill ? (o.stroke ? 'FD' : 'F') : 'S', o.closed);
+  }
+}
+
+function drawSide(doc, panels, start, sideLabel) {
+  const colW = 110, halfH = 105;
+  for (const [col, row, idx] of [[0, 0, start], [0, 1, start + 1], [1, 0, start + 2], [1, 1, start + 3]]) {
+    if (idx < panels.length) drawPanel(doc, panels[idx], col * colW, row * halfH, colW, halfH);
+  }
+  PDFKit.marks(doc, 'regular', { label: sideLabel, title: '', horizontal: true });
+}
+
+function buildDoc(panels, sheets, sideFilter) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  PDFKit.register(doc);
+  const order = sideFilter === 'side2'
+    ? Array.from({ length: sheets }, (_, i) => sheets - 1 - i)
+    : Array.from({ length: sheets }, (_, i) => i);
+  let first = true;
+  for (const p of order) {
+    for (const side of [1, 2]) {
+      if (sideFilter === 'side1' && side === 2) continue;
+      if (sideFilter === 'side2' && side === 1) continue;
+      if (!first) doc.addPage(); first = false;
+      drawSide(doc, panels, p * 8 + (side - 1) * 4, `Page ${p + 1} of ${sheets} - Side ${side}`);
+    }
+  }
+  return doc;
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────────
+function makePanels(code, total) {
+  Seed.at(code, 0);
+  const subjects = ColourPage.sequence(getPics(), total);
+  return subjects.map((subject, i) => {
+    Seed.at(code, i + 1);
+    return { subject, ops: ColourPage.generate({ subject, detail: getDetail(), thick: getThick() }), number: i + 1 };
+  });
+}
+
+generateBtn.addEventListener('click', async () => {
+  const pages = pageCount, total = pages * 8;
+  generateBtn.disabled = true;
+  progress.classList.add('visible');
+  await PDFKit.preload();
+  setProgress(20, 'Drawing pictures...');
+  await new Promise(r => setTimeout(r, 50));
+
+  bookSeed = Seed.begin(seedUI.value());
+  const panels = makePanels(bookSeed, total);
+  Seed.free(); seedUI.used(bookSeed);
+
+  setProgress(90, 'Building PDF...');
+  await new Promise(r => setTimeout(r, 50));
+  const base = `tn-colouring-${getPics().join('-')}-${getDetail()}`;
+
+  if (duplexSupported) {
+    buildDoc(panels, pages, 'all').save(`${base}-${pages}pages.pdf`);
+    setProgress(100, 'Done!');
+  } else {
+    generatedDocs = { panels, sheets: pages, base };
+    setProgress(100, 'Ready!');
+    await new Promise(r => setTimeout(r, 300));
+    showManualModal();
+  }
+
+  await new Promise(r => setTimeout(r, 300));
+  generateBtn.disabled = false;
+  progress.classList.remove('visible');
+  progressFill.style.width = '0%';
+});
+
+function showManualModal() {
+  document.getElementById('modalSteps').innerHTML = `
+    <div class="step"><div class="step-num">1</div><div class="step-text">Click <strong>Download Side 1</strong> and print in <strong>landscape</strong>.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Flip the stack face-down</strong> and reinsert into the paper tray.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Click <strong>Download Side 2</strong> — pages are in reverse order so everything lines up.</div></div>`;
+
+  modalBtn1.textContent = 'Download Side 1';
+  modalBtn1.disabled = false;
+  modalBtn1.onclick = () => {
+    const { panels, sheets, base } = generatedDocs;
+    buildDoc(panels, sheets, 'side1').save(`${base}-side1.pdf`);
+    document.querySelectorAll('#modalSteps .step-num')[0].classList.add('done');
+    document.querySelectorAll('#modalSteps .step-num')[0].textContent = '✓';
+    modalBtn1.textContent = 'Download Side 2';
+    modalBtn1.onclick = () => {
+      buildDoc(panels, sheets, 'side2').save(`${base}-side2.pdf`);
+      document.querySelectorAll('#modalSteps .step-num').forEach(el => { el.classList.add('done'); el.textContent = '✓'; });
+      modalBtn1.textContent = '✓ All done!';
+      modalBtn1.disabled = true;
+    };
+  };
+  modalOverlay.classList.add('visible');
+}
+
+// ── Preview ────────────────────────────────────────────────────────────────────
+// Same layout as the PDF, drawn on a canvas (1mm = `s` px)
+function drawPanelPreview(ctx, ox, oy, s, panel) {
+  const C = PDFKit.COLORS;
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.fillStyle = rgb(C.gold); ctx.font = `${4.6 / 2.835 * s}px DM Mono, monospace`;
+  ctx.fillText(('The Insert Studio · ' + DETAIL_LABEL[getDetail()]).toUpperCase(), ox + 12.5 * s, oy + 5.6 * s);
+  ctx.fillStyle = rgb(C.ink); ctx.font = `bold ${12 / 2.835 * s}px Playfair Display, serif`;
+  const lead = 'Colour the ';
+  ctx.fillText(lead, ox + 6 * s, oy + 11.2 * s);
+  const w = ctx.measureText(lead).width;
+  ctx.fillStyle = rgb(C.rust); ctx.font = `italic bold ${12 / 2.835 * s}px Playfair Display, serif`;
+  ctx.fillText(ColourPage.SUBJECTS[panel.subject], ox + 6 * s + w, oy + 11.2 * s);
+  ctx.fillStyle = rgb(C.gold); ctx.fillRect(ox + 6 * s, oy + 13.2 * s, 16 * s, 0.5 * s);
+  ctx.fillStyle = rgb(C.rule); ctx.fillRect(ox + 6 * s, oy + 98.6 * s, 98 * s, 0.15 * s);
+  ctx.fillStyle = rgb(C.muted); ctx.font = `${3.4 / 2.835 * s}px DM Mono, monospace`;
+  ctx.fillText('THE INSERT STUDIO', ox + 6 * s, oy + 101.6 * s);
+  ctx.fillStyle = rgb(C.rust); ctx.font = `italic ${6.5 / 2.835 * s}px Playfair Display, serif`;
+  ctx.textAlign = 'right'; ctx.fillText(String(panel.number).padStart(2, '0'), ox + 104 * s, oy + 102 * s);
+  if (getName()) { ctx.font = `italic ${8 / 2.835 * s}px Playfair Display, serif`; ctx.fillText('for ' + getName(), ox + 104 * s, oy + 11.2 * s); }
+
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = rgb(C.ink); ctx.fillStyle = '#fff';
+  for (const o of ColourPage.place(panel.ops, ox / s, oy / s, BODY_TOP)) {
+    ctx.beginPath();
+    o.pts.forEach((p, i) => i ? ctx.lineTo(p[0] * s, p[1] * s) : ctx.moveTo(p[0] * s, p[1] * s));
+    if (o.closed) ctx.closePath();
+    ctx.lineWidth = Math.max(0.6, o.w * s);
+    if (o.fill) ctx.fill();
+    if (o.stroke) ctx.stroke();
+  }
+}
+
+function updatePreview() {
+  const canvas = document.getElementById('previewCanvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  if (!W || !H) { setTimeout(updatePreview, 150); return; }
+
+  document.getElementById('previewBadge').textContent = `${getPics().map(p => ColourPage.SUBJECTS[p]).join(' + ')} · ${DETAIL_LABEL[getDetail()]}`;
+
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.width = Math.round(W * window.devicePixelRatio);
+  canvas.height = Math.round(H * window.devicePixelRatio);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+
+  const s = W / 297, colW = 110 * s, halfH = H / 2;
+  const panels = makePanels(previewSeed, 4);
+  Seed.free();
+  [[0, 0, 0], [0, 1, 1], [1, 0, 2], [1, 1, 3]].forEach(([col, row, i]) => drawPanelPreview(ctx, col * colW, row * halfH, s, panels[i]));
+
+  // fold (dashed) and cut (dotted) lines, and the shaded off-cut strip
+  ctx.strokeStyle = 'rgba(100,100,100,0.4)'; ctx.lineWidth = 0.8;
+  ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(colW, 0); ctx.lineTo(colW, H); ctx.stroke();
+  ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(80,80,80,0.4)';
+  ctx.beginPath(); ctx.moveTo(2 * colW, 0); ctx.lineTo(2 * colW, H); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(220,215,208,0.35)'; ctx.fillRect(2 * colW, 0, W - 2 * colW, H);
+  ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(180,180,180,0.5)'; ctx.lineWidth = 0.4;
+  ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(2 * colW, H / 2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+window.updatePreview = updatePreview;
+
+// Init
+setTimeout(updatePreview, 100);
+setTimeout(updatePreview, 500);
+window.addEventListener('resize', updatePreview);
+updateStats();
+</script>
+</body>
+</html>

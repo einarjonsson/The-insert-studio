@@ -12,7 +12,8 @@ Printable Traveler's Notebook insert generators, all in one static site (no buil
 | Calligraphy Practice | `calligraphy/` |
 | Nonogram | `nonogram/` |
 | Number Fill-In | `numberfill/` |
-| Math Worksheets (A4 portrait) | `math/` |
+| Math Worksheets | `math/` |
+| Colouring Pages | `colouring/` |
 | Build a notebook (mix inserts into one PDF) | `notebook/` |
 
 ## Structure

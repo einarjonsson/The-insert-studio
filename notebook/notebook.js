@@ -17,12 +17,12 @@
     { key: 'nonogram',          name: 'Nonogram',          tag: 'Picture logic',   sided: 1, color: '#2a2218' },
     { key: 'habit',             name: 'Habit Tracker',     tag: 'Monthly grid',    sided: 1, color: '#4d6a3f' },
     { key: 'calligraphy',       name: 'Calligraphy',       tag: 'Practice sheets', sided: 1, color: '#35507a' },
-    { key: 'dnd',               name: 'D&D Pack',          tag: 'Campaign manual', sided: 1, color: '#6a1f1f', regularOnly: true },
+    { key: 'dnd',               name: 'D&D Pack',          tag: 'Campaign manual', sided: 1, color: '#6a1f1f' },
     { key: 'wandering-library', name: 'Wandering Library', tag: 'Solo RPG pack',   sided: 2, color: '#4a3018' }
   ];
   const BY_KEY = Object.fromEntries(INSERTS.map((i) => [i.key, i]));
 
-  const state = { size: 'regular', mode: 'duplex', title: 'My Notebook', cover: true, items: [], seq: 0, active: null, busy: false, opened: false };
+  const state = { mode: 'duplex', title: 'My Notebook', cover: true, items: [], seq: 0, active: null, busy: false, opened: false };
 
   const stage = $('#stage'), cover = $('#cover'), coverFront = $('#coverFront'), pageRight = $('#pageRight'), pageScroll = $('#pageScroll');
   const shelf = $('#shelf'), booklets = $('#booklets'), countEl = $('#count'), tally = $('#tally'), makeBtn = $('#makeBtn');
@@ -202,47 +202,17 @@
     $('#coverTitle').textContent = state.title;
   });
 
-  document.querySelectorAll('input[name="nbsize"]').forEach((r) => r.addEventListener('change', () => setSize(r.value)));
   document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', () => { state.mode = r.value; }));
   $('#coverIn').addEventListener('change', (e) => { state.cover = e.target.checked; });
-
-  function setSize(size) {
-    const clash = size === 'passport' ? state.items.filter((i) => BY_KEY[i.key].regularOnly) : [];
-    if (clash.length && !window.confirm(clash.map((i) => BY_KEY[i.key].name).join(', ') + ' only comes in Regular size. Remove it from the notebook?')) {
-      document.querySelector('input[name="nbsize"][value="regular"]').checked = true;
-      return;
-    }
-    clash.forEach(removeItem);
-    state.size = size;
-    state.items.forEach((i) => applySize(i));
-    $('#coverIn').disabled = size === 'passport';
-    $('#coverRow').classList.toggle('disabled', size === 'passport');
-    const note = $('#sizeNote');
-    note.hidden = size !== 'passport';
-    note.textContent = size === 'passport' ? 'Cover sheets are made for Regular size. D&D is Regular only.' : '';
-    renderShelf(); updateAll();
-  }
-
-  // push the notebook size into an insert's own page
-  function applySize(item) {
-    const f = item.frame; if (!f || !item.ready) return;
-    const w = f.contentWindow, d = f.contentDocument;
-    try {
-      if (typeof w.setSizeBtn === 'function') { w.setSizeBtn(state.size); return; }
-      const r = d.querySelector(`input[name="size"][value="${state.size}"], input[name="nbsize"][value="${state.size}"]`);
-      if (r) r.click();
-    } catch (e) { /* the insert keeps its own size */ }
-  }
 
   // ── the shelf ─────────────────────────────────────────────────────────────
   function renderShelf() {
     shelf.innerHTML = '';
     INSERTS.forEach((ins) => {
       const n = state.items.filter((i) => i.key === ins.key).length;
-      const locked = ins.regularOnly && state.size === 'passport';
       const b = el('button', 'shelf-item',
-        `${n ? `<span class="badge">×${n}</span>` : ''}<span class="plus" aria-hidden="true">+</span>${(window.NB_THUMBS || {})[ins.key] || ''}<b>${ins.name}</b><i>${locked ? 'Regular only' : ins.tag}</i>`);
-      b.type = 'button'; b.disabled = locked; b.setAttribute('role', 'listitem');
+        `${n ? `<span class="badge">×${n}</span>` : ''}<span class="plus" aria-hidden="true">+</span>${(window.NB_THUMBS || {})[ins.key] || ''}<b>${ins.name}</b><i>${ins.tag}</i>`);
+      b.type = 'button'; b.setAttribute('role', 'listitem');
       b.setAttribute('aria-label', `Add ${ins.name} to the notebook`);
       b.addEventListener('click', () => addItem(ins.key));
       shelf.appendChild(b);
@@ -261,7 +231,6 @@
     frame.src = `../${key}/?embed`;
     frame.addEventListener('load', () => {
       item.ready = true;
-      applySize(item);
       const d = frame.contentDocument;
       let t = null;
       const poke = () => { clearTimeout(t); t = setTimeout(() => refreshSummary(item), 250); };
@@ -376,7 +345,6 @@
     item.sink.length = 0;
     const ov = d.getElementById('duplexOverride');                    // ask for one combined PDF
     if (ov) ov.click();
-    applySize(item);
     d.querySelector('.generate-btn').click();
     const t0 = Date.now();
     while (!item.sink.length) {
@@ -403,7 +371,7 @@
     if (state.busy || !state.items.length) return;
     state.busy = true; updateAll();
     const items = [...state.items];
-    const useCover = state.cover && state.size === 'regular';
+    const useCover = state.cover;
 
     const box = $('#binding'), stepsEl = $('#bindSteps'), bar = $('#bindBar');
     box.hidden = false; box.classList.remove('done');
@@ -485,7 +453,6 @@
       acts.appendChild(a);
     });
     const how = $('#howto'); const steps = [];
-    const fold = state.size === 'regular' ? 'Fold each sheet at 110mm and cut at 220mm (the marks are printed).' : 'Cut each sheet along the centre lines (the marks are printed).';
     if (r.files.length === 2) {
       steps.push('Print <strong>side 1</strong> on A4, landscape.');
       steps.push('Flip the stack face-down, put it back in the tray without rotating, and print <strong>side 2</strong>.');
@@ -494,7 +461,7 @@
     } else {
       steps.push('Print on A4, <strong>landscape, one side only</strong>.');
     }
-    steps.push(fold);
+    steps.push('Fold each sheet at 110mm and cut at 220mm (the marks are printed).');
     steps.push('Slip the inserts into your notebook.');
     if (r.backs && state.items.some((i) => BY_KEY[i.key].sided === 1)) steps.push('Single-sheet inserts get a blank back so every page lines up.');
     how.innerHTML = steps.map((s) => `<li>${s}</li>`).join('');

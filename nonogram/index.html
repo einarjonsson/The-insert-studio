@@ -118,15 +118,6 @@
     </div>
   </div>
 
-  <!-- Notebook size -->
-  <div class="section">
-    <div class="section-title">Notebook Size</div>
-    <div class="radio-group cols-2">
-      <label class="radio-option"><input type="radio" name="nbsize" value="regular" checked onchange="updatePreview()"><span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm wide</span></span></label>
-      <label class="radio-option"><input type="radio" name="nbsize" value="passport" onchange="updatePreview()"><span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm</span></span></label>
-    </div>
-  </div>
-
   <!-- Count -->
   <div class="section">
     <div class="section-title">Number of Puzzles</div>
@@ -472,9 +463,7 @@ function buildDoc(allGrids) {
   const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
   PDFKit.register(doc);
   const W=297, H=210;
-  const nbsize = document.querySelector('input[name="nbsize"]:checked')?.value || 'regular';
-  const colW = nbsize==='regular' ? 110 : 134;
-  const ph   = nbsize==='regular' ? 210 : 98;
+  const colW = 110;
   const {cols, rows} = getGridDims();
   const flipEdge = duplexSupported ? getFlipEdge() : 'long';
 
@@ -495,44 +484,24 @@ function buildDoc(allGrids) {
       const drawRotated = (drawFn, px, py, pw, pph, ...args) =>
         drawFn(doc, W-px-pw, H-py-pph, pw, pph, ...args);
 
-      if (nbsize === 'regular') {
-        // Back: solution on left (was right), puzzle on right (was left) — both rotated
-        if (opts.solution) {
-          drawNonogramPDF(doc, W-colW, 0, colW, H, grid, i+1, true);   // rotated left = orig right
-        } else {
-        }
-        drawNonogramPDF(doc, W-2*colW, 0, colW, H, grid, i+1, false); // rotated right = orig left
-      } else {
-        const sx=(W-colW*2)/2, sy=(H-ph*2)/2;
-        drawNonogramPDF(doc, W-sx-colW,    H-sy-ph,    colW, ph, grid, i+1, false);
-        drawNonogramPDF(doc, W-sx-2*colW,  H-sy-ph,    colW, ph, grid, i+1, opts.solution);
-        drawNonogramPDF(doc, W-sx-colW,    H-sy-2*ph,  colW, ph, grid, i+1, false);
-        drawNonogramPDF(doc, W-sx-2*colW,  H-sy-2*ph,  colW, ph, grid, i+1, opts.solution);
+      // Back: solution on left (was right), puzzle on right (was left) — both rotated
+      if (opts.solution) {
+        drawNonogramPDF(doc, W-colW, 0, colW, H, grid, i+1, true);   // rotated left = orig right
       }
+      drawNonogramPDF(doc, W-2*colW, 0, colW, H, grid, i+1, false); // rotated right = orig left
 
       // Fold/cut marks (mirrored for rotated page)
-      if (nbsize === 'regular') drawRotatedRegularMarks(doc);
-      else PDFKit.marks(doc, 'passport', { label: 'Back' });
+      drawRotatedRegularMarks(doc);
 
     } else {
       // Normal (odd pages, or short-edge, or manual)
-      if (nbsize === 'regular') {
-        drawNonogramPDF(doc, 0, 0, colW, ph, grid, i+1, false);
-        if (opts.solution) {
-          drawNonogramPDF(doc, colW, 0, colW, ph, grid, i+1, true);
-        } else {
-        }
-      } else {
-        const sx=(W-colW*2)/2, sy=(H-ph*2)/2;
-        drawNonogramPDF(doc, sx,    sy,    colW, ph, grid, i+1, false);
-        drawNonogramPDF(doc, sx+colW, sy,  colW, ph, grid, i+1, opts.solution);
-        drawNonogramPDF(doc, sx,    sy+ph, colW, ph, grid, i+1, false);
-        drawNonogramPDF(doc, sx+colW, sy+ph, colW, ph, grid, i+1, opts.solution);
+      drawNonogramPDF(doc, 0, 0, colW, H, grid, i+1, false);
+      if (opts.solution) {
+        drawNonogramPDF(doc, colW, 0, colW, H, grid, i+1, true);
       }
 
       // Fold/cut marks
-      if (nbsize === 'regular') PDFKit.marks(doc, 'regular', { label: 'Puzzle · Solution' });
-      else PDFKit.marks(doc, 'passport', { label: 'Puzzle · Solution' });
+      PDFKit.marks(doc, 'regular', { label: 'Puzzle · Solution' });
     }
   });
   return doc;
@@ -619,8 +588,7 @@ function updatePreview() {
   ctx.fillStyle='#f0ead8'; ctx.fillRect(0,0,W,H);
 
   const sc=W/297;
-  const nbsize=document.querySelector('input[name="nbsize"]:checked')?.value||'regular';
-  const colW=(nbsize==='regular'?110:134)*sc;
+  const colW=110*sc;
 
   drawCanvasNonogram(ctx, 0, 0, colW, H, sc, currentGrid, 1, false);
   if (opts.solution) {

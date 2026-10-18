@@ -3,7 +3,7 @@ StudioIntro.register('wandering-library', {
   title: ['The Wandering', 'Library'],
   hook: 'You run a library on wheels. Roll the dice, travel the road, meet whoever turns up, and write the story down. This pack prints everything you need on the page.',
   cta: 'Build my pack',
-  footer: 'Five insert types · Regular & Passport',
+  footer: 'Five insert types',
 
   hero: `<svg class="ill" viewBox="0 0 640 460" role="img" aria-label="A book wagon travelling a winding road at night">
     <g class="i-gold">

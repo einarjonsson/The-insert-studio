@@ -173,21 +173,6 @@
         </div>
       </div>
 
-      <!-- Notebook size -->
-      <div class="section">
-        <div class="section-title">Notebook Size</div>
-        <div class="radio-group cols-2">
-          <label class="radio-option">
-            <input type="radio" name="size" value="regular" checked>
-            <span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm · fold + cut</span></span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="size" value="passport">
-            <span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm · cut only</span></span>
-          </label>
-        </div>
-      </div>
-
       <!-- Librarian name -->
       <div class="section">
         <div class="section-title">Your Librarian</div>
@@ -265,7 +250,6 @@ const modalOverlay = document.getElementById('modalOverlay');
 const modalBtn1    = document.getElementById('modalBtn1');
 const modalClose   = document.getElementById('modalClose');
 
-const getSize = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
 const getLibrarian = () => document.getElementById('librarianName')?.value.trim() || '';
 
 // ── UI helpers ─────────────────────────────────────────────────────────────────
@@ -311,7 +295,6 @@ modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) mod
 
 // ── PDF Drawing helpers ────────────────────────────────────────────────────────
 const PW = 110, PH = 210; // panel dimensions in mm (Regular TN)
-const PPW = 134, PPH = 98; // passport panel
 
 // Fonts: Playfair (PDFKit.serif) for titles / section headings / numerals, DM Mono (PDFKit.mono) for labels and lists.
 // Sizes are pt, layout is mm.
@@ -322,7 +305,6 @@ function mmFont(doc, size, style='normal', face='serif') {
   doc.setFont(mono ? PDFKit.mono() : PDFKit.serif(), style);
   doc.setFontSize(size);
 }
-const isWide = (pw) => pw > 120;   // passport panels (134mm) get a two-column layout
 
 // Ornate border with corner flourishes
 function drawBorder(doc, x, y, w, h, thin=false) {
@@ -503,47 +485,24 @@ function drawSessionLog(doc, px, py, pw, ph, pageNum, librarian) {
   cy += 5.2;
   const checks = ['Books lent out', 'Books returned', 'New book found', 'Book lost or damaged'];
 
-  if (isWide(pw)) {
-    // Passport: two columns
-    const cw = (iw - 5) / 2, lx = px+m, rx = px+m+cw+5;
-    let ly = cy, ry = cy;
-    drawSectionHeader(doc, '— The Road —', lx, ly, cw); ly += SH;
-    drawLines(doc, lx, ly, cw, 1, 4.5); ly += 4.4;
-    label(doc, 'Roll d6 for the journey:', lx, ly, 4.2); ly += 1.4;
-    drawD6Table(doc, D6_ROAD, lx, ly, cw, 3.0); ly += 5*3.0 + 3;
-    drawSectionHeader(doc, '— Who Came to the Library? —', rx, ry, cw); ry += SH;
-    drawD6Table(doc, D6_VISITOR, rx, ry, cw, 3.0); ry += 6*3.0 + 3;
-    // the shorter column gets the checklist
-    drawSectionHeader(doc, '— The Library Tonight —', lx, ly, cw); ly += SH + 0.8;
-    drawChecks(doc, checks, lx, ly, cw); ly += 2*4;
-    cy = Math.max(ly, ry) + 1.4;
-    // What happened + next time, side by side
-    const nLines = Math.max(2, Math.floor((B - (cy + SH + 0.6)) / 4.2));
-    drawSectionHeader(doc, '— What Happened —', lx, cy, cw);
-    drawLines(doc, lx, cy+SH+0.6, cw, nLines, 4.2);
-    drawSectionHeader(doc, '— Until Next Time —', rx, cy, cw);
-    field(doc, 'Next destination:', rx, cy+SH+1.8, cw, 4.2);
-    field(doc, 'One thing I\'m carrying forward:', rx, cy+SH+7.8, cw, 4.2);
-  } else {
-    drawSectionHeader(doc, '— The Road —', px+m, cy, iw); cy += SH;
-    drawLines(doc, px+m, cy, iw, 1, 4.5); cy += 4.2;
-    label(doc, 'Roll d6 for the journey:', px+m, cy, 4.2); cy += 1.4;
-    drawD6Table(doc, D6_ROAD, px+m, cy, iw, 2.9); cy += 5*2.9 + 2.6;
-    drawSectionHeader(doc, '— Who Came to the Library? —', px+m, cy, iw); cy += SH;
-    drawD6Table(doc, D6_VISITOR, px+m, cy, iw, 2.9); cy += 6*2.9 + 2.6;
-    drawSectionHeader(doc, '— The Library Tonight —', px+m, cy, iw); cy += SH + 0.8;
-    drawChecks(doc, checks, px+m, cy, iw); cy += 2*4 + 0.4;
-    // Optional journal lines, only as many as genuinely fit
-    const need = SH + 5 + 5.6;                 // "Until next time" block
-    const wLines = Math.floor((B - need - (cy + SH + 0.6) - 1.5) / 4);
-    if (wLines >= 2) {
-      drawSectionHeader(doc, '— What Happened —', px+m, cy, iw); cy += SH + 0.6;
-      drawLines(doc, px+m, cy, iw, wLines, 4); cy += wLines*4 + 0.8;
-    }
-    drawSectionHeader(doc, '— Until Next Time —', px+m, cy, iw); cy += SH + 1.2;
-    field(doc, 'Next destination:', px+m, cy, iw, 4.2); cy += 5;
-    field(doc, 'One thing I\'m carrying forward:', px+m, cy, iw, 4.2);
+  drawSectionHeader(doc, '— The Road —', px+m, cy, iw); cy += SH;
+  drawLines(doc, px+m, cy, iw, 1, 4.5); cy += 4.2;
+  label(doc, 'Roll d6 for the journey:', px+m, cy, 4.2); cy += 1.4;
+  drawD6Table(doc, D6_ROAD, px+m, cy, iw, 2.9); cy += 5*2.9 + 2.6;
+  drawSectionHeader(doc, '— Who Came to the Library? —', px+m, cy, iw); cy += SH;
+  drawD6Table(doc, D6_VISITOR, px+m, cy, iw, 2.9); cy += 6*2.9 + 2.6;
+  drawSectionHeader(doc, '— The Library Tonight —', px+m, cy, iw); cy += SH + 0.8;
+  drawChecks(doc, checks, px+m, cy, iw); cy += 2*4 + 0.4;
+  // Optional journal lines, only as many as genuinely fit
+  const need = SH + 5 + 5.6;                 // "Until next time" block
+  const wLines = Math.floor((B - need - (cy + SH + 0.6) - 1.5) / 4);
+  if (wLines >= 2) {
+    drawSectionHeader(doc, '— What Happened —', px+m, cy, iw); cy += SH + 0.6;
+    drawLines(doc, px+m, cy, iw, wLines, 4); cy += wLines*4 + 0.8;
   }
+  drawSectionHeader(doc, '— Until Next Time —', px+m, cy, iw); cy += SH + 1.2;
+  field(doc, 'Next destination:', px+m, cy, iw, 4.2); cy += 5;
+  field(doc, 'One thing I\'m carrying forward:', px+m, cy, iw, 4.2);
   drawFooter(doc, px, py, pw, ph, pageNum);
 }
 
@@ -557,43 +516,26 @@ function drawLocationCard(doc, px, py, pw, ph, pageNum) {
   let cy = py+14.2;
   cy = nameLine(doc, 'Place Name', px+m, cy, iw, [80,100,60]);
 
-  if (isWide(pw)) {
-    // Passport: one row of four fields, then two columns
-    const fw = (iw - 9) / 4;
-    ['Region:', 'Type:', 'First visited:', 'Pop. feel:'].forEach((n, i) => field(doc, n, px+m+i*(fw+3), cy, fw, 4.2));
-    cy += 5.4;
-    const cw = (iw - 5) / 2, lx = px+m, rx = px+m+cw+5;
-    const g = 4.2;
-    let ly = secLines(doc, '— Notable Features —', lx, cy, cw, 3, g);
-    ly = secLines(doc, '— What the Library Offered Here —', lx, ly, cw, 3, g);
-    let ry = secLines(doc, '— People Met Here —', rx, cy, cw, 3, g);
-    drawSectionHeader(doc, '— Return Visits —', rx, ry, cw); ry += SH + 1.4;
-    for (let i=0; i<2; i++) { field(doc, 'Date:', rx, ry, cw*0.4, 4.2); field(doc, 'Note:', rx+cw*0.45, ry, cw*0.55, 4.2); ry += 4.8; }
-    cy = Math.max(ly, ry + 0.4);
-    const n = Math.max(1, Math.floor((B - (cy + SH + 0.6)) / g) + 1);
-    secLines(doc, '— I Will Remember —', px+m, cy, iw, n, g);
-  } else {
-    field(doc, 'Region:', px+m, cy, iw*0.45, 4.2);
-    field(doc, 'Type:', px+m+iw*0.5, cy, iw*0.5, 4.2);
-    cy += 5;
-    field(doc, 'First visited:', px+m, cy, iw*0.5, 4.2);
-    field(doc, 'Pop. feel:', px+m+iw*0.55, cy, iw*0.45, 4.2);
-    cy += 5.4;
-    // fixed parts: 5 headers, return rows; the rest is shared by 8 ruled lines
-    const fixed = 5*(SH + 0.6 + 2.6) + 2*4.8;
-    const g = Math.max(3.2, Math.min(4.5, (B - cy - fixed) / 11));
-    cy = secLines(doc, '— Notable Features —', px+m, cy, iw, 3, g) - 0.8;
-    cy = secLines(doc, '— What the Library Offered Here —', px+m, cy, iw, 3, g) - 0.8;
-    cy = secLines(doc, '— People Met Here —', px+m, cy, iw, 3, g) - 0.8;
-    drawSectionHeader(doc, '— Return Visits —', px+m, cy, iw); cy += SH + 1.4;
-    for (let i=0; i<2; i++) {
-      field(doc, 'Date:', px+m, cy, iw*0.4, 4.2);
-      field(doc, 'Note:', px+m+iw*0.45, cy, iw*0.55, 4.2);
-      cy += 4.8;
-    }
-    cy += 0.8;
-    secLines(doc, '— I Will Remember —', px+m, cy, iw, 2, g);
+  field(doc, 'Region:', px+m, cy, iw*0.45, 4.2);
+  field(doc, 'Type:', px+m+iw*0.5, cy, iw*0.5, 4.2);
+  cy += 5;
+  field(doc, 'First visited:', px+m, cy, iw*0.5, 4.2);
+  field(doc, 'Pop. feel:', px+m+iw*0.55, cy, iw*0.45, 4.2);
+  cy += 5.4;
+  // fixed parts: 5 headers, return rows; the rest is shared by 8 ruled lines
+  const fixed = 5*(SH + 0.6 + 2.6) + 2*4.8;
+  const g = Math.max(3.2, Math.min(4.5, (B - cy - fixed) / 11));
+  cy = secLines(doc, '— Notable Features —', px+m, cy, iw, 3, g) - 0.8;
+  cy = secLines(doc, '— What the Library Offered Here —', px+m, cy, iw, 3, g) - 0.8;
+  cy = secLines(doc, '— People Met Here —', px+m, cy, iw, 3, g) - 0.8;
+  drawSectionHeader(doc, '— Return Visits —', px+m, cy, iw); cy += SH + 1.4;
+  for (let i=0; i<2; i++) {
+    field(doc, 'Date:', px+m, cy, iw*0.4, 4.2);
+    field(doc, 'Note:', px+m+iw*0.45, cy, iw*0.55, 4.2);
+    cy += 4.8;
   }
+  cy += 0.8;
+  secLines(doc, '— I Will Remember —', px+m, cy, iw, 2, g);
   drawFooter(doc, px, py, pw, ph, pageNum);
 }
 
@@ -617,30 +559,15 @@ function drawPatronCard(doc, px, py, pw, ph, pageNum) {
     doc.text('Will return', x+4.5, y);
   };
 
-  if (isWide(pw)) {
-    const cw = (iw - 5) / 2, lx = px+m, rx = px+m+cw+5;
-    let ly = cy, ry = cy;
-    drawSectionHeader(doc, '— Personality (d6) —', lx, ly, cw); ly += SH;
-    drawD6Table(doc, D6_PATRON, lx, ly, cw, 3.2); ly += 6*3.2 + 4.2;
-    willReturn(lx, ly); ly += 4.6;
-    ry = secLines(doc, '— Appearance —', rx, ry, cw, 2, 4.2);
-    drawSectionHeader(doc, '— Books —', rx, ry, cw); ry += SH + 1.4;
-    field(doc, 'Borrowed:', rx, ry, cw, 4.2); ry += 4.8;
-    field(doc, 'Returned:', rx, ry, cw, 4.2); ry += 5;
-    cy = Math.max(ly, ry) + 0.6;
-    const n = Math.max(1, Math.floor((B - (cy + SH + 0.6)) / 4.2) + 1);
-    secLines(doc, '— Notes —', px+m, cy, iw, n, 4.2);
-  } else {
-    drawSectionHeader(doc, '— Personality (d6) —', px+m, cy, iw); cy += SH;
-    drawD6Table(doc, D6_PATRON, px+m, cy, iw, 2.9); cy += 6*2.9 + 3.6;
-    cy = secLines(doc, '— Appearance —', px+m, cy, iw, 2, 3.8) - 0.6;
-    drawSectionHeader(doc, '— Books —', px+m, cy, iw); cy += SH + 1.4;
-    field(doc, 'Borrowed:', px+m, cy, iw, 4.2); cy += 4.8;
-    field(doc, 'Returned:', px+m, cy, iw, 4.2); cy += 5.4;
-    willReturn(px+m, cy); cy += 4.4;
-    const n = Math.max(1, Math.floor((B - (cy + SH + 0.6)) / 3.8) + 1);
-    secLines(doc, '— Notes —', px+m, cy, iw, n, 3.8);
-  }
+  drawSectionHeader(doc, '— Personality (d6) —', px+m, cy, iw); cy += SH;
+  drawD6Table(doc, D6_PATRON, px+m, cy, iw, 2.9); cy += 6*2.9 + 3.6;
+  cy = secLines(doc, '— Appearance —', px+m, cy, iw, 2, 3.8) - 0.6;
+  drawSectionHeader(doc, '— Books —', px+m, cy, iw); cy += SH + 1.4;
+  field(doc, 'Borrowed:', px+m, cy, iw, 4.2); cy += 4.8;
+  field(doc, 'Returned:', px+m, cy, iw, 4.2); cy += 5.4;
+  willReturn(px+m, cy); cy += 4.4;
+  const n = Math.max(1, Math.floor((B - (cy + SH + 0.6)) / 3.8) + 1);
+  secLines(doc, '— Notes —', px+m, cy, iw, n, 3.8);
   drawFooter(doc, px, py, pw, ph, pageNum);
 }
 
@@ -786,30 +713,16 @@ function layoutRegular(doc, drawFn, pageData, sideLabel) {
   });
 }
 
-function layoutPassport(doc, drawFn, pageData, sideLabel) {
-  const W=297,H=210,pw=134,ph=98;
-  const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
-  PDFKit.marks(doc, 'passport', { label: sideLabel });
-  const positions=[[0,0],[1,0],[0,1],[1,1]];
-  pageData.forEach((data,i)=>{
-    if(i>=4)return;
-    const[col,row]=positions[i];
-    drawFn(doc,sx+col*pw,sy+row*ph,pw,ph,data.num,data.librarian);
-  });
-}
-
 // ── Build the full PDF ─────────────────────────────────────────────────────────
 function buildFullDoc(sideFilter) {
   const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
   PDFKit.register(doc);
-  const size = getSize();
   const librarian = getLibrarian();
-  const layout = size === 'passport' ? layoutPassport : layoutRegular;
   let first = true;
   let pageNum = 1;
 
   // Collect all pages in order: sessions, locations, patrons, ledgers, maps
-  // Each page type fills panels (4 per A4 sheet for regular, 4 for passport)
+  // Each page type fills panels (4 per A4 sheet)
   const insertOrder = ['session','location','patron','ledger','map'];
   const drawFns = {
     session: drawSessionLog,
@@ -842,7 +755,7 @@ function buildFullDoc(sideFilter) {
         }
         const validData = panelData.map(d => d || {num:'', librarian:''});
         if (!first) doc.addPage(); first = false;
-        layout(doc, drawFns[type], validData, `${type} · side 1`);
+        layoutRegular(doc, drawFns[type], validData, `${type} · side 1`);
       }
 
       // Side 2
@@ -855,7 +768,7 @@ function buildFullDoc(sideFilter) {
         }
         const validData = panelData.map(d => d || {num:'', librarian:''});
         if (!first) doc.addPage(); first = false;
-        layout(doc, drawFns[type], validData, `${type} · side 2`);
+        layoutRegular(doc, drawFns[type], validData, `${type} · side 2`);
       }
     }
     pageNum += qty;

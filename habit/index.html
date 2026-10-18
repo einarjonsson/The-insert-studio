@@ -43,15 +43,6 @@
   <aside class="settings-panel">
     <div class="settings-inner">
 
-      <!-- Notebook size -->
-      <div class="section">
-        <div class="section-title">Notebook Size</div>
-        <div class="radio-group cols-2">
-          <label class="radio-option"><input type="radio" name="size" value="regular" checked><span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm · fold + cut</span></span></label>
-          <label class="radio-option"><input type="radio" name="size" value="passport"><span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm · cut only</span></span></label>
-        </div>
-      </div>
-
       <!-- Month & Year -->
       <div class="section">
         <div class="section-title">Month & Year</div>
@@ -191,7 +182,6 @@ const modalBtn1    = document.getElementById('modalBtn1');
 const modalClose   = document.getElementById('modalClose');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const getSize    = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
 const getFont    = () => document.querySelector('input[name="font"]:checked')?.value || 'studio';
 const getMonth   = () => document.getElementById('monthSelect').value;
 const getYear    = () => parseInt(document.getElementById('yearInput').value) || 2026;
@@ -439,28 +429,17 @@ function drawNotesPanel(doc, px, py, pw, ph, config, number) {
 function buildDoc(config) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   PDFKit.register(doc);
-  const { size, pages, showNotes } = config;
+  const { pages, showNotes } = config;
   const label = `${config.month} ${config.year}`;
 
   for (let p = 0; p < pages; p++) {
     if (p > 0) doc.addPage();
 
-    if (size === 'regular') {
-      const H = 210, colW = 110;
-      drawHabitPage(doc, 0, 0, colW, H, config, 1);
-      if (showNotes) drawNotesPanel(doc, colW, 0, colW, H, config, 2);
-      else drawHabitPage(doc, colW, 0, colW, H, config, 2);
-      PDFKit.marks(doc, 'regular', { label });
-    } else {
-      const W=297, H=210, pw=134, ph=98;
-      const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
-      const panels = [[sx,sy],[sx+pw,sy],[sx,sy+ph],[sx+pw,sy+ph]];
-      panels.forEach(([ox,oy], i) => {
-        if (i === 0 || i === 1) drawHabitPage(doc, ox, oy, pw, ph, config, i + 1);
-        else drawNotesPanel(doc, ox, oy, pw, ph, config, i + 1);
-      });
-      PDFKit.marks(doc, 'passport', { label });
-    }
+    const H = 210, colW = 110;
+    drawHabitPage(doc, 0, 0, colW, H, config, 1);
+    if (showNotes) drawNotesPanel(doc, colW, 0, colW, H, config, 2);
+    else drawHabitPage(doc, colW, 0, colW, H, config, 2);
+    PDFKit.marks(doc, 'regular', { label });
   }
   return doc;
 }
@@ -475,7 +454,7 @@ generateBtn.addEventListener('click', async () => {
   const config = {
     month: getMonth(), year: getYear(),
     habits: getHabitNames().slice(0, getHabitCount()),
-    font: getFont(), size: getSize(),
+    font: getFont(),
     pages: getPageCount(),
     showMood: toggleState.mood,
     showNotes: toggleState.notes,
@@ -508,7 +487,7 @@ function showManualModal() {
   document.getElementById('modalSteps').innerHTML = `
     <div class="step"><div class="step-num">1</div><div class="step-text">Click <strong>Download</strong> — the habit tracker is a single-sided insert, no duplex needed!</div></div>
     <div class="step"><div class="step-num">2</div><div class="step-text">Print in <strong>landscape</strong> orientation on A4.</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Fold at 110mm, cut at 220mm</strong> for Regular TN. Cut at centre lines for Passport.</div></div>`;
+    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Fold at 110mm, cut at 220mm</strong>.</div></div>`;
   modalBtn1.textContent = 'Download PDF';
   modalBtn1.onclick = () => {
     generatedDoc.doc.save(`habit-tracker-${generatedDoc.slug}.pdf`);

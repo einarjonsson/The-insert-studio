@@ -50,27 +50,6 @@
   <aside class="settings-panel">
     <div class="settings-inner">
 
-      <!-- Notebook size -->
-      <div class="section">
-        <div class="section-title">Notebook Size</div>
-        <div class="radio-group cols-2">
-          <label class="radio-option">
-            <input type="radio" name="size" value="regular" checked>
-            <span class="radio-btn">
-              <span class="rb-title">Regular</span>
-              <span class="rb-sub">110mm · fold + cut</span>
-            </span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="size" value="passport">
-            <span class="radio-btn">
-              <span class="rb-title">Passport</span>
-              <span class="rb-sub">134×98mm · cut only</span>
-            </span>
-          </label>
-        </div>
-      </div>
-
       <!-- Difficulty -->
       <div class="section">
         <div class="section-title">Difficulty</div>
@@ -309,7 +288,6 @@ const { jsPDF } = window.jspdf;
 let pageCount = 1;
 let duplexSupported = false;
 let generatedPuzzles = null;
-let generatedSize = null;
 let generatedPages = null;
 let generatedDifficulty = null;
 let bookSeed = '';
@@ -345,7 +323,6 @@ duplexBanner.addEventListener('click', e => {
 // ── Duplex detection ──────────────────────────────────────────────────────────
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
-function getSize() { return document.querySelector('input[name="size"]:checked').value; }
 function getDifficulty() { return document.querySelector('input[name="difficulty"]:checked')?.value || 'medium'; }
 function getTitle() { return document.getElementById('customTitle')?.value.trim() || ''; }
 function getCover() { return document.querySelector('input[name="cover"]:checked')?.value || 'none'; }
@@ -374,7 +351,6 @@ function updateHint() {
   countHint.textContent = `= ${pageCount * 8} sudokus`;
 }
 
-document.querySelectorAll('input[name="size"]').forEach(r => r.addEventListener('change', updateHint));
 countInput.addEventListener('input', updateHint);
 decBtn.addEventListener('click', () => { if (pageCount > 1) { pageCount--; countInput.value = pageCount; updateHint(); } });
 incBtn.addEventListener('click', () => { pageCount++; countInput.value = pageCount; updateHint(); });
@@ -508,14 +484,6 @@ function drawRegularSide(doc, puzzles, startIdx, sideLabel) {
   PDFKit.marks(doc, 'regular', { label: sideLabel, title: getTitle(), horizontal: true });
 }
 
-function drawPassportSide(doc, puzzles, startIdx, sideLabel) {
-  const W = 297, H = 210, pw = 134, ph = 98;
-  const startX = (W - pw * 2) / 2, startY = (H - ph * 2) / 2;
-  for (const [col, row, num] of [[0,0,startIdx],[1,0,startIdx+1],[0,1,startIdx+2],[1,1,startIdx+3]])
-    drawPanel(doc, startX + col * pw, startY + row * ph, pw, ph, puzzles[num-1], num);
-  PDFKit.marks(doc, 'passport', { label: sideLabel, title: getTitle() });
-}
-
 function drawCoverPage(doc, title, count) {
   PDFKit.cover(doc, {
     kicker: 'Sudoku', title: title || 'Sudoku Puzzles', blank: !title,
@@ -524,7 +492,7 @@ function drawCoverPage(doc, title, count) {
 }
 
 // ── Build PDFs ────────────────────────────────────────────────────────────────
-function buildDoc(puzzles, size, pages, sideFilter) {
+function buildDoc(puzzles, pages, sideFilter) {
   // sideFilter: 'all' | 'side1' | 'side2'
   // For side2 manual duplex: pages must be in REVERSE order so when
   // the stack is flipped, page N back aligns with page N front.
@@ -548,16 +516,12 @@ function buildDoc(puzzles, size, pages, sideFilter) {
     if (sideFilter === 'all' || sideFilter === 'side1') {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 1`;
-      size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+1, label)
-        : drawPassportSide(doc, puzzles, base+1, label);
+      drawRegularSide(doc, puzzles, base+1, label);
     }
     if (sideFilter === 'all' || sideFilter === 'side2') {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 2`;
-      size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+5, label)
-        : drawPassportSide(doc, puzzles, base+5, label);
+      drawRegularSide(doc, puzzles, base+5, label);
     }
   }
   return doc;
@@ -565,7 +529,6 @@ function buildDoc(puzzles, size, pages, sideFilter) {
 
 // ── Generate button ───────────────────────────────────────────────────────────
 generateBtn.addEventListener('click', async () => {
-  const size = getSize();
   const pages = parseInt(countInput.value) || 1;
   const total = pages * 8;
 
@@ -590,11 +553,11 @@ generateBtn.addEventListener('click', async () => {
 
   if (duplexSupported) {
     // Single PDF, all pages interleaved
-    const doc = buildDoc(puzzles, size, pages, 'all');
+    const doc = buildDoc(puzzles, pages, 'all');
     setProgress(100, 'Done! Downloading...');
     await new Promise(r => setTimeout(r, 300));
     const titleSlug = getTitle().replace(/[^a-z0-9]/gi,'-').toLowerCase().replace(/-+/g,'-').replace(/^-|-$/g,'');
-    const fname = titleSlug ? `${titleSlug}-sudoku-${size}-${getDifficulty()}-${pages}pages.pdf` : `tn-sudoku-${size}-${getDifficulty()}-${pages}pages.pdf`;
+    const fname = titleSlug ? `${titleSlug}-sudoku-regular-${getDifficulty()}-${pages}pages.pdf` : `tn-sudoku-regular-${getDifficulty()}-${pages}pages.pdf`;
     doc.save(fname);
     generateBtn.disabled = false;
     progress.classList.remove('visible');
@@ -602,7 +565,6 @@ generateBtn.addEventListener('click', async () => {
   } else {
     // Store puzzles and show modal
     generatedPuzzles = puzzles;
-    generatedSize = size;
     generatedPages = pages;
     generatedDifficulty = getDifficulty();
     generatedTitle = getTitle();
@@ -611,12 +573,12 @@ generateBtn.addEventListener('click', async () => {
     generateBtn.disabled = false;
     progress.classList.remove('visible');
     progressFill.style.width = '0%';
-    showManualModal(size, pages);
+    showManualModal(pages);
   }
 });
 
 // ── Manual duplex modal ───────────────────────────────────────────────────────
-function showManualModal(size, pages) {
+function showManualModal(pages) {
   document.getElementById('modalSteps').innerHTML = `
     <div class="step">
       <div class="step-num">1</div>
@@ -634,13 +596,13 @@ function showManualModal(size, pages) {
 
   modalBtn1.textContent = 'Download Side 1';
   modalBtn1.onclick = () => {
-    const doc = buildDoc(generatedPuzzles, generatedSize, generatedPages, 'side1');
-    doc.save(`tn-sudoku-${generatedSize}-${generatedDifficulty}-side1.pdf`);
+    const doc = buildDoc(generatedPuzzles, generatedPages, 'side1');
+    doc.save(`tn-sudoku-regular-${generatedDifficulty}-side1.pdf`);
     // After download, update modal to step 2/3
     modalBtn1.textContent = 'Download Side 2';
     modalBtn1.onclick = () => {
-      const doc2 = buildDoc(generatedPuzzles, generatedSize, generatedPages, 'side2');
-      doc2.save(`tn-sudoku-${generatedSize}-${generatedDifficulty}-side2.pdf`);
+      const doc2 = buildDoc(generatedPuzzles, generatedPages, 'side2');
+      doc2.save(`tn-sudoku-regular-${generatedDifficulty}-side2.pdf`);
       modalBtn1.textContent = '✓ All done!';
       modalBtn1.disabled = true;
       // Mark steps done
@@ -666,14 +628,13 @@ updateHint();
 
 // ── Live preview ──────────────────────────────────────────────────────────────
 function updatePreview() {
-  const size = getSize();
   const diff = getDifficulty();
   const pages = parseInt(document.getElementById('countDisplay').value) || 1;
   const hasCover = getCover() === 'cover';
 
   // Update badge and stats
   document.getElementById('previewBadge').textContent =
-    `${size.charAt(0).toUpperCase()+size.slice(1)} · ${diff.charAt(0).toUpperCase()+diff.slice(1)}`;
+    `Regular · ${diff.charAt(0).toUpperCase()+diff.slice(1)}`;
   document.getElementById('statPuzzles').textContent = pages * 8;
   document.getElementById('statSheets').textContent = pages + (hasCover ? 1 : 0);
   document.getElementById('statPages').textContent = (pages + (hasCover ? 1 : 0)) * 2;
@@ -696,11 +657,7 @@ function updatePreview() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  if (size === 'regular') {
-    drawRegularPreview(ctx, W, H, scale);
-  } else {
-    drawPassportPreview(ctx, W, H, scale);
-  }
+  drawRegularPreview(ctx, W, H, scale);
 }
 
 function drawRegularPreview(ctx, W, H, scale) {
@@ -748,46 +705,6 @@ function drawRegularPreview(ctx, W, H, scale) {
   ctx.fillText('fold', colW + 2*scale, H/2 - 8*scale);
   ctx.fillText('cut', 2*colW + 2*scale, H/2 - 8*scale);
   ctx.fillText('waste', 2*colW + 4*scale, H/2);
-}
-
-function drawPassportPreview(ctx, W, H, scale) {
-  const pw = 134*scale, ph = 98*scale;
-  const totalW = pw*2, totalH = ph*2;
-  const startX = (W - totalW)/2, startY = (H - totalH)/2;
-  const hasNotes = getNotes() === 'notes';
-  const notesH = hasNotes ? 14*scale : 0;
-  const labelH = 8*scale;
-  const gridSize = Math.min(pw - 8*scale, ph - 8*scale - labelH - notesH);
-  const vOff = (ph - gridSize - labelH - notesH)/2;
-  const hOff = (pw - gridSize)/2;
-
-  for (const [col, row] of [[0,0],[1,0],[0,1],[1,1]]) {
-    const ox = startX + col*pw + hOff;
-    const oy = startY + row*ph + vOff;
-    // Panel bg
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(startX + col*pw, startY + row*ph, pw, ph);
-    ctx.strokeStyle = 'rgba(160,160,160,0.4)';
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(startX + col*pw, startY + row*ph, pw, ph);
-    drawPreviewGrid(ctx, ox, oy, gridSize, scale);
-    if (hasNotes) drawPreviewNotes(ctx, ox, oy + gridSize + 2*scale, gridSize, scale);
-  }
-
-  // Cut lines
-  ctx.strokeStyle = 'rgba(80,80,80,0.5)';
-  ctx.lineWidth = 0.8;
-  ctx.setLineDash([2, 4]);
-  ctx.beginPath(); ctx.moveTo(startX+pw, startY-4*scale); ctx.lineTo(startX+pw, startY+totalH+4*scale); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(startX-4*scale, startY+ph); ctx.lineTo(startX+totalW+4*scale, startY+ph); ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Background outside panels
-  ctx.fillStyle = 'rgba(220,215,208,0.3)';
-  ctx.fillRect(0, 0, startX, H);
-  ctx.fillRect(startX+totalW, 0, W-(startX+totalW), H);
-  ctx.fillRect(startX, 0, totalW, startY);
-  ctx.fillRect(startX, startY+totalH, totalW, H-(startY+totalH));
 }
 
 function drawPreviewGrid(ctx, ox, oy, size, scale) {

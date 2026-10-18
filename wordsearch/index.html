@@ -55,21 +55,6 @@
   <aside class="settings-panel">
     <div class="settings-inner">
 
-      <!-- Notebook size -->
-      <div class="section">
-        <div class="section-title">Notebook Size</div>
-        <div class="radio-group cols-2">
-          <label class="radio-option">
-            <input type="radio" name="size" value="regular" checked>
-            <span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm · fold + cut</span></span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="size" value="passport">
-            <span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm · cut only</span></span>
-          </label>
-        </div>
-      </div>
-
       <!-- Category -->
       <div class="section">
         <div class="section-title">Word Category</div>
@@ -267,7 +252,6 @@ const modalBtn1   = document.getElementById('modalBtn1');
 const modalClose  = document.getElementById('modalClose');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const getSize       = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
 const getCategory   = () => document.querySelector('input[name="category"]:checked')?.value || 'animals';
 const getDifficulty = () => document.querySelector('input[name="difficulty"]:checked')?.value || 'medium';
 const getFont       = () => document.querySelector('input[name="font"]:checked')?.value || 'studio';
@@ -278,7 +262,7 @@ const getTitle      = () => document.getElementById('customTitle')?.value.trim()
 // ── UI ─────────────────────────────────────────────────────────────────────────
 function updateHint() {
   pageCount = parseInt(countInput.value) || 1;
-  const puzzlesPerPage = getSize() === 'passport' ? 4 : 4;
+  const puzzlesPerPage = 4;
   countHint.textContent = `= ${pageCount * puzzlesPerPage} puzzles`;
   document.getElementById('statPuzzles').textContent = pageCount * puzzlesPerPage;
   document.getElementById('statSheets').textContent = (pageCount + (getCover() === 'cover' ? 1 : 0)) * 2;
@@ -374,14 +358,13 @@ const seedLabel = () => 'The Insert Studio' + (bookSeed ? ' · Seed ' + bookSeed
 function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph) {
   const { grid, words } = puzzle, C = PDFKit.COLORS;
   const gridSize = grid.length;
-  const isPassport = ph < 110; // passport panels are 98mm tall
   const top = PDFKit.header(doc, ox, oy, pw, {
     eyebrow: 'The Insert Studio · ' + CATEGORY_LABELS[getCategory()] + ' · ' + DIFF_LABEL[getDifficulty()],
     title: 'Word Search', accent: 'No. ' + number, number
   });
   const bottom = PDFKit.footer(doc, ox, oy, pw, ph, { label: seedLabel() });
 
-  const rowH = isPassport ? 3.6 : 4.0;
+  const rowH = 4.0;
   const listRows = Math.ceil(words.length / 4);
   const wordListH = 3.5 + listRows * rowH + 1;
   const availW = pw - 14;
@@ -417,7 +400,7 @@ function drawWordSearchPage(doc, puzzle, number, ox, oy, pw, ph) {
   const lx = ox + 7;
   PDFKit.set(doc, PDFKit.mono(), 'normal', 4.2, C.rust);
   PDFKit.text(doc, 'FIND', lx, wly, null, 0.6);
-  PDFKit.set(doc, PDFKit.mono(), 'normal', isPassport ? 5 : 5.2, C.ink);
+  PDFKit.set(doc, PDFKit.mono(), 'normal', 5.2, C.ink);
   const colW = (pw - 14) / 4;
   words.forEach((w, i) => {
     doc.text(w, lx + (i % 4) * colW, wly + 3.2 + Math.floor(i / 4) * rowH);
@@ -433,16 +416,6 @@ function drawRegularSide(doc, puzzles, startIdx, sideLabel, title) {
   PDFKit.marks(doc, 'regular', { label: sideLabel, title, horizontal: true });
 }
 
-function drawPassportSide(doc, puzzles, startIdx, sideLabel, title) {
-  const W = 297, H = 210, pw = 134, ph = 98;
-  const startX = (W-pw*2)/2, startY = (H-ph*2)/2;
-  const panels = [[0,0,startIdx],[1,0,startIdx+1],[0,1,startIdx+2],[1,1,startIdx+3]];
-  for (const [col,row,idx] of panels) {
-    if (idx-1 < puzzles.length) drawWordSearchPage(doc, puzzles[idx-1], idx, startX+col*pw, startY+row*ph, pw, ph);
-  }
-  PDFKit.marks(doc, 'passport', { label: sideLabel, title });
-}
-
 function drawCoverPage(doc, title, count) {
   PDFKit.cover(doc, {
     kicker: 'Word Search', title: title || 'Word Search Puzzles', blank: !title,
@@ -450,7 +423,7 @@ function drawCoverPage(doc, title, count) {
   });
 }
 
-function buildDoc(puzzles, size, pages, sideFilter) {
+function buildDoc(puzzles, pages, sideFilter) {
   const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
   PDFKit.register(doc);
   const title = getTitle();
@@ -470,16 +443,12 @@ function buildDoc(puzzles, size, pages, sideFilter) {
     if (sideFilter === 'all' || sideFilter === 'side1') {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 1`;
-      size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+1, label, title)
-        : drawPassportSide(doc, puzzles, base+1, label, title);
+      drawRegularSide(doc, puzzles, base+1, label, title);
     }
     if (sideFilter === 'all' || sideFilter === 'side2') {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 2`;
-      size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+5, label, title)
-        : drawPassportSide(doc, puzzles, base+5, label, title);
+      drawRegularSide(doc, puzzles, base+5, label, title);
     }
   }
   return doc;
@@ -487,11 +456,11 @@ function buildDoc(puzzles, size, pages, sideFilter) {
 
 // ── Generate ───────────────────────────────────────────────────────────────────
 generateBtn.addEventListener('click', async () => {
-  const size = getSize(), category = getCategory();
+  const category = getCategory();
   const difficulty = getDifficulty(), font = getFont();
   const pages = parseInt(countInput.value) || 1;
   const total = pages * 8;
-  const gridSize = size === 'passport' ? 10 : 14;
+  const gridSize = 14;
   const wordList = WORDS[category];
 
   generateBtn.disabled = true;
@@ -517,10 +486,10 @@ generateBtn.addEventListener('click', async () => {
   const base = titleSlug || `tn-wordsearch-${category}-${difficulty}`;
 
   if (duplexSupported) {
-    buildDoc(puzzles, size, pages, 'all').save(`${base}-${pages}pages.pdf`);
+    buildDoc(puzzles, pages, 'all').save(`${base}-${pages}pages.pdf`);
     setProgress(100, 'Done!');
   } else {
-    generatedDocs = { puzzles, size, pages, base };
+    generatedDocs = { puzzles, pages, base };
     setProgress(100, 'Ready!');
     await new Promise(r => setTimeout(r, 300));
     showManualModal();
@@ -541,13 +510,13 @@ function showManualModal() {
   modalBtn1.textContent = 'Download Side 1';
   modalBtn1.disabled = false;
   modalBtn1.onclick = () => {
-    const { puzzles, size, pages, base } = generatedDocs;
-    buildDoc(puzzles, size, pages, 'side1').save(`${base}-side1.pdf`);
+    const { puzzles, pages, base } = generatedDocs;
+    buildDoc(puzzles, pages, 'side1').save(`${base}-side1.pdf`);
     document.querySelectorAll('#modalSteps .step-num')[0].classList.add('done');
     document.querySelectorAll('#modalSteps .step-num')[0].textContent = '✓';
     modalBtn1.textContent = 'Download Side 2';
     modalBtn1.onclick = () => {
-      buildDoc(puzzles, size, pages, 'side2').save(`${base}-side2.pdf`);
+      buildDoc(puzzles, pages, 'side2').save(`${base}-side2.pdf`);
       document.querySelectorAll('#modalSteps .step-num').forEach(el => { el.classList.add('done'); el.textContent = '✓'; });
       modalBtn1.textContent = '✓ All done!';
       modalBtn1.disabled = true;
@@ -558,7 +527,7 @@ function showManualModal() {
 
 // ── Preview ────────────────────────────────────────────────────────────────────
 function updatePreview() {
-  const size = getSize(), cat = getCategory(), diff = getDifficulty();
+  const cat = getCategory(), diff = getDifficulty();
   const pages = parseInt(countInput.value) || 1;
 
   document.getElementById('previewBadge').textContent =
@@ -582,13 +551,12 @@ function updatePreview() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  if (size === 'regular') drawRegularWSPreview(ctx, W, H, W/297);
-  else drawPassportWSPreview(ctx, W, H, W/297);
+  drawRegularWSPreview(ctx, W, H, W/297);
 }
 
 function drawWSGrid(ctx, ox, oy, pw, ph, scale) {
   const margin = 5*scale, titleH = 8*scale, wordListH = 22*scale;
-  const gridSize = pw < 100*scale ? 10 : 14;
+  const gridSize = 14;
   const availW = pw - margin*2, availH = ph - margin*2 - titleH - wordListH;
   const cell = Math.min(availW/gridSize, availH/gridSize);
   const gw = cell*gridSize, gh = cell*gridSize;
@@ -639,25 +607,6 @@ function drawRegularWSPreview(ctx, W, H, scale) {
   ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(180,180,180,0.5)'; ctx.lineWidth=0.4;
   ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(2*colW,H/2); ctx.stroke();
   ctx.setLineDash([]);
-}
-
-function drawPassportWSPreview(ctx, W, H, scale) {
-  const pw=134*scale, ph=98*scale;
-  const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
-  for (const [col,row] of [[0,0],[1,0],[0,1],[1,1]]) {
-    ctx.fillStyle='#ffffff'; ctx.fillRect(sx+col*pw,sy+row*ph,pw,ph);
-    ctx.strokeStyle='rgba(160,160,160,0.3)'; ctx.lineWidth=0.4;
-    ctx.strokeRect(sx+col*pw,sy+row*ph,pw,ph);
-    drawWSGrid(ctx,sx+col*pw,sy+row*ph,pw,ph,scale);
-  }
-  ctx.strokeStyle='rgba(80,80,80,0.4)'; ctx.lineWidth=0.8;
-  ctx.setLineDash([2,4]);
-  ctx.beginPath(); ctx.moveTo(sx+pw,sy-4*scale); ctx.lineTo(sx+pw,sy+ph*2+4*scale); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(sx-4*scale,sy+ph); ctx.lineTo(sx+pw*2+4*scale,sy+ph); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle='rgba(220,215,208,0.25)';
-  ctx.fillRect(0,0,sx,H); ctx.fillRect(sx+pw*2,0,W-sx-pw*2,H);
-  ctx.fillRect(sx,0,pw*2,sy); ctx.fillRect(sx,sy+ph*2,pw*2,H-sy-ph*2);
 }
 
 // Init

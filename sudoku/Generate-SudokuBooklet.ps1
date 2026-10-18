@@ -1,7 +1,6 @@
 # Generate-SudokuBooklet.ps1
-# Creates a landscape A4 PDF with Sudoku puzzles sized for either:
-#   - Regular Traveler's Notebook (110mm panels, 4 per side, fold + cut)
-#   - Passport Traveler's Notebook (134x98mm, 2 per side, cut only)
+# Creates a landscape A4 PDF with Sudoku puzzles sized for a Regular
+# Traveler's Notebook (110mm panels, 4 per side, fold + cut).
 #
 # REQUIREMENTS:
 #   Python 3 installed and in PATH
@@ -41,39 +40,17 @@ if ($Seed -eq -1) {
     Write-Host "Using random seed: $Seed  (use -Seed $Seed to regenerate the same puzzles)"
 }
 
-# ── Ask size ──────────────────────────────────────────────────────────────────
-Write-Host ""
-Write-Host "What size Traveler's Notebook do you have?" -ForegroundColor Cyan
-Write-Host "  1. Regular  (110mm panels - 4 sudokus per side, fold + cut)"
-Write-Host "  2. Passport (134x98mm    - 2 sudokus per side, cut only)"
-Write-Host ""
-$SizeChoice = Read-Host "Enter 1 or 2"
-if ($SizeChoice -ne "1" -and $SizeChoice -ne "2") {
-    Write-Error "Invalid choice. Please enter 1 or 2."
-    exit 1
-}
-$IsPassport = ($SizeChoice -eq "2")
-
 # ── Ask how many pages ────────────────────────────────────────────────────────
 Write-Host ""
-if ($IsPassport) {
-    $Pages = Read-Host "How many pages do you want? (each page has 4 sudokus, printed both sides = 8 per page)"
-} else {
-    $Pages = Read-Host "How many pages do you want? (each page has 4 sudokus, printed both sides = 8 per page)"
-}
+$Pages = Read-Host "How many pages do you want? (each page has 4 sudokus, printed both sides = 8 per page)"
 $Pages = [int]$Pages
 if ($Pages -lt 1) {
     Write-Error "Please enter at least 1 page."
     exit 1
 }
 
-if ($IsPassport) {
-    $TotalPuzzles = $Pages * 8
-    $PuzzlesPerSide = 4
-} else {
-    $TotalPuzzles = $Pages * 8
-    $PuzzlesPerSide = 4
-}
+$TotalPuzzles = $Pages * 8
+$PuzzlesPerSide = 4
 
 Write-Host "Generating $TotalPuzzles Sudoku puzzles across $Pages page(s)..."
 
@@ -85,7 +62,6 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 
 random.seed($Seed)
-is_passport = $( if ($IsPassport) { "True" } else { "False" } )
 total_puzzles = $TotalPuzzles
 pages = $Pages
 
@@ -204,75 +180,18 @@ def draw_regular_side(c, puzzles, start_idx, side_label):
     c.drawString(tx, A4h/2,         "... cut at 220mm")
     c.drawString(tx, A4h/2 - mm(4), side_label)
 
-# ── Passport layout: 2 per side, cut only ────────────────────────────────────
-
-def draw_passport_side(c, puzzles, start_idx, side_label):
-    A4w, A4h = landscape(A4)
-    pw = mm(134)
-    ph = mm(98)
-    total_w = pw * 2
-    total_h = ph * 2
-    start_x = (A4w - total_w) / 2
-    start_y = (A4h - total_h) / 2
-    label_h = mm(8)
-    grid_size = min(pw - mm(8), ph - mm(8) - label_h)
-    v_offset = (ph - grid_size - label_h) / 2
-    h_offset = (pw - grid_size) / 2
-
-    # 4 panels: top-left, top-right, bottom-left, bottom-right
-    panels = [
-        (0, 1, start_idx),
-        (1, 1, start_idx + 1),
-        (0, 0, start_idx + 2),
-        (1, 0, start_idx + 3),
-    ]
-    for col, row, num in panels:
-        ox = start_x + col * pw + h_offset
-        oy = start_y + row * ph + v_offset
-        draw_sudoku(c, ox, oy, grid_size, puzzles[num - 1], num, label_fs=7)
-
-    # Border outlines for all 4 panels
-    c.setStrokeColor(colors.Color(0.6, 0.6, 0.6))
-    c.setLineWidth(0.4)
-    for col in range(2):
-        for row in range(2):
-            c.rect(start_x + col*pw, start_y + row*ph, pw, ph, fill=0, stroke=1)
-
-    # Vertical cut line
-    c.setStrokeColor(colors.Color(0.3, 0.3, 0.3))
-    c.setLineWidth(0.7)
-    c.setDash([2, 5])
-    c.line(start_x + pw, start_y - mm(4), start_x + pw, start_y + total_h + mm(4))
-
-    # Horizontal cut line
-    c.line(start_x - mm(4), start_y + ph, start_x + total_w + mm(4), start_y + ph)
-    c.setDash([])
-
-    # Legend
-    c.setFont("Helvetica", 5)
-    c.setFillColor(colors.Color(0.5, 0.5, 0.5))
-    c.drawCentredString(A4w/2, start_y - mm(6), f"... cut horizontally and vertically at centre | {side_label}")
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 puzzles = [generate_sudoku() for _ in range(total_puzzles)]
 out = r"""$OutputPath"""
 c = canvas.Canvas(out, pagesize=landscape(A4))
 
-if is_passport:
-    for p in range(pages):
-        base = p * 4
-        draw_passport_side(c, puzzles, base + 1, f"Page {p+1} of {pages} - Side 1, print first")
-        c.showPage()
-        draw_passport_side(c, puzzles, base + 3, f"Page {p+1} of {pages} - Side 2, flip on short edge")
-        c.showPage()
-else:
-    for p in range(pages):
-        base = p * 8
-        draw_regular_side(c, puzzles, base + 1, f"Page {p+1} of {pages} - Side 1, print first")
-        c.showPage()
-        draw_regular_side(c, puzzles, base + 5, f"Page {p+1} of {pages} - Side 2, flip on short edge")
-        c.showPage()
+for p in range(pages):
+    base = p * 8
+    draw_regular_side(c, puzzles, base + 1, f"Page {p+1} of {pages} - Side 1, print first")
+    c.showPage()
+    draw_regular_side(c, puzzles, base + 5, f"Page {p+1} of {pages} - Side 2, flip on short edge")
+    c.showPage()
 
 c.save()
 print(f"Saved: {out}")
@@ -290,19 +209,11 @@ if ($exitCode -eq 0) {
     Write-Host "SUCCESS! $Pages page(s) saved to: $OutputPath" -ForegroundColor Green
     Write-Host ""
     Write-Host "INSTRUCTIONS:" -ForegroundColor Cyan
-    if ($IsPassport) {
-        Write-Host "  1. Print Side 1"
-        Write-Host "  2. Flip paper on the SHORT edge and print Side 2"
-        Write-Host "  3. Cut along the DOTTED vertical line (centre)"
-        Write-Host "  4. Cut along the DOTTED horizontal line (centre)"
-        Write-Host "  5. You now have $($Pages * 8) passport-sized Sudoku inserts"
-    } else {
-        Write-Host "  1. Print Side 1"
-        Write-Host "  2. Flip paper on the SHORT edge and print Side 2"
-        Write-Host "  3. Fold at the DASHED line (110mm from left)"
-        Write-Host "  4. Cut at the DOTTED line  (220mm from left)"
-        Write-Host "  5. You now have $($Pages * 8) regular-sized Sudoku inserts"
-    }
+    Write-Host "  1. Print Side 1"
+    Write-Host "  2. Flip paper on the SHORT edge and print Side 2"
+    Write-Host "  3. Fold at the DASHED line (110mm from left)"
+    Write-Host "  4. Cut at the DOTTED line  (220mm from left)"
+    Write-Host "  5. You now have $($Pages * 8) regular-sized Sudoku inserts"
     Write-Host ""
     if ($IsWindows -or ($PSVersionTable.PSVersion.Major -le 5)) {
         Start-Process $OutputPath -ErrorAction SilentlyContinue

@@ -30,7 +30,7 @@ window.StudioIntro = (function () {
   };
   const DEFAULT_FACTS = [
     { icon: 'print', title: 'Print on A4', text: 'Landscape, one sheet at a time. Duplex printers get a single PDF; others get a guided two-step flow.' },
-    { icon: 'fold', title: 'Fold, cut, done', text: 'Regular size folds at 110mm and cuts at 220mm. Passport size cuts at the centre lines. Marks are printed for you.' },
+    { icon: 'fold', title: 'Fold, cut, done', text: 'Fold at 110mm and cut at 220mm. Marks are printed for you.' },
     { icon: 'lock', title: 'Private by design', text: 'Everything is made in your browser. Nothing you type is uploaded anywhere.' }
   ];
 

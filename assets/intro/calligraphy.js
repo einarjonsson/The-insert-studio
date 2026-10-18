@@ -3,7 +3,7 @@ StudioIntro.register('calligraphy', {
   title: ["Learn to write","<em>beautifully.</em>"],
   hook: "Calligraphy is the art of beautiful writing. These practice sheets give you ruled guides, slant lines and ghost letters to trace, so your hand learns the shapes.",
   cta: "Make my sheets",
-  footer: "Copperplate & Modern · Regular & Passport",
+  footer: "Copperplate & Modern",
 
   hero: `<svg class="ill" viewBox="0 0 640 460" role="img" aria-label="A practice sheet with slanted guidelines, a ghost word half traced in ink, a dip pen and an inkwell">
     <g class="i-gold">

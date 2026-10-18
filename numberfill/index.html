@@ -43,21 +43,6 @@
   <aside class="settings-panel">
     <div class="settings-inner">
 
-      <!-- Notebook size -->
-      <div class="section">
-        <div class="section-title">Notebook Size</div>
-        <div class="radio-group cols-2">
-          <label class="radio-option">
-            <input type="radio" name="size" value="regular" checked>
-            <span class="radio-btn"><span class="rb-title">Regular</span><span class="rb-sub">110mm · fold + cut</span></span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="size" value="passport">
-            <span class="radio-btn"><span class="rb-title">Passport</span><span class="rb-sub">134×98mm · cut only</span></span>
-          </label>
-        </div>
-      </div>
-
       <!-- Difficulty -->
       <div class="section">
         <div class="section-title">Difficulty</div>
@@ -214,7 +199,6 @@ const modalBtn1   = document.getElementById('modalBtn1');
 const modalClose  = document.getElementById('modalClose');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const getSize       = () => document.querySelector('input[name="size"]:checked')?.value || 'regular';
 const getDifficulty = () => document.querySelector('input[name="difficulty"]:checked')?.value || 'medium';
 const getFont       = () => document.querySelector('input[name="font"]:checked')?.value || 'studio';
 const F = () => PDFKit.family(getFont());
@@ -224,7 +208,7 @@ const getTitle      = () => document.getElementById('customTitle')?.value.trim()
 // ── UI ─────────────────────────────────────────────────────────────────────────
 function updateHint() {
   pageCount = parseInt(countInput.value) || 1;
-  const puzzlesPerPage = getSize() === 'passport' ? 4 : 4;
+  const puzzlesPerPage = 4;
   countHint.textContent = `= ${pageCount * puzzlesPerPage} puzzles`;
   document.getElementById('statPuzzles').textContent = pageCount * puzzlesPerPage;
   document.getElementById('statSheets').textContent = (pageCount + (getCover() === 'cover' ? 1 : 0)) * 2;
@@ -260,14 +244,14 @@ let bookSeed = '';
 const seedUI = Seed.mount(document.getElementById('seedBox'));
 const seedLabel = () => 'The Insert Studio' + (bookSeed ? ' · Seed ' + bookSeed : '');
 
-function drawFillInPage(doc, puzzle, number, ox, oy, pw, ph, size) {
+function drawFillInPage(doc, puzzle, number, ox, oy, pw, ph) {
   const C = PDFKit.COLORS;
   const top = PDFKit.header(doc, ox, oy, pw, {
     eyebrow: 'The Insert Studio · ' + DIFF_LABEL[getDifficulty()],
     title: 'Number', accent: 'Fill-In', number
   });
   const bottom = PDFKit.footer(doc, ox, oy, pw, ph, { number, label: seedLabel() });
-  const L = FillIn.layout(puzzle, pw, ph, size, { top: top - oy + 1.2, bottom: bottom - oy - 0.5, side: 7 });
+  const L = FillIn.layout(puzzle, pw, ph, { top: top - oy + 1.2, bottom: bottom - oy - 0.5, side: 7 });
   const { n, cell, gx, gy } = L;
 
   // Grid: black blocks, wash for written-in numbers, tan rules
@@ -308,19 +292,9 @@ function drawRegularSide(doc, puzzles, startIdx, sideLabel, title) {
   const colW = 110, halfH = 105;
   const panels = [[0, 0, startIdx],[0, 1, startIdx+1],[1, 0, startIdx+2],[1, 1, startIdx+3]];
   for (const [col, row, idx] of panels) {
-    if (idx - 1 < puzzles.length) drawFillInPage(doc, puzzles[idx-1], idx, col*colW, row*halfH, colW, halfH, 'regular');
+    if (idx - 1 < puzzles.length) drawFillInPage(doc, puzzles[idx-1], idx, col*colW, row*halfH, colW, halfH);
   }
   PDFKit.marks(doc, 'regular', { label: sideLabel, title, horizontal: true });
-}
-
-function drawPassportSide(doc, puzzles, startIdx, sideLabel, title) {
-  const W = 297, H = 210, pw = 134, ph = 98;
-  const startX = (W-pw*2)/2, startY = (H-ph*2)/2;
-  const panels = [[0,0,startIdx],[1,0,startIdx+1],[0,1,startIdx+2],[1,1,startIdx+3]];
-  for (const [col,row,idx] of panels) {
-    if (idx-1 < puzzles.length) drawFillInPage(doc, puzzles[idx-1], idx, startX+col*pw, startY+row*ph, pw, ph, 'passport');
-  }
-  PDFKit.marks(doc, 'passport', { label: sideLabel, title });
 }
 
 function drawCoverPage(doc, title, count) {
@@ -330,7 +304,7 @@ function drawCoverPage(doc, title, count) {
   });
 }
 
-function buildDoc(puzzles, size, pages, sideFilter) {
+function buildDoc(puzzles, pages, sideFilter) {
   const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
   PDFKit.register(doc);
   const title = getTitle();
@@ -350,16 +324,12 @@ function buildDoc(puzzles, size, pages, sideFilter) {
     if (sideFilter === 'all' || sideFilter === 'side1') {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 1`;
-      size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+1, label, title)
-        : drawPassportSide(doc, puzzles, base+1, label, title);
+      drawRegularSide(doc, puzzles, base+1, label, title);
     }
     if (sideFilter === 'all' || sideFilter === 'side2') {
       if (!first) doc.addPage(); first = false;
       const label = `Page ${p+1} of ${pages} - Side 2`;
-      size === 'regular'
-        ? drawRegularSide(doc, puzzles, base+5, label, title)
-        : drawPassportSide(doc, puzzles, base+5, label, title);
+      drawRegularSide(doc, puzzles, base+5, label, title);
     }
   }
   return doc;
@@ -367,7 +337,6 @@ function buildDoc(puzzles, size, pages, sideFilter) {
 
 // ── Generate ───────────────────────────────────────────────────────────────────
 generateBtn.addEventListener('click', async () => {
-  const size = getSize();
   const difficulty = getDifficulty(), font = getFont();
   const pages = parseInt(countInput.value) || 1;
   const total = pages * 8;
@@ -384,7 +353,7 @@ generateBtn.addEventListener('click', async () => {
     setProgress(i/total*80, `Building puzzle ${i+1} of ${total}...`);
     await new Promise(r => setTimeout(r, 0));
     Seed.at(bookSeed, i + 1);
-    puzzles.push(FillIn.generate(size, difficulty));
+    puzzles.push(FillIn.generate(difficulty));
   }
   Seed.free(); seedUI.used(bookSeed);
 
@@ -392,13 +361,13 @@ generateBtn.addEventListener('click', async () => {
   await new Promise(r => setTimeout(r, 50));
 
   const titleSlug = getTitle().replace(/[^a-z0-9]/gi,'-').toLowerCase().replace(/-+/g,'-').replace(/^-|-$/g,'');
-  const base = titleSlug || `tn-numberfill-${size}-${difficulty}`;
+  const base = titleSlug || `tn-numberfill-regular-${difficulty}`;
 
   if (duplexSupported) {
-    buildDoc(puzzles, size, pages, 'all').save(`${base}-${pages}pages.pdf`);
+    buildDoc(puzzles, pages, 'all').save(`${base}-${pages}pages.pdf`);
     setProgress(100, 'Done!');
   } else {
-    generatedDocs = { puzzles, size, pages, base };
+    generatedDocs = { puzzles, pages, base };
     setProgress(100, 'Ready!');
     await new Promise(r => setTimeout(r, 300));
     showManualModal();
@@ -419,13 +388,13 @@ function showManualModal() {
   modalBtn1.textContent = 'Download Side 1';
   modalBtn1.disabled = false;
   modalBtn1.onclick = () => {
-    const { puzzles, size, pages, base } = generatedDocs;
-    buildDoc(puzzles, size, pages, 'side1').save(`${base}-side1.pdf`);
+    const { puzzles, pages, base } = generatedDocs;
+    buildDoc(puzzles, pages, 'side1').save(`${base}-side1.pdf`);
     document.querySelectorAll('#modalSteps .step-num')[0].classList.add('done');
     document.querySelectorAll('#modalSteps .step-num')[0].textContent = '✓';
     modalBtn1.textContent = 'Download Side 2';
     modalBtn1.onclick = () => {
-      buildDoc(puzzles, size, pages, 'side2').save(`${base}-side2.pdf`);
+      buildDoc(puzzles, pages, 'side2').save(`${base}-side2.pdf`);
       document.querySelectorAll('#modalSteps .step-num').forEach(el => { el.classList.add('done'); el.textContent = '✓'; });
       modalBtn1.textContent = '✓ All done!';
       modalBtn1.disabled = true;
@@ -436,19 +405,18 @@ function showManualModal() {
 
 // ── Preview ────────────────────────────────────────────────────────────────────
 const previewCache = {};
-function previewPuzzle(size, diff) {
-  const k = size + diff;
-  if (!previewCache[k]) previewCache[k] = FillIn.generate(size, diff);
-  return previewCache[k];
+function previewPuzzle(diff) {
+  if (!previewCache[diff]) previewCache[diff] = FillIn.generate(diff);
+  return previewCache[diff];
 }
 
 function updatePreview() {
-  const size = getSize(), diff = getDifficulty();
+  const diff = getDifficulty();
   const pages = parseInt(countInput.value) || 1;
-  const puzzle = previewPuzzle(size, diff);
+  const puzzle = previewPuzzle(diff);
 
   document.getElementById('previewBadge').textContent =
-    `${size === 'regular' ? 'Regular' : 'Passport'} · ${diff.charAt(0).toUpperCase()+diff.slice(1)} · ${puzzle.n}×${puzzle.n}`;
+    `Regular · ${diff.charAt(0).toUpperCase()+diff.slice(1)} · ${puzzle.n}×${puzzle.n}`;
   document.getElementById('statPuzzles').textContent = pages * 4;
   document.getElementById('statWords').textContent = puzzle.count;
   document.getElementById('statSheets').textContent = (pages + (getCover() === 'cover' ? 1 : 0)) * 2;
@@ -468,13 +436,12 @@ function updatePreview() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  if (size === 'regular') drawRegularPreview(ctx, W, H, W/297, puzzle);
-  else drawPassportPreview(ctx, W, H, W/297, puzzle);
+  drawRegularPreview(ctx, W, H, W/297, puzzle);
 }
 
 // Same layout as the PDF, drawn on a canvas (1mm = `s` px)
-function drawFillInPreview(ctx, ox, oy, pw, ph, s, puzzle, size) {
-  const L = FillIn.layout(puzzle, pw / s, ph / s, size);
+function drawFillInPreview(ctx, ox, oy, pw, ph, s, puzzle) {
+  const L = FillIn.layout(puzzle, pw / s, ph / s);
   const { n, cell } = L;
   const gx = ox + L.gx * s, gy = oy + L.gy * s, c = cell * s;
 
@@ -509,7 +476,7 @@ function drawFillInPreview(ctx, ox, oy, pw, ph, s, puzzle, size) {
 function drawRegularPreview(ctx, W, H, s, puzzle) {
   const colW = 110*s, halfH = H/2;
   for (const [col,row] of [[0,0],[0,1],[1,0],[1,1]])
-    drawFillInPreview(ctx, col*colW, row*halfH, colW, halfH, s, puzzle, 'regular');
+    drawFillInPreview(ctx, col*colW, row*halfH, colW, halfH, s, puzzle);
   ctx.strokeStyle='rgba(100,100,100,0.4)'; ctx.lineWidth=0.8;
   ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(colW,0); ctx.lineTo(colW,H); ctx.stroke();
   ctx.setLineDash([2,4]); ctx.strokeStyle='rgba(80,80,80,0.4)';
@@ -519,25 +486,6 @@ function drawRegularPreview(ctx, W, H, s, puzzle) {
   ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(180,180,180,0.5)'; ctx.lineWidth=0.4;
   ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(2*colW,H/2); ctx.stroke();
   ctx.setLineDash([]);
-}
-
-function drawPassportPreview(ctx, W, H, s, puzzle) {
-  const pw=134*s, ph=98*s;
-  const sx=(W-pw*2)/2, sy=(H-ph*2)/2;
-  for (const [col,row] of [[0,0],[1,0],[0,1],[1,1]]) {
-    ctx.fillStyle='#ffffff'; ctx.fillRect(sx+col*pw,sy+row*ph,pw,ph);
-    ctx.strokeStyle='rgba(160,160,160,0.3)'; ctx.lineWidth=0.4;
-    ctx.strokeRect(sx+col*pw,sy+row*ph,pw,ph);
-    drawFillInPreview(ctx,sx+col*pw,sy+row*ph,pw,ph,s,puzzle,'passport');
-  }
-  ctx.strokeStyle='rgba(80,80,80,0.4)'; ctx.lineWidth=0.8;
-  ctx.setLineDash([2,4]);
-  ctx.beginPath(); ctx.moveTo(sx+pw,sy-4*s); ctx.lineTo(sx+pw,sy+ph*2+4*s); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(sx-4*s,sy+ph); ctx.lineTo(sx+pw*2+4*s,sy+ph); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle='rgba(220,215,208,0.25)';
-  ctx.fillRect(0,0,sx,H); ctx.fillRect(sx+pw*2,0,W-sx-pw*2,H);
-  ctx.fillRect(sx,0,pw*2,sy); ctx.fillRect(sx,sy+ph*2,pw*2,H-sy-ph*2);
 }
 
 // Init

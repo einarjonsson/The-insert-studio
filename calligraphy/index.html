@@ -171,19 +171,6 @@
     <input type="text" class="text-input" id="insertTitle" placeholder="e.g. My Calligraphy Practice" maxlength="32" oninput="updatePreview()">
   </div>
 
-  <!-- Size -->
-  <div class="section">
-    <div class="section-title">Notebook Size</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-      <label style="cursor:pointer;"><input type="radio" name="size" value="regular" checked style="display:none" onchange="updatePreview()">
-        <div class="mode-btn active" id="size-regular" onclick="setSizeBtn('regular')"><span class="mode-icon">📓</span>Regular</div>
-      </label>
-      <label style="cursor:pointer;"><input type="radio" name="size" value="passport" style="display:none" onchange="updatePreview()">
-        <div class="mode-btn" id="size-passport" onclick="setSizeBtn('passport')"><span class="mode-icon">📔</span>Passport</div>
-      </label>
-    </div>
-  </div>
-
   <!-- Copies -->
   <div class="section">
     <div class="section-title">Copies</div>
@@ -303,13 +290,6 @@ function setPreviewTab(t) {
   updatePreview();
 }
 
-function setSizeBtn(s) {
-  document.getElementById('size-regular').classList.toggle('active', s === 'regular');
-  document.getElementById('size-passport').classList.toggle('active', s === 'passport');
-  document.querySelector(`input[value="${s}"]`).checked = true;
-  updatePreview();
-}
-
 function changeCount(d) {
   const el = document.getElementById('countVal');
   el.value = Math.max(1, parseInt(el.value) + d);
@@ -325,14 +305,13 @@ function updateSlantLabel() {
   document.getElementById('slantVal').textContent = state.slant + '°';
 }
 
-function getSize()  { return document.querySelector('input[name="size"]:checked')?.value || 'regular'; }
 function getCount() { return parseInt(document.getElementById('countVal').value) || 4; }
 function getWord()  { return document.getElementById('practiceWord')?.value.trim() || ''; }
 function getTitle() { return document.getElementById('insertTitle')?.value.trim() || ''; }
 
 function updateStats() {
   const spacing = parseInt(document.getElementById('spacingSlider').value);
-  const ph = getSize() === 'regular' ? 210 : 98;
+  const ph = 210;
   const cfg = PRESETS[state.preset];
   const totalH = spacing * (1 + cfg.ascRatio + cfg.descRatio);
   const lines = Math.floor((ph - 16) / (totalH));
@@ -630,10 +609,8 @@ function drawRightPanel(doc, px, py, pw, ph, opts) {
 function buildDoc() {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   PDFKit.register(doc);
-  const W = 297, H = 210;
-  const size = getSize();
-  const colW = size === 'regular' ? 110 : 134;
-  const ph = size === 'regular' ? 210 : 98;
+  const H = 210;
+  const colW = 110;
   const count = getCount();
   const title = getTitle();
   const word  = getWord();
@@ -648,24 +625,15 @@ function buildDoc() {
     title,
     word,
   };
-  const perPage = size === 'regular' ? 2 : 4;
+  const perPage = 2;
 
   for (let i = 0; i < count; i++) {
     if (i > 0) doc.addPage();
     const n = (k) => ({ ...base, num: i * perPage + k });
 
-    if (size === 'regular') {
-      drawPracticeGrid(doc, 0, 0, colW, H, n(1));
-      drawRightPanel(doc, colW, 0, colW, H, n(2));
-      PDFKit.marks(doc, 'regular', { label: 'Calligraphy', title });
-    } else {
-      const sx = (W - colW * 2) / 2, sy = (H - ph * 2) / 2;
-      drawPracticeGrid(doc, sx, sy, colW, ph, n(1));
-      drawRightPanel(doc, sx + colW, sy, colW, ph, n(2));
-      drawPracticeGrid(doc, sx, sy + ph, colW, ph, n(3));
-      drawRightPanel(doc, sx + colW, sy + ph, colW, ph, n(4));
-      PDFKit.marks(doc, 'passport', { label: 'Calligraphy', title });
-    }
+    drawPracticeGrid(doc, 0, 0, colW, H, n(1));
+    drawRightPanel(doc, colW, 0, colW, H, n(2));
+    PDFKit.marks(doc, 'regular', { label: 'Calligraphy', title });
   }
   return doc;
 }

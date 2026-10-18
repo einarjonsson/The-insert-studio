@@ -13,11 +13,8 @@
     medium: { maxLen: 5, density: 0.28 },
     hard:   { maxLen: 6, density: 0.27 }
   };
-  // Grid size per notebook size and difficulty.
-  const GRID = {
-    regular:  { easy: 7, medium: 9,  hard: 10 },
-    passport: { easy: 8, medium: 10, hard: 12 }
-  };
+  // Grid size per difficulty.
+  const GRID = { easy: 7, medium: 9, hard: 10 };
 
   // ── Pattern ──────────────────────────────────────────────────────────────────
   function findSlots(black, n) {
@@ -192,9 +189,9 @@
   }
 
   // ── Puzzle ───────────────────────────────────────────────────────────────────
-  function generate(size, difficulty) {
+  function generate(difficulty) {
     const lv = LEVELS[difficulty] || LEVELS.medium;
-    const n = (GRID[size] || GRID.regular)[difficulty] || 9;
+    const n = GRID[difficulty] || 9;
     let fallback = null;
     for (let attempt = 0; attempt < 40; attempt++) {
       const pat = makePattern(n, lv);
@@ -234,12 +231,12 @@
   // ── Page layout (all in mm, relative to the panel's top-left) ────────────────
   // layout.gx/gy/cell: grid; layout.columns: [{x, y, len, nums, header}] for the number list.
   // opts (all mm, relative to the panel): { top, bottom, side } = content area; defaults suit the preview canvas.
-  function layout(puzzle, pw, ph, size, opts) {
+  function layout(puzzle, pw, ph, opts) {
     opts = opts || {};
     const n = puzzle.n, margin = opts.side != null ? opts.side : 5, titleH = 8;
     const top = opts.top != null ? opts.top : 5 + titleH;       // y where grid starts
     const bottom = opts.bottom != null ? opts.bottom : ph - 5;  // y where content must end
-    const fontPt = size === 'passport' ? 7 : 6.2;
+    const fontPt = 6.2;
     const lineH = fontPt / 2.835 * 1.5;
     const digitW = fontPt / 2.835 * 0.62;
     const gap = 3.2, headH = 3.6;
@@ -260,27 +257,17 @@
     }
 
     let cell, gx, gy, listX, listY, packed;
-    if (size === 'passport') {
-      const availH = bottom - top;
-      const rows = Math.floor((availH - headH) / lineH);
-      for (cell = Math.min(7.5, availH / n); cell > 3; cell -= 0.05) {
-        packed = pack(rows, pw - margin * 2 - cell * n - 6);
-        if (packed) break;
-      }
-      gx = margin; gy = top;
-      listX = gx + cell * n + 6; listY = gy;
-    } else {
-      const availW = pw - margin * 2;
-      for (cell = Math.min(8, availW / n); cell > 3; cell -= 0.05) {
-        const listH = bottom - top - cell * n - 3;
-        const rows = Math.floor((listH - headH) / lineH);
-        if (rows < 3) continue;
-        packed = pack(rows, availW);
-        if (packed) break;
-      }
-      gx = margin + (availW - cell * n) / 2; gy = top;
-      listX = margin + (availW - (packed ? packed.totalW : 0)) / 2; listY = gy + cell * n + 3;
+    const availW = pw - margin * 2;
+    for (cell = Math.min(8, availW / n); cell > 3; cell -= 0.05) {
+      const listH = bottom - top - cell * n - 3;
+      const rows = Math.floor((listH - headH) / lineH);
+      if (rows < 3) continue;
+      packed = pack(rows, availW);
+      if (packed) break;
     }
+    gx = margin + (availW - cell * n) / 2; gy = top;
+    listX = margin + (availW - (packed ? packed.totalW : 0)) / 2; listY = gy + cell * n + 3;
+  
     if (!packed) packed = { cols: [], totalW: 0 };
     return {
       n, cell, gx, gy, fontPt, lineH, digitW, headH, margin, titleH,

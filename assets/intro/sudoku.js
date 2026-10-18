@@ -3,7 +3,7 @@ StudioIntro.register('sudoku', {
   title: ['Pencil, paper,', 'pure <em>logic.</em>'],
   hook: 'A sudoku is a number puzzle you solve with nothing but your head and a pencil. This generator prints fresh ones, sized to slot into your Traveler’s Notebook.',
   cta: 'Make my puzzles',
-  footer: 'Easy to Hard · Regular & Passport',
+  footer: 'Easy to Hard',
 
   hero: `<svg class="ill" viewBox="0 0 640 460" role="img" aria-label="A sudoku board on an easel with a pencil in front">
     <g class="i-gold"><path class="twinkle" d="M110 60l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/><path class="twinkle2" d="M560 90l2.4 7 7 2.4-7 2.4-2.4 7-2.4-7-7-2.4 7-2.4z"/><circle class="twinkle2" cx="250" cy="24" r="2.2"/><circle class="twinkle" cx="500" cy="30" r="2"/><circle class="twinkle2" cx="60" cy="230" r="2"/><circle class="twinkle" cx="590" cy="250" r="1.8"/></g>

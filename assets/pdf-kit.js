@@ -5,7 +5,7 @@
 //   const doc = new jsPDF(...); PDFKit.register(doc);
 //   PDFKit.header(doc, ox, oy, pw, { eyebrow, title, accent });  // -> y where content may start
 //   PDFKit.footer(doc, ox, oy, pw, ph, { number });
-//   PDFKit.marks(doc, 'regular' | 'passport', { label, title, horizontal });
+//   PDFKit.marks(doc, 'regular', { label, title, horizontal });
 //   PDFKit.cover(doc, { kicker, title, subtitle, accent });
 //
 // jsPDF's built-in fonts only cover Latin-1, so decorative glyphs (✦, □) are drawn as vectors.
@@ -146,37 +146,25 @@ window.PDFKit = (function () {
   const FOOTER_H = 8;
 
   // ── Fold & cut marks ─────────────────────────────────────────────────────────
-  // 'regular': fold at 110mm (dashed), cut at 220mm (dotted); opts.horizontal draws the divider between rows.
-  // 'passport': cut lines through the centre.
+  // Fold at 110mm (dashed), cut at 220mm (dotted); opts.horizontal draws the divider between rows.
+  // `size` is kept for call-site compatibility; Regular (110mm panels) is the only layout.
   function marks(doc, size, opts) {
     opts = opts || {};
     const W = 297, H = 210, label = opts.label || '';
     doc.setLineDashPattern([], 0);
-    if (size === 'passport') {
-      const pw = 134, ph = 98, sx = (W - pw * 2) / 2, sy = (H - ph * 2) / 2;
-      doc.setDrawColor(...COLORS.tan); doc.setLineWidth(0.15);
-      for (let c = 0; c < 2; c++) for (let r = 0; r < 2; r++) doc.rect(sx + c * pw, sy + r * ph, pw, ph);
-      doc.setDrawColor(...COLORS.gold); doc.setLineWidth(0.25); doc.setLineDashPattern([0.8, 2], 0);
-      doc.line(sx + pw, sy - 4, sx + pw, sy + ph * 2 + 4);
-      doc.line(sx - 4, sy + ph, sx + pw * 2 + 4, sy + ph);
-      doc.setLineDashPattern([], 0);
-      set(doc, mono(), 'normal', 3.6, COLORS.gold);
-      text(doc, ('Cut along dotted lines' + (label ? '  ·  ' + label : '')).toUpperCase(), W / 2, sy - 5, { align: 'center' }, 0.4);
-    } else {
-      const colW = 110;
-      doc.setDrawColor(...COLORS.gold); doc.setLineWidth(0.25);
-      doc.setLineDashPattern([2, 1.5], 0); doc.line(colW, 0, colW, H);
-      doc.setLineDashPattern([0.8, 2], 0); doc.line(2 * colW, 0, 2 * colW, H);
-      doc.setLineDashPattern([], 0);
-      if (opts.horizontal) {
-        doc.setDrawColor(...COLORS.tan); doc.setLineWidth(0.12); doc.setLineDashPattern([1, 2], 0);
-        doc.line(0, H / 2, 2 * colW, H / 2); doc.setLineDashPattern([], 0);
-      }
-      set(doc, mono(), 'normal', 3.6, COLORS.gold);
-      text(doc, '- - -  FOLD AT 110MM', 2 * colW + 2, H / 2 - 4, null, 0.3);
-      text(doc, '· · ·  CUT AT 220MM', 2 * colW + 2, H / 2, null, 0.3);
-      if (label) text(doc, label.toUpperCase(), 2 * colW + 2, H / 2 + 4, null, 0.3);
+    const colW = 110;
+    doc.setDrawColor(...COLORS.gold); doc.setLineWidth(0.25);
+    doc.setLineDashPattern([2, 1.5], 0); doc.line(colW, 0, colW, H);
+    doc.setLineDashPattern([0.8, 2], 0); doc.line(2 * colW, 0, 2 * colW, H);
+    doc.setLineDashPattern([], 0);
+    if (opts.horizontal) {
+      doc.setDrawColor(...COLORS.tan); doc.setLineWidth(0.12); doc.setLineDashPattern([1, 2], 0);
+      doc.line(0, H / 2, 2 * colW, H / 2); doc.setLineDashPattern([], 0);
     }
+    set(doc, mono(), 'normal', 3.6, COLORS.gold);
+    text(doc, '- - -  FOLD AT 110MM', 2 * colW + 2, H / 2 - 4, null, 0.3);
+    text(doc, '· · ·  CUT AT 220MM', 2 * colW + 2, H / 2, null, 0.3);
+    if (label) text(doc, label.toUpperCase(), 2 * colW + 2, H / 2 + 4, null, 0.3);
     if (opts.title) { set(doc, serif(), 'italic', 5, COLORS.muted); doc.text(opts.title, W / 2, H - 3, { align: 'center' }); }
   }
 

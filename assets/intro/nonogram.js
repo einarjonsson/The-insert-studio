@@ -3,7 +3,7 @@ StudioIntro.register('nonogram', {
   title: ['Nonogram', 'Puzzles'],
   hook: 'Numbers beside a blank grid tell you which squares to fill. Use pure logic and a hidden pattern appears. Grids from 5×5 to 20×20, with answers included.',
   cta: 'Make my puzzles',
-  footer: 'Regular & Passport · 5×5 to 20×20',
+  footer: '5×5 to 20×20',
 
   hero: `<svg class="ill" viewBox="0 0 640 460" role="img" aria-label="A nonogram on an easel with a pixel mushroom half revealed">
     <g class="i-gold">

@@ -3,7 +3,7 @@ StudioIntro.register('habit', {
   title: ["Small ticks,","big <em>change.</em>"],
   hook: "A habit tracker is a grid where you colour in a box each day you do something. Seeing the chain grow makes it easier to keep going. This one is sized for your notebook.",
   cta: "Make my tracker",
-  footer: "Up to 8 habits · Regular & Passport",
+  footer: "Up to 8 habits",
 
   hero: `<svg class="ill" viewBox="0 0 640 460" role="img" aria-label="A monthly habit grid page with sage ticks, a streak badge and a growing plant">
     <g class="i-gold">
